@@ -1,6 +1,11 @@
-;; ownable
-(define-data-var owner principal 'S1G2081040G2081040G2081040G208105NK8PE5)
+;; nongible
+(define-data-var owner principal 'params.contractOwner)
+(define-non-fungible-token nongible-tokens (buff 32)) ;; identifier is 256-bit hash of image
+(define-data-var mint-price uint uparams.mintPrice)
+(define-data-var base-token-uri (buff 100) params.callBack)
+(define-map nongibles ((token-id (buff 32))) ((author principal) (date uint))) ;; extra info about token related to the nft-token
 
+;; ownable methods
 (define-read-only (get-owner)
     (var-get owner))
 
@@ -16,12 +21,7 @@
         (var-set owner new-owner)
         (ok true)))
 
-;; loopbomb
-(define-non-fungible-token loopbomb-tokens (buff 32)) ;; identifier is 256-bit hash of image
-(define-data-var mint-price uint u5000000000000000)
-(define-data-var base-token-uri (buff 100) "https://loopbomb.com/assets/api/v2/loop/")
-(define-map loopbombs ((token-id (buff 32))) ((author principal) (date uint))) ;; extra info about token related to the nft-token
-
+;; nongible methods
 (define-public (update-base-token-uri (new-base-token-uri (buff 100)))
     (begin 
         (asserts! (is-eq (var-get owner) tx-sender) (err 1))
@@ -44,12 +44,13 @@
     (concat (var-get base-token-uri) token-id))
 
 (define-read-only (get-token-info (token-id (buff 32)))
-    (map-get? loopbombs ((token-id token-id))))
+    (map-get? nongibles ((token-id token-id))))
 
-(define-public (create-loopbomb (token-id (buff 32)))
+(define-public (create-nongible (token-id (buff 32)))
     (begin 
+        (asserts! (>= (stx-get-balance tx-sender) (var-get mint-price)) (err 2))
         (as-contract
             (stx-transfer? (var-get mint-price) tx-sender (var-get owner))) ;; transfer stx if there is enough to pay for mint, otherwith throws an error
-        (nft-mint? loopbomb-tokens token-id tx-sender) ;; fails if token has been minted before
-        (map-insert loopbombs ((token-id token-id)) ((author tx-sender) (date block-height)))
+        (nft-mint? nongible-tokens token-id tx-sender) ;; fails if token has been minted before
+        (map-insert nongibles ((token-id token-id)) ((author tx-sender) (date block-height)))
         (ok true)))

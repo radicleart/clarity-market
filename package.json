@@ -12,6 +12,7 @@
   },
   "scripts": {
     "test": "mocha",
+    "deploy": "mocha 'test/integration/deploy.ts'",
     "test:watch": "mocha --watch"
   },
   "devDependencies": {
@@ -25,6 +26,7 @@
   },
   "dependencies": {
     "@blockstack/clarity": "^0.2.0",
-    "@blockstack/clarity-native-bin": "^0.2.0"
+    "@blockstack/clarity-native-bin": "^0.2.0",
+    "@blockstack/stacks-transactions": "^0.7.0"
   }
 }
