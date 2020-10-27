@@ -17,7 +17,7 @@
         (var-set administrator new-administrator)
         (ok true)))
         
-(define-public (add-app (owner (buff 20)) (projectId (buff 100)) (storage-model uint))
+(define-public (add-app (owner (buff 20)) (projectId (buff 100)) (storage-model uint) (status uint))
   (begin
     (if (is-update-allowed)
       (begin
