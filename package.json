@@ -12,6 +12,7 @@
   },
   "scripts": {
     "test": "mocha",
+    "appmap": "mocha 'test/unit/appmap.ts'",
     "deploy": "mocha 'test/integration/deploy.ts'",
     "test:watch": "mocha --watch"
   },

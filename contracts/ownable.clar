@@ -1,4 +1,4 @@
-(define-data-var owner principal 'S1G2081040G2081040G2081040G208105NK8PE5)
+(define-data-var owner principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
 
 (define-read-only (get-owner)
     (var-get owner))
