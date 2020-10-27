@@ -1,6 +1,6 @@
 ;; appmap - map of applications connected to platform for purpose of indexing nfts
 (define-data-var administrator principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
-(define-map app-map  ((owner (buff 20)) (projectId (buff 100))) ((storage-model uint)))
+(define-map app-map  ((owner (buff 20)) (projectId (buff 100))) ((storage-model uint) (status uint)))
 
 (define-constant not-allowed u100)
 (define-constant not-found u100)
@@ -17,17 +17,7 @@
         (var-set administrator new-administrator)
         (ok true)))
         
-(define-public (add-app (owner (buff 20)) (projectId (buff 100)) (storage-model uint) (status uint))
-  (begin
-    (if (is-update-allowed)
-      (begin
-        (map-insert app-map {owner: owner, projectId: projectId} ((storage-model storage-model)))
-        (ok owner)
-      )
-      (err not-allowed)
-    )
-  )
-)
+
 ;; get the meta data for the given project
 (define-public (get-app (owner (buff 20)) (projectId (buff 100)))
   (match (map-get? app-map {owner: owner, projectId: projectId})
@@ -39,3 +29,14 @@
   (is-eq tx-sender (var-get administrator))
 )
 
+(define-public (add-app (owner (buff 20)) (projectId (buff 100)) (storage-model uint))
+  (begin
+    (if (is-update-allowed)
+      (begin
+        (map-insert app-map {owner: owner, projectId: projectId} ((storage-model storage-model) (status u0)))
+        (ok owner)
+      )
+      (err not-allowed)
+    )
+  )
+)

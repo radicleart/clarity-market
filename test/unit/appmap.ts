@@ -2,7 +2,7 @@ import { Client, Provider, ProviderRegistry, Result } from "@blockstack/clarity"
 import { assert } from "chai";
 import { readFromContract, execMethod } from "./query-utils"
 import * as fs from "fs";
-describe("app-map tutorial test suite", () => {
+describe("appmap tutorial test suite", () => {
 
   const contractKeys = JSON.parse(fs.readFileSync("./keys-contract-base.json").toString());
   const project1Keys = JSON.parse(fs.readFileSync("./keys-project1.json").toString());
@@ -16,7 +16,7 @@ describe("app-map tutorial test suite", () => {
 
   before(async () => {
     provider = await ProviderRegistry.createProvider();
-    client = new Client(contractKey + ".app-map", "app-map", provider);
+    client = new Client(contractKey + ".appmap", "appmap", provider);
   });
 
   describe("Deploying an instance of the contract", () => {
@@ -32,9 +32,9 @@ describe("app-map tutorial test suite", () => {
       assert.isOk(result.rawResult.indexOf("STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY") > -1);
     })
     it("should allow insert if tx-sender is contract owner", async () => {
-      let txreceive = await execMethod(client, contractKey, "add-project", [ `'${project1Key}`, "\"http://project1.com/assets/v1\"","u5000"]);
+      let txreceive = await execMethod(client, contractKey, "add-app", [ `'${project1Key}`, "\"http://project1.com/assets/v1\"","u5000"]);
       assert.isOk(txreceive.success, "Transaction succeeded");
-      const result = await readFromContract(client, "get-project", [`'${project1Key}`]);
+      const result = await readFromContract(client, "add-app", [`'${project1Key}`]);
       assert.isOk(result.rawResult.indexOf('u5000') > -1, "Ensure mint price is correct");
       assert.equal(result.strings[0], "http://project1.com/assets/v1");
       assert.equal(result.strings.length, 1);
