@@ -1,9 +1,9 @@
-;; nongible
+;; A template used in Risidio Auctions to make is simple to onboard new DC projects.
 (define-data-var owner principal 'params.contractOwner)
-(define-non-fungible-token nongible-tokens (buff 32)) ;; identifier is 256-bit hash of image
 (define-data-var mint-price uint uparams.mintPrice)
 (define-data-var base-token-uri (buff 100) params.callBack)
 (define-map nongibles ((token-id (buff 32))) ((author principal) (date uint))) ;; extra info about token related to the nft-token
+(define-non-fungible-token nongible-tokens (buff 32)) ;; identifier is 256-bit hash of image
 
 ;; ownable methods
 (define-read-only (get-owner)
