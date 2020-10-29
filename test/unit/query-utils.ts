@@ -8,22 +8,26 @@ interface NameValuePair { rawResult: string; strings: string[]; }
 
 function unwrapStrings(tuple: string): [string]|RegExpMatchArray {
   var names = tuple.match(/0x\w+/g) || [];
-  for(let i=0; i<names.length; i++){
+  for(let i=0; i<names.length; i++) {
     names[i] = Buffer.from(names[i].substring(2), "hex").toString();
   }
   return names;
 }
 
 function logResult(result: NameValuePair) {
-    if (result.rawResult.indexOf("0x") > -1) {
-        console.log("Raw result: '" + result.rawResult + "' Dehexed: " + result.strings);
+    if (result && !result.rawResult) {
+        console.log("Result: '" + result.rawResult + "'");
     } else {
-        console.log("Raw result: '" + result.rawResult + "'");
+        if (result.rawResult.indexOf("0x") > -1) {
+            console.log("Raw result: '" + result.rawResult + "' Dehexed: " + result.strings);
+        } else {
+            console.log("Raw result: '" + result.rawResult + "'");
+        }
     }
 }
     
 function logReceipt(receipt: Receipt) {
-    console.log("Raw result: " + receipt);
+    console.log("Raw result: ", receipt);
 }
 
 async function performQuery(client: Client, name: string, args: string[]): Promise<NameValuePair> {

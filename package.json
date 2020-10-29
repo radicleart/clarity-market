@@ -17,17 +17,19 @@
     "test:watch": "mocha --watch"
   },
   "devDependencies": {
-    "@types/node": "^10",
-    "typescript": "^3.5.2",
-    "ts-node": "^8.2.0",
     "chai": "^4.2.0",
-    "@types/chai": "^4.1.7",
     "mocha": "^6.1.4",
-    "@types/mocha": "^5.2.7"
+    "ts-node": "^8.2.0",
+    "typescript": "^3.5.2"
   },
   "dependencies": {
     "@blockstack/clarity": "^0.2.0",
     "@blockstack/clarity-native-bin": "^0.2.0",
-    "@blockstack/stacks-transactions": "^0.7.0"
+    "@blockstack/stacks-transactions": "^0.7.0",
+    "@types/chai": "^4.1.7",
+    "@types/jest": "^26.0.15",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^10",
+    "axios": "^0.21.0"
   }
 }
