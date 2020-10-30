@@ -68,20 +68,21 @@ describe("appmap tutorial test suite", () => {
     })
 
     it("should be able to get apps from map", async () => {
-      let result = await readFromContract(client, "get-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\""]);
-      assert.isOk(result.rawResult.indexOf('(ok (tuple (status u0) (storage-model u1)))') > -1, "returns error: not found");
-      assert.equal(result.strings.length, 0);
+      let result = await readFromContract(client, "get-app", [ "u0"], false);
+      assert.isOk(result.rawResult.indexOf('(ok (tuple (owner 0x6d696a6f636f2e69642e626c6f636b737461636b) (projectId 0x53544d59413545414e57364330484e5331533537565835324d3042373935484846444257325842452e6d792d676169612d70726f6a656374) (status u0) (storage-model u1)))') > -1, "returns error: not found");
+      assert.equal(result.strings.length, 2);
 
-      result = await readFromContract(client, "get-app", [ "\"radicle.id.blockstack\"", "\"" + project1Key + ".my-upfs-project\""]);
-      assert.isOk(result.rawResult.indexOf('(ok (tuple (status u0) (storage-model u5)))') > -1, "returns error: not found");
-      assert.equal(result.strings.length, 0);
+      result = await readFromContract(client, "get-app", [ "u1"], true);
+      assert.isOk(result.rawResult.indexOf('(ok (tuple') > -1, "returns error: not found");
+      assert.equal(result.strings.length, 2);
+      assert.equal(result.strings[1], 'STMYA5EANW6C0HNS1S57VX52M0B795HHFDBW2XBE.my-filecoin-project');
     })
 
     it("should be able to set apps to live if not administrator", async () => {
-      let txreceive = await execMethod(client, contractKey, "set-app-live", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\""]);
+      let txreceive = await execMethod(client, contractKey, "set-app-live", [ "u0", "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\"", "u1"], false);
       assert.isOk(txreceive.success, "Transaction succeeded");
 
-      txreceive = await execMethod(client, project1Key, "set-app-live", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\""], false);
+      txreceive = await execMethod(client, project1Key, "set-app-live", [ "u0", "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\"", "u1"], false);
       assert.isNotOk(txreceive.success, "Transaction succeeded");
     })
 
@@ -89,7 +90,7 @@ describe("appmap tutorial test suite", () => {
       let txreceive = await execMethod(client, contractKey, "transfer-administrator", [ `'${project1Key}` ], false);
       assert.isOk(txreceive.success, "Transaction succeeded");
 
-      txreceive = await execMethod(client, project1Key, "set-app-live", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\""], false);
+      txreceive = await execMethod(client, project1Key, "set-app-live", [ "u0", "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\"", "u1"], false);
       assert.isOk(txreceive.success, "Transaction succeeded");
     })
 
