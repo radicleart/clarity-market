@@ -51,6 +51,9 @@
     myProject (ok myProject) (err not-found)
   )
 )
+(define-read-only (get-app-counter)
+  (ok (var-get app-counter))
+)
 ;; Get current administrator
 (define-read-only (get-administrator)
     (var-get administrator))

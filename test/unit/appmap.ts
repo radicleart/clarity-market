@@ -35,6 +35,11 @@ describe("appmap tutorial test suite", () => {
       assert.isOk(result.rawResult.indexOf("ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW") > -1);
     })
     
+    it("should indicate zero apps", async () => {
+      const result = await readFromContract(client, "get-app-counter", [], false);
+      assert.isOk(result.rawResult.indexOf("(ok u0)") > -1);
+    })
+    
     it("should fail insert new application if illegal storage", async () => {
       let txreceive = await execMethod(client, project1Key, "add-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-project\"","u50"]);
       assert.isNotOk(txreceive.success, "Transaction succeeded");
@@ -55,6 +60,9 @@ describe("appmap tutorial test suite", () => {
       txreceive = await execMethod(client, project1Key, "add-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-filecoin-project\"","u2"]);
       assert.isOk(txreceive.success, "Transaction succeeded");
 
+      const result = await readFromContract(client, "get-app-counter", [], false);
+      assert.isOk(result.rawResult.indexOf("(ok u2)") > -1);
+
       txreceive = await execMethod(client, project2Key, "add-app", [ "\"radicle.id.blockstack\"", "\"" + project1Key + ".my-upfs-project\"","u5"]);
       assert.isOk(txreceive.success, "Transaction succeeded");
 
@@ -67,12 +75,17 @@ describe("appmap tutorial test suite", () => {
       // assert.equal(result.strings.length, 1);
     })
 
+    it("should indicate 4 apps", async () => {
+      const result = await readFromContract(client, "get-app-counter", [], false);
+      assert.isOk(result.rawResult.indexOf("(ok u4)") > -1);
+    })
+    
     it("should be able to get apps from map", async () => {
       let result = await readFromContract(client, "get-app", [ "u0"], false);
       assert.isOk(result.rawResult.indexOf('(ok (tuple (owner 0x6d696a6f636f2e69642e626c6f636b737461636b) (projectId 0x53544d59413545414e57364330484e5331533537565835324d3042373935484846444257325842452e6d792d676169612d70726f6a656374) (status u0) (storage-model u1)))') > -1, "returns error: not found");
       assert.equal(result.strings.length, 2);
 
-      result = await readFromContract(client, "get-app", [ "u1"], true);
+      result = await readFromContract(client, "get-app", [ "u1"], false);
       assert.isOk(result.rawResult.indexOf('(ok (tuple') > -1, "returns error: not found");
       assert.equal(result.strings.length, 2);
       assert.equal(result.strings[1], 'STMYA5EANW6C0HNS1S57VX52M0B795HHFDBW2XBE.my-filecoin-project');
