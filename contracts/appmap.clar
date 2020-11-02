@@ -1,7 +1,7 @@
 ;; appmap - map of applications connected to auction platform
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-map app-map ((index uint)) ((owner (buff 80)) (projectId (buff 100)) (storage-model uint) (status uint)))
-(define-data-var app-counter uint u0)
+(define-map app-map ((index int)) ((owner (buff 80)) (projectId (buff 100)) (storage-model int) (status int)))
+(define-data-var app-counter int 0)
 
 (define-constant not-found u100)
 (define-constant not-allowed u101)
@@ -15,13 +15,13 @@
         (ok true)))
 
 ;; Insert new app at current index
-(define-public (add-app (owner (buff 80)) (projectId (buff 100)) (storage-model uint))
+(define-public (add-app (owner (buff 80)) (projectId (buff 100)) (storage-model int))
   (begin
     (if (is-storage-allowed storage-model)
       (begin
-        (map-insert app-map ((index (var-get app-counter))) ((owner owner) (projectId projectId) (storage-model storage-model) (status u0)))
-        (var-set app-counter (+ (var-get app-counter) u1))
-        (ok owner)
+        (map-insert app-map ((index (var-get app-counter))) ((owner owner) (projectId projectId) (storage-model storage-model) (status 0)))
+        (var-set app-counter (+ (var-get app-counter) 1))
+        (ok (- (var-get app-counter) 1))
       )
       (err illegal-storage)
     )
@@ -29,13 +29,13 @@
 )
 
 ;; Make app live - set status to 1
-(define-public (set-app-live (index uint) (owner (buff 80)) (projectId (buff 100)) (storage-model uint))
+(define-public (set-app-live (index int) (owner (buff 80)) (projectId (buff 100)) (storage-model int))
   (begin
     (if (is-update-allowed)
     (begin
       (match (map-get? app-map {index: index})
         myProject 
-        (ok (map-set app-map {index: index} ((owner owner) (projectId projectId) (storage-model storage-model) (status u1))))
+        (ok (map-set app-map {index: index} ((owner owner) (projectId projectId) (storage-model storage-model) (status 1))))
         (err not-found)
       )
     )
@@ -46,7 +46,7 @@
 
 ;; -- read only --
 ;; Get app by index
-(define-read-only (get-app (index uint))
+(define-read-only (get-app (index int))
   (match (map-get? app-map ((index index)))
     myProject (ok myProject) (err not-found)
   )
@@ -58,11 +58,10 @@
 (define-read-only (get-administrator)
     (var-get administrator))
 
-
 ;; -- private --
 (define-private (is-update-allowed)
   (is-eq (var-get administrator) contract-caller)
 )
-(define-private (is-storage-allowed (storage uint))
-  (<= storage u10)
+(define-private (is-storage-allowed (storage int))
+  (<= storage 10)
 )
