@@ -1,17 +1,13 @@
 import { assert } from "chai";
 import * as fs from "fs";
 import {
-  StacksTransaction,
   makeContractDeploy,
   makeContractCall,
+  callReadOnlyFunction,
   ClarityValue,
-  uintCV,
-  intCV,
-  bufferCV,
-  standardPrincipalCV,
-  StacksTestnet,
   broadcastTransaction,
-} from "@blockstack/stacks-transactions";
+} from "@stacks/transactions";
+import { StacksTestnet } from '@stacks/network';
 const BigNum = require("bn.js"); 
 const network = new StacksTestnet();
 const fee = new BigNum(3000);
@@ -35,9 +31,9 @@ async function deployContract(contractName: string, nonce): Promise<Object> {
     // nonce: nonce,   // watch for nonce increments if this works - may need to restart mocknet!
     network,
   });
-  await broadcastTransaction(transaction, network);
+  var result = await broadcastTransaction(transaction, network);
   await new Promise((r) => setTimeout(r, 30000));
-  return transaction;
+  return result;
 }
 async function callContract(nonce, sender: string, contractName: string, functionName: string, functionArgs: ClarityValue[]): Promise<StacksTransaction> {
   console.log("transaction: contract=" + contractName + " sender=" + sender + " function=" + functionName + " args= .. ");
@@ -54,56 +50,79 @@ async function callContract(nonce, sender: string, contractName: string, functio
   var result = await broadcastTransaction(transaction, network);
   // console.log(transaction);
   // console.log(result);
-  return transaction;
+  return result;
+}
+
+async function callReadOnly(nonce, sender: string, contractName: string, functionName: string, functionArgs: ClarityValue[]): Promise<any> {
+  console.log("transaction: contract=" + contractName + " sender=" + keys[sender].stacksAddress + " function=" + functionName + " args= .. " + functionArgs);
+  const options = {
+    contractAddress: keys[sender].stacksAddress,
+    contractName,
+    functionName,
+    functionArgs: functionArgs,
+    network,
+    senderAddress: keys[sender].secretKey,
+  };  
+  var result = await callReadOnlyFunction(options);
+  return result;
 }
 
 describe("Deploying contracts", () => {
   it("should deploy nongibles and projects and wait for confirmation", async () => {
-    let transaction = await deployContract("nongibles", new BigNum(0));
-    console.log("=======================================================================================");
-    console.log(transaction)
-    console.log("=======================================================================================");
+    let result: any = await deployContract("nongibles", new BigNum(0));
+    assert.isNotOk(result.error, "Transaction succeeded");
+    console.log(result.error)
   });
 });
 
 describe("Check contracts deployed", () => {
-  it("should return nongibles contract address", async () => {
-    let args = [];
-    let transaction = await callContract(new BigNum(2), "contract-base", "nongibles", "get-address", args);
-    assert.isOk(transaction, "Transaction succeeded");
+  it("should read address of administrator", async () => {
+    let result: any = await callReadOnly(new BigNum(0), "contract-base", "nongibles", "get-administrator", []);
+    assert.isOk(result.error, "Transaction succeeded");
   })
 })
-
+/**
 describe("Test project admin functions", () => {
   it("should allow insert if tx-sender is contract owner", async () => {
     let args = [standardPrincipalCV(keys['project1'].stacksAddress), bufferCV(Buffer.from("http://project1.com/assets/v1")), uintCV(0x5000)];
-    let transaction = await callContract(new BigNum(2), "contract-base", "nongibles", "add-project", args);
-    assert.isOk(transaction, "Transaction succeeded");
+    let result: any = await callContract(new BigNum(2), "contract-base", "nongibles", "add-project", args);
+    assert.isNotOk(result.error, "Transaction succeeded");
+    console.log(result.error)
   })
   it("should allow read of inserted project", async () => {
     let args = [standardPrincipalCV(keys['project1'].stacksAddress)];
-    let transaction = await callContract(new BigNum(0), "project1", "nongibles", "get-project", args);
+    let result: any = await callContract(new BigNum(0), "project1", "nongibles", "get-project", args);
   })
   it("should return error if no project found", async () => {
     let args = [standardPrincipalCV(keys['project1'].stacksAddress)];
-    let transaction = await callContract(new BigNum(0), "project2", "nongibles", "get-project", args);
+    let result: any = await callContract(new BigNum(0), "project2", "nongibles", "get-project", args);
+    assert.isNotOk(result.error, "Transaction succeeded");
+    console.log(result.error)
   })
 });
 
 describe("Test minting functions", () => {
   it("should mint a non fungible token", async () => {
-    let args = [intCV(0x100),  uintCV(0x5000), bufferCV(Buffer.from("aset1"))];
-    let transaction = await callContract(new BigNum(0), "minter", "nongibles", "mint-to", args);
+    let args = [intCV(0x100),  uintCV(0x5000), bufferCV(Buffer.from("asset1"))];
+    let result: any = await callContract(new BigNum(0), "minter", "nongibles", "mint-to", args);
+    assert.isNotOk(result.error, "Transaction succeeded");
+    console.log(result.error)
   });
   it("should override the mint fee with the projects fee", async () => {
-    let args = [intCV(0x100),  uintCV(0x5000), bufferCV(Buffer.from("aset1"))];
-    let transaction = await callContract(new BigNum(0), "minter", "nongibles", "mint-to", args);
+    let args = [intCV(0x100),  uintCV(0x5000), bufferCV(Buffer.from("asset1"))];
+    let result: any = await callContract(new BigNum(0), "minter", "nongibles", "mint-to", args);
+    assert.isNotOk(result.error, "Transaction succeeded");
+    console.log(result.error)
   });
   it("should return a project for an asset", async () => {
-    let args = [bufferCV(Buffer.from("aset1"))];
-    let transaction = await callContract(new BigNum(0), "minter", "nongibles", "get-project-id", args);
+    let args = [bufferCV(Buffer.from("asset1"))];
+    let result: any = await callContract(new BigNum(0), "minter", "nongibles", "get-project-id", args);
+    assert.isNotOk(result.error, "Transaction succeeded");
+    console.log(result.error)
   });
 });
+  **/
+
 after(async () => {
   // await provider.close();
 });

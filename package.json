@@ -13,7 +13,9 @@
   "scripts": {
     "test": "mocha",
     "appmap": "mocha 'test/unit/appmap.ts'",
-    "deploy": "mocha 'test/integration/deploy.ts'",
+    "nongibles": "mocha 'test/unit/nongibles.ts'",
+    "inongibles": "mocha 'test/integration/nongibles.ts'",
+    "iappmap": "mocha 'test/integration/appmap.ts'",
     "test:watch": "mocha --watch"
   },
   "devDependencies": {
@@ -25,11 +27,12 @@
   "dependencies": {
     "@blockstack/clarity": "^0.2.0",
     "@blockstack/clarity-native-bin": "^0.2.0",
-    "@blockstack/stacks-transactions": "^0.7.0",
-    "@types/chai": "^4.1.7",
+    "@stacks/network": "^1.0.0-beta.7",
+    "@stacks/transactions": "^1.0.0-beta.7",
+    "@types/chai": "^4.2.14",
     "@types/jest": "^26.0.15",
     "@types/mocha": "^5.2.7",
-    "@types/node": "^10",
+    "@types/node": "^10.17.44",
     "axios": "^0.21.0"
   }
 }
