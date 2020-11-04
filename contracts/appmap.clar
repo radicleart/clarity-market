@@ -1,6 +1,6 @@
 ;; appmap - map of applications connected to auction platform
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-map app-map ((index int)) ((owner (buff 80)) (projectId (buff 100)) (storage-model int) (status int)))
+(define-map app-map ((index int)) ((owner (buff 80)) (app-contract-id (buff 100)) (storage-model int) (status int)))
 (define-data-var app-counter int 0)
 
 (define-constant not-found u100)
@@ -15,13 +15,14 @@
         (ok true)))
 
 ;; Insert new app at current index
-(define-public (add-app (owner (buff 80)) (projectId (buff 100)) (storage-model int))
+(define-public (add-app (owner (buff 80)) (app-contract-id (buff 100)) (storage-model int))
   (begin
     (if (is-storage-allowed storage-model)
       (begin
-        (map-insert app-map ((index (var-get app-counter))) ((owner owner) (projectId projectId) (storage-model storage-model) (status 0)))
+        (map-insert app-map ((index (var-get app-counter))) ((owner owner) (app-contract-id app-contract-id) (storage-model storage-model) (status 0)))
         (var-set app-counter (+ (var-get app-counter) 1))
-        (ok (- (var-get app-counter) 1))
+        (print (var-get app-counter))
+        (ok (var-get app-counter))
       )
       (err illegal-storage)
     )
@@ -29,13 +30,13 @@
 )
 
 ;; Make app live - set status to 1
-(define-public (set-app-live (index int) (owner (buff 80)) (projectId (buff 100)) (storage-model int))
+(define-public (set-app-live (index int) (owner (buff 80)) (app-contract-id (buff 100)) (storage-model int))
   (begin
     (if (is-update-allowed)
     (begin
       (match (map-get? app-map {index: index})
         myProject 
-        (ok (map-set app-map {index: index} ((owner owner) (projectId projectId) (storage-model storage-model) (status 1))))
+        (ok (map-set app-map {index: index} ((owner owner) (app-contract-id app-contract-id) (storage-model storage-model) (status 1))))
         (err not-found)
       )
     )

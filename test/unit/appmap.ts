@@ -87,7 +87,7 @@ describe("appmap tutorial test suite", () => {
     
     it("should be able to get apps from map", async () => {
       let result = await readFromContract(client, "get-app", ["0"], true);
-      assert.isOk(result.rawResult.indexOf('(ok (tuple (owner 0x6d696a6f636f2e69642e626c6f636b737461636b) (projectId 0x53544d59413545414e57364330484e5331533537565835324d3042373935484846444257325842452e6d792d70726f6a656374) (status 0) (storage-model -1)))') > -1, "returns error: not found");
+      assert.isOk(result.rawResult.indexOf('(ok (tuple (owner 0x6d696a6f636f2e69642e626c6f636b737461636b) (appId 0x53544d59413545414e57364330484e5331533537565835324d3042373935484846444257325842452e6d792d70726f6a656374) (status 0) (storage-model -1)))') > -1, "returns error: not found");
       assert.equal(result.strings.length, 2);
 
       result = await readFromContract(client, "get-app", ["1"], true);
