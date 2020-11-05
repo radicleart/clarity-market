@@ -48,35 +48,35 @@ describe("nongibles tutorial test suite", () => {
     })
     
     it("should fail insert new application if illegal storage", async () => {
-      let txreceive = await execMethod(client, project1Key, "add-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-project\"", "50"]);
+      let txreceive = await execMethod(client, project1Key, "register-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-project\"", "50"]);
       assert.isNotOk(txreceive.success, "Transaction succeeded");
 
-      txreceive = await execMethod(client, project1Key, "add-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-project\"","-1"]);
+      txreceive = await execMethod(client, project1Key, "register-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-project\"","-1"]);
       assert.isOk(txreceive.success, "Transaction succeeded");
     })
 
     it("should fail insert new application if owner more than 80 chars", async () => {
-      let txreceive = await execMethod(client, project1Key, "add-app", [ "\"mijoco.id.blockstackmijoco.id.blockstackmijoco.id.blockstackmijoco.id.blockstackmijoco.id.blockstackijoco.id.blockstackmijoco.id.blockstack\"", "\"" + project1Key + ".my-project\"", "1"]);
+      let txreceive = await execMethod(client, project1Key, "register-app", [ "\"mijoco.id.blockstackmijoco.id.blockstackmijoco.id.blockstackmijoco.id.blockstackmijoco.id.blockstackijoco.id.blockstackmijoco.id.blockstack\"", "\"" + project1Key + ".my-project\"", "1"]);
       assert.isNotOk(txreceive.success, "Transaction succeeded");
     })
 
     it("should allow insert 2 new applications", async () => {
-      let txreceive = await execMethod(client, project1Key, "add-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\"", "1"]);
+      let txreceive = await execMethod(client, project1Key, "register-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\"", "1"]);
       assert.isOk(txreceive.success, "Transaction succeeded");
 
-      txreceive = await execMethod(client, project1Key, "add-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-filecoin-project\"", "2"]);
+      txreceive = await execMethod(client, project1Key, "register-app", [ "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-filecoin-project\"", "2"]);
       assert.isOk(txreceive.success, "Transaction succeeded");
 
       const result = await readFromContract(client, "get-app-counter", [], true);
       assert.isOk(result.rawResult.indexOf("(ok 3)") > -1);
 
-      txreceive = await execMethod(client, project2Key, "add-app", [ "\"radicle.id.blockstack\"", "\"" + project1Key + ".my-upfs-project\"", "5"]);
+      txreceive = await execMethod(client, project2Key, "register-app", [ "\"radicle.id.blockstack\"", "\"" + project1Key + ".my-upfs-project\"", "5"]);
       assert.isOk(txreceive.success, "Transaction succeeded");
 
-      txreceive = await execMethod(client, project2Key, "add-app", [ "\"radicle.id.blockstack\"", "\"" + project1Key + ".my-storj-project\"", "6"]);
+      txreceive = await execMethod(client, project2Key, "register-app", [ "\"radicle.id.blockstack\"", "\"" + project1Key + ".my-storj-project\"", "6"]);
       assert.isOk(txreceive.success, "Transaction succeeded");
 
-      // const result = await readFromContract(client, "add-app", [`'${project1Key}`]);
+      // const result = await readFromContract(client, "register-app", [`'${project1Key}`]);
       // assert.isOk(result.rawResult.indexOf('u5000') > -1, "Ensure mint price is correct");
       // assert.equal(result.strings[0], "http://project1.com/assets/v1");
       // assert.equal(result.strings.length, 1);

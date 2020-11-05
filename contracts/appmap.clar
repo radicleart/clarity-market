@@ -15,7 +15,7 @@
         (ok true)))
 
 ;; Insert new app at current index
-(define-public (add-app (owner (buff 80)) (app-contract-id (buff 100)) (storage-model int))
+(define-public (register-app (owner (buff 80)) (app-contract-id (buff 100)) (storage-model int))
   (begin
     (if (is-storage-allowed storage-model)
       (begin
