@@ -25,7 +25,7 @@
         (var-set mint-price new-mint-price)
         (ok true)))
 
-(define-public (create-nongible (token-id (buff 32)))
+(define-public (mint-token (token-id (buff 32)))
     (begin 
         (asserts! (>= (stx-get-balance tx-sender) (var-get mint-price)) (err 2))
         (as-contract
