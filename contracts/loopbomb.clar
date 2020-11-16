@@ -55,22 +55,16 @@
 )
 
 (define-public (set-sale-data (asset-hash (buff 32)) (sale-type uint) (increment-stx uint) (reserve-stx uint) (amount-stx uint))
-    (begin
-        (asserts! (is-eq (try! (nft-get-owner? loopbomb (get index myIndex))) tx-sender) (err not-allowed))
         (match (map-get? loopbomb-lookup ((asset-hash asset-hash)))
             myIndex
-            (ok (map-insert sale-data {index: (get index myIndex)} ((sale-type sale-type) (increment-stx increment-stx) (reserve-stx reserve-stx) (amount-stx amount-stx))))
+            (if 
+                (try! (is-nft-owner (get index myIndex)))
+                (ok (map-insert sale-data {index: (get index myIndex)} ((sale-type sale-type) (increment-stx increment-stx) (reserve-stx reserve-stx) (amount-stx amount-stx))))
+                (err not-allowed)
+            )
             (err not-found)
         )
-    )
 )
-
-               ;; (asserts! 
-               ;;     (is-eq 
-               ;;         (try! (nft-get-owner? loopbomb (get index myIndex))) tx-sender) 
-               ;;         (err not-allowed)
-               ;;     )
-               ;; (ok (map-insert sale-data {index: (get index myIndex)} ((sale-type sale-type) (increment-stx increment-stx) (reserve-stx reserve-stx) (amount-stx amount-stx))))
 
 ;; read only methods
 ;; ---------------
@@ -101,4 +95,9 @@
 
 ;; private methods
 ;; ---------------
+(define-private (is-nft-owner (index uint))
+    (if (is-eq (some tx-sender) (nft-get-owner? loopbomb index))
+        (ok true)
+        (err not-allowed)
+    ))
 
