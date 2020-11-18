@@ -56,7 +56,7 @@
 )
 
 (define-public (set-sale-data (asset-hash (buff 32)) (sale-type uint) (increment-stx uint) (reserve-stx uint) (amount-stx uint))
-    (match (map-get? loopbomb-lookup ((asset-hash asset-hash)))
+    (match (map-get? sticksnstones-lookup ((asset-hash asset-hash)))
         myIndex
         (if 
             (try! (is-nft-owner (get index myIndex)))
@@ -89,15 +89,26 @@
     (map-get? sticksnstones-data ((index index))))
 
 (define-read-only (get-index (asset-hash (buff 32)))
-    (map-get? sticksnstones-lookup ((asset-hash asset-hash))))
+    (match (map-get? sticksnstones-lookup ((asset-hash asset-hash)))
+        myIndex
+        (ok (get index myIndex))
+        (err not-found)
+    )
+)
 
 (define-read-only (get-sale-data (index uint))
-    (map-get? sale-data ((index index))))
+    (match (map-get? sale-data ((index index)))
+        mySaleData
+        (ok mySaleData)
+        (err not-found)
+    )
+)
 
 ;; private methods
 ;; ---------------
 (define-private (is-nft-owner (index uint))
-    (if (is-eq (some tx-sender) (nft-get-owner? loopbomb index))
+    (if (is-eq (some tx-sender) (nft-get-owner? sticksnstones index))
         (ok true)
         (err not-allowed)
-    ))
+    )
+)

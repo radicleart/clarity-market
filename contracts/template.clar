@@ -89,16 +89,27 @@
     (map-get? params.token-data ((index index))))
 
 (define-read-only (get-index (asset-hash (buff 32)))
-    (map-get? params.token-lookup ((asset-hash asset-hash))))
+    (match (map-get? params.token-lookup ((asset-hash asset-hash)))
+        myIndex
+        (ok (get index myIndex))
+        (err not-found)
+    )
+)
 
 (define-read-only (get-sale-data (index uint))
-    (map-get? sale-data ((index index))))
+    (match (map-get? sale-data ((index index)))
+        mySaleData
+        (ok mySaleData)
+        (err not-found)
+    )
+)
 
 ;; private methods
 ;; ---------------
 (define-private (is-nft-owner (index uint))
-    (if (is-eq (some tx-sender) (nft-get-owner? loopbomb index))
+    (if (is-eq (some tx-sender) (nft-get-owner? params.token index))
         (ok true)
         (err not-allowed)
-    ))
+    )
+)
 
