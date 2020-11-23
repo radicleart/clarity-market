@@ -1,10 +1,12 @@
-;; Partial support for ERC-721 NFT methods
+;; Partial support for ERC-721 NFT methods - approvals not yet supported.
 (define-trait transferable-nft-trait
   (
-    ;; transfer asset - tx-sender is the recipient
+    ;; transfer asset - tx-sender is the  / buyer - this is 
+    ;; different from the blockstack implemnentation where the tx-sender 
+    ;; has to call this method.
     (transfer-from (principal principal uint) (response uint uint))
 
-    ;; transfer asset - tx-sender must be current owner
+    ;; transfer asset - safer form tx-sender must be current owner
     (transfer (principal uint) (response uint uint))
 
     ;; number of tokens owned by address
@@ -12,6 +14,7 @@
   )
 )
 
+;; Contracts representing assets for sale in marketplace.
 (define-trait tradable-nft-trait
   (
     ;; set terms of sale
