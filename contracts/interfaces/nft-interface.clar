@@ -17,7 +17,9 @@
 ;; Contracts representing assets for sale in marketplace.
 (define-trait tradable-nft-trait
   (
-    ;; set terms of sale
+;; set-sale-data updates the sale type and purchase info for a given NFT. Only the owner can call this method
+;; and doing so make the asset transferable by the recipient - on condition of meeting the conditions of sale
+;; This is equivalent to the setApprovalForAll method in ERC 721 contracts.
     ;; args - 1. sha256 asset hash
     ;;        2. sale-type 0=not for sale, 1=buy now, 2=bidding
     ;;        3. incremet - 0 if sale-type != 2 
