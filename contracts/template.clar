@@ -1,6 +1,6 @@
 ;; Interface definitions
-(impl-trait 'params.platformAddress.nft-interface.transferable-nft-trait)
-(impl-trait 'params.platformAddress.nft-interface.tradable-nft-trait)
+;; (impl-trait 'params.platformAddress.nft-interface.transferable-nft-trait)
+;; (impl-trait 'params.platformAddress.nft-interface.tradable-nft-trait)
 
 ;; Non Fungible Token, modeled after ERC-721 via transferable-nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
@@ -13,6 +13,8 @@
 (define-map my-nft-data ((nft-index uint)) ((asset-hash (buff 32)) (date uint)))
 (define-map sale-data ((nft-index uint)) ((sale-type uint) (increment-stx uint) (reserve-stx uint) (amount-stx uint) (bidding-end-time uint)))
 (define-map my-nft-lookup ((asset-hash (buff 32))) ((nft-index uint)))
+(define-map transfer-map ((nft-index uint)) ((transfer-count uint)))
+(define-map transfer-history-map ((nft-index uint) (transfer-count uint)) ((from principal) (to principal) (sale-type uint) (when uint) (amount uint)))
 
 ;; variables
 (define-data-var administrator principal 'params.contractOwner)
@@ -124,6 +126,9 @@
         (asserts! (> (unwrap! amount amount-not-set) u0) amount-not-set)
         (asserts! (is-eq buyer tx-sender) same-spender-err)
         (asserts! (not (is-eq (unwrap! seller1 seller-not-found) seller)) seller-not-found)
+        (let ((count (inc-transfer-count nft-index)))
+            (add-transfer nft-index (- count u1) seller buyer (unwrap! saleType seller-not-found) u0 (unwrap! amount amount-not-set))
+        )
         (map-set my-nft-data { nft-index: nft-index } { asset-hash: (unwrap! ahash not-found), date: block-height })
         (map-set sale-data { nft-index: nft-index } { amount-stx: u0, bidding-end-time: u0, increment-stx: u0, reserve-stx: u0, sale-type: u0 })
         (stx-transfer? (/ (* (unwrap! amount amount-not-set) (var-get platform-fee)) u100) tx-sender (as-contract tx-sender))
@@ -172,6 +177,18 @@
     (map-get? my-nft-data ((nft-index nft-index)))
 )
 
+(define-read-only (get-token-info-full (nft-index uint))
+    (let 
+        (
+            (the-token-info (map-get? my-nft-data ((nft-index nft-index))))
+            (the-sale-data (map-get? sale-data ((nft-index nft-index))))
+            (the-owner (unwrap-panic (nft-get-owner? my-nft nft-index)))
+            (the-tx-count (default-to u0 (get transfer-count (map-get? transfer-map (tuple (nft-index nft-index))))))
+        )
+        (ok (tuple (token-info the-token-info) (sale-data the-sale-data) (owner the-owner) (transfer-count the-tx-count)))
+    )
+)
+
 (define-read-only (get-index (asset-hash (buff 32)))
     (match (map-get? my-nft-lookup ((asset-hash asset-hash)))
         myIndex
@@ -185,6 +202,15 @@
         mySaleData
         (ok mySaleData)
         not-found
+    )
+)
+
+(define-read-only (get-transfer-count (nft-index uint))
+    (let 
+        (
+            (count (default-to u0 (get transfer-count (map-get? transfer-map (tuple (nft-index nft-index))))))
+        )
+        (ok count)
     )
 )
 
@@ -203,4 +229,22 @@
         (ok true)
         not-allowed
     )
+)
+(define-private (inc-transfer-count (nft-index uint))
+    (let 
+        (
+            (count (default-to u0 (get transfer-count (map-get? transfer-map (tuple (nft-index nft-index))))))
+        )
+        (begin 
+            (map-insert transfer-map { nft-index: nft-index } { transfer-count: count})
+            (+ count u1)
+        )
+    )
+)
+
+(define-private (add-transfer (nft-index uint) (transfer-count uint) (from principal) (to principal) (sale-type uint) (when uint) (amount uint))
+  (if (is-eq to tx-sender)
+    (ok (map-insert transfer-history-map {nft-index: nft-index, transfer-count: transfer-count} ((from from) (to to) (sale-type sale-type) (when when) (amount amount))))
+    not-allowed
+  )
 )

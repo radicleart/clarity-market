@@ -3,14 +3,14 @@
 (define-map app-map ((index int)) ((owner (buff 80)) (app-contract-id (buff 100)) (storage-model int) (status int)))
 (define-data-var app-counter int 0)
 
-(define-constant not-found u100)
-(define-constant not-allowed u101)
-(define-constant illegal-storage u102)
+(define-constant not-found (err u100))
+(define-constant illegal-storage (err u102))
+(define-constant not-allowed (err u101))
 
 ;; -- writers --
 (define-public (transfer-administrator (new-administrator principal))
     (begin
-        (asserts! (is-eq (var-get administrator) contract-caller) (err 1))
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set administrator new-administrator)
         (ok true)))
 
@@ -24,7 +24,7 @@
         (print (var-get app-counter))
         (ok (var-get app-counter))
       )
-      (err illegal-storage)
+      illegal-storage
     )
   )
 )
@@ -37,10 +37,10 @@
       (match (map-get? app-map {index: index})
         myProject 
         (ok (map-set app-map {index: index} ((owner owner) (app-contract-id app-contract-id) (storage-model storage-model) (status 1))))
-        (err not-found)
+        not-found
       )
     )
-      (err not-allowed)
+      not-allowed
     )
   )
 )
@@ -49,7 +49,7 @@
 ;; Get app by index
 (define-read-only (get-app (index int))
   (match (map-get? app-map ((index index)))
-    myProject (ok myProject) (err not-found)
+    myProject (ok myProject) not-found
   )
 )
 (define-read-only (get-app-counter)
