@@ -1,6 +1,6 @@
 ;; Interface definitions
-;; (impl-trait 'params.platformAddress.nft-interface.transferable-nft-trait)
-;; (impl-trait 'params.platformAddress.nft-interface.tradable-nft-trait)
+(impl-trait 'params.platformAddress.nft-interface.transferable-nft-trait)
+(impl-trait 'params.platformAddress.nft-interface.tradable-nft-trait)
 
 ;; Non Fungible Token, modeled after ERC-721 via transferable-nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets

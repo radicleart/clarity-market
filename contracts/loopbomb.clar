@@ -6,7 +6,7 @@
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
 ;; NFT are identified by nft-index (uint) which is tied via a reverse lookup to a real world
 ;; asset hash - SHA 256 32 byte value. The Asset Hash is used to tie arbitrary real world
-;; data to the NFT 
+;; data to the NFT
 (define-non-fungible-token my-nft uint)
 
 ;; data structures
