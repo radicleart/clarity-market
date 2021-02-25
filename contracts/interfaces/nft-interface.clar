@@ -36,11 +36,8 @@
 ;; Real world asset.
 (define-trait traceable-nft-trait
   (
-;; A traceable trait requires NFTs to expose a create methodwhich links a SHA256 hash to the
-;; token-id
-    (create ((buff 32) uint uint uint uint uint) (response uint uint))
 ;; Indicates the number of transfers for the given asset
     ;; args - 1. nft-index
-    (get-transfer-count (uint) (response uint uint))
+    (get-geo-coords (uint) (response uint uint))
   )
 )
