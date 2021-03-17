@@ -2,14 +2,7 @@
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.transferable-nft-trait)
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
 
-;; Non Fungible Token, modeled after ERC-721 via transferable-nft-trait
-;; Note this is a basic implementation - no support yet for setting approvals for assets
-;; NFT are identified by nft-index (uint) which is tied via a reverse lookup to a real world
-;; asset hash - SHA 256 32 byte value. The Asset Hash is used to tie arbitrary real world
-;; data to the NFT
-(define-non-fungible-token my-nft uint)
-
-;; variables
+;; contract variables
 (define-data-var administrator principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
 (define-data-var mint-price uint u10000)
 (define-data-var base-token-uri (buff 100) 0x68747470733a2f2f6c6f6f70626f6d622e7269736964696f2e636f6d2f696e6465782f76312f61737365742f)
@@ -19,6 +12,13 @@
 ;; constants
 (define-constant token-name "loopbomb")
 (define-constant token-symbol "LOOP")
+
+;; Non Fungible Token, modeled after ERC-721 via transferable-nft-trait
+;; Note this is a basic implementation - no support yet for setting approvals for assets
+;; NFT are identified by nft-index (uint) which is tied via a reverse lookup to a real world
+;; asset hash - SHA 256 32 byte value. The Asset Hash is used to tie arbitrary real world
+;; data to the NFT
+(define-non-fungible-token my-nft uint)
 
 ;; data structures
 (define-map beneficiaries {nft-index: uint} {addresses: (list 10 principal), shares: (list 10 uint)})
