@@ -5,7 +5,7 @@ describe("counter contract test suite", () => {
   let provider: Provider;
   before(async () => {
     provider = await ProviderRegistry.createProvider();
-    loopbombClient = new Client("SP3GWX3NE58KXHESRYE4DYQ1S31PQJTCRXB3PE9SB.sticks", "sticks", provider);
+    loopbombClient = new Client("SP3GWX3NE58KXHESRYE4DYQ1S31PQJTCRXB3PE9SB.loopbomb", "loopbomb", provider);
   });
   it("should have a valid syntax", async () => {
     await loopbombClient.checkContract();
