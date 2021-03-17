@@ -1,6 +1,6 @@
 ;; application registry for applications  wishing to sell NFTs throug the marketplace
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-map app-map {index: int} {owner: (buff 80), app-contract-id: (buff 100), storage-model: int, status: int})
+(define-map app-map ((index int)) ((owner (buff 80)) (app-contract-id (buff 100)) (storage-model int) (status int)))
 (define-data-var app-counter int 0)
 
 (define-constant not-found (err u100))
@@ -19,7 +19,7 @@
   (begin
     (if (is-storage-allowed storage-model)
       (begin
-        (map-insert app-map {index: (var-get app-counter)} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
+        (map-insert app-map ((index (var-get app-counter))) ((owner owner) (app-contract-id app-contract-id) (storage-model storage-model) (status 0)))
         (var-set app-counter (+ (var-get app-counter) 1))
         (print (var-get app-counter))
         (ok (var-get app-counter))
@@ -36,7 +36,7 @@
     (begin
       (match (map-get? app-map {index: index})
         myProject 
-        (ok (map-set app-map {index: index} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: 1}))
+        (ok (map-set app-map {index: index} ((owner owner) (app-contract-id app-contract-id) (storage-model storage-model) (status 1))))
         not-found
       )
     )
@@ -48,7 +48,7 @@
 ;; -- read only --
 ;; Get app by index
 (define-read-only (get-app (index int))
-  (match (map-get? app-map {index: index})
+  (match (map-get? app-map ((index index)))
     myProject (ok myProject) not-found
   )
 )
@@ -57,7 +57,8 @@
 )
 ;; Get current administrator
 (define-read-only (get-administrator)
-    (var-get administrator))
+  (ok (var-get administrator))
+)
 
 ;; -- private --
 (define-private (is-update-allowed)
