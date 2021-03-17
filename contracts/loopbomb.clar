@@ -16,6 +16,10 @@
 (define-data-var mint-counter uint u0)
 (define-data-var platform-fee uint u5)
 
+;; constants
+(define-constant token-name "loopbomb")
+(define-constant token-symbol "LOOP")
+
 ;; data structures
 (define-map beneficiaries {nft-index: uint} {addresses: (list 10 principal), shares: (list 10 uint)})
 (define-map my-nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
@@ -24,10 +28,6 @@
 (define-map sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint})
 (define-map transfer-map {nft-index: uint} {transfer-count: uint})
 (define-map transfer-history-map {nft-index: uint, transfer-count: uint} {from: principal, to: principal, sale-type: uint, when: uint, amount: uint})
-
-;; constants
-(define-constant token-name "loopbomb")
-(define-constant token-symbol "LOOP")
 
 (define-constant not-allowed (err u10))
 (define-constant not-found (err u11))
@@ -92,7 +92,7 @@
 ;; Note series-original in the case of the original in series is just
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from my-nft-lookup).
-(define-public (mint-token (asset-hash (buff 32)) (max-editions uint))
+(define-public (mint-token (asset-hash (buff 32)) (max-editions uint) (addresses (list 10 principal)) (shares (list 10 uint)))
     (let
         (
             (mintCounter (var-get mint-counter))
@@ -101,12 +101,12 @@
         (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) failed-to-mint-err)
         (asserts! (is-none ahash) asset-not-registered)
 
-            ;; transfer stx if there is enough to pay for mint, otherwith throws an error
+        ;; transfer stx if there is enough to pay for mint, otherwith throws an error
         (map-insert my-nft-data {nft-index: mintCounter} {asset-hash: asset-hash, max-editions: max-editions, edition: u0, date: block-height, series-original: mintCounter})
         (map-insert my-nft-edition-pointer {nft-index: mintCounter} {current-edition: u1})
         (map-insert my-nft-lookup {asset-hash: asset-hash, edition: u0} {nft-index: mintCounter})
 
-        ;; (map-insert beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares})
+        (map-insert beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares})
         ;; finally - mint the NFT and step the counter
         (unwrap! (as-contract
             (stx-transfer? (var-get mint-price) tx-sender (var-get administrator))) failed-to-mint-err)
@@ -191,9 +191,11 @@
         (asserts! (is-some ahash) asset-not-registered)
         (asserts! (is-eq saleType u1) not-approved-to-sell)
         (asserts! (> amount u0) amount-not-set)
+
         (let ((count (inc-transfer-count nft-index)))
             (unwrap! (add-transfer nft-index (- count u1) owner tx-sender saleType u0 amount) failed-to-mint-err)
         )
+
         ;; (map-set my-nft-data { nft-index: nft-index } { asset-hash: (unwrap! ahash not-found),  edition: edition, date: block-height, series-original: nft-index })
         (map-set sale-data { nft-index: nft-index } { amount-stx: u0, bidding-end-time: u0, increment-stx: u0, reserve-stx: u0, sale-type: u0 })
         (unwrap! (stx-transfer? (/ (* amount platformFee) u100) tx-sender (var-get administrator)) failed-to-mint-err)
