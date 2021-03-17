@@ -13,8 +13,7 @@
   "scripts": {
     "test": "mocha",
     "appmap": "mocha 'test/unit/appmap.ts'",
-    "sticks": "mocha 'test/unit/sticks.ts'",
-    "unit-test-loopbomb": "mocha 'test/unit/unit-test-loopbomb.ts'",
+    "loopbomb": "mocha 'test/unit/loopbomb.ts'",
     "iloopbomb": "mocha 'test/integration/loopbomb.ts'",
     "iappmap": "mocha 'test/integration/appmap.ts'",
     "isticks": "mocha 'test/integration/sticks.ts'",
