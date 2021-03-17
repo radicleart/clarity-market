@@ -58,7 +58,7 @@ async function callContract(nonce, sender: string, contractName: string, functio
 
 describe("Deploying contracts", () => {
   it("should deploy appmap and projects and wait for confirmation", async () => {
-    let result: any = await deployContract("appmap", new BigNum(0));
+    let result: any = await deployContract("sticks", new BigNum(0));
     assert.isNotOk(result.error, "Transaction succeeded");
     console.log(result.error)
   });

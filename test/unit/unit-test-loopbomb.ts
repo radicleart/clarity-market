@@ -1,9 +1,7 @@
-import { Client, Provider, ProviderRegistry } from "@blockstack/clarity";
-import { assert } from "chai";
-import { readFromContract, execMethod } from "./query-utils"
+import { Client, Provider, ProviderRegistry, Result } from "@blockstack/clarity";
 import * as fs from "fs";
 
-describe("appmap tutorial test suite", () => {
+describe("loopbomb tutorial test suite", () => {
 
   const contractKeys = JSON.parse(fs.readFileSync("./keys-contract-base.json").toString());
   const project1Keys = JSON.parse(fs.readFileSync("./keys-project1.json").toString());
@@ -17,30 +15,33 @@ describe("appmap tutorial test suite", () => {
 
   before(async () => {
     provider = await ProviderRegistry.createProvider();
-    client = new Client(contractKey + ".appmap", "appmap", provider);
+    client = new Client(contractKey + ".loopbomb", "unit-test-loopbomb", provider);
   });
 
   describe("Deploying an instance of the contract", () => {
     it("should have a valid syntax", async () => {
+      console.log("=========================================================================");
+      console.log("Unit testing a contract with stx-get-balance isn't possible!!");
+      console.log("=========================================================================");
       await client.checkContract();
-      await client.deployContract();
+      // await client.deployContract();
     });
   });
 
   describe("Project map tests", () => {
     
+    /**
     it("should return the admin address", async () => {
-      const result = await readFromContract(client, "get-administrator", [], false);
+      const result = await readFromContract(client, "get-administrator", [], true);
       assert.isOk(result.rawResult.indexOf("ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW") > -1);
     })
-    
     it("should return initial value of 0 for app-counter", async () => {
       const result = await readFromContract(client, "get-app-counter", [], true);
       assert.isOk(result.rawResult.indexOf("(ok 0)") > -1);
     })
     
     it("should indicate zero apps", async () => {
-      const result = await readFromContract(client, "get-app-counter", [], false);
+      const result = await readFromContract(client, "get-app-counter", [], true);
       assert.isOk(result.rawResult.indexOf("(ok 0)") > -1);
     })
     
@@ -86,7 +87,7 @@ describe("appmap tutorial test suite", () => {
     
     it("should be able to get apps from map", async () => {
       let result = await readFromContract(client, "get-app", ["0"], true);
-      assert.isOk(result.rawResult.indexOf('(ok (tuple (owner 0x6d696a6f636f2e69642e626c6f636b737461636b) (appId 0x53544d59413545414e57364330484e5331533537565835324d3042373935484846444257325842452e6d792d70726f6a656374) (status 0) (storage-model -1)))') > -1, "returns error: not found");
+      assert.isOk(result.rawResult.indexOf('(ok (tuple (owner 0x6d696a6f636f2e69642e626c6f636b737461636b) (projectId 0x53544d59413545414e57364330484e5331533537565835324d3042373935484846444257325842452e6d792d70726f6a656374) (status 0) (storage-model -1)))') > -1, "returns error: not found");
       assert.equal(result.strings.length, 2);
 
       result = await readFromContract(client, "get-app", ["1"], true);
@@ -110,10 +111,11 @@ describe("appmap tutorial test suite", () => {
       txreceive = await execMethod(client, project1Key, "set-app-live", [  "0", "\"mijoco.id.blockstack\"", "\"" + project1Key + ".my-gaia-project\"",  "1"], false);
       assert.isOk(txreceive.success, "Transaction succeeded");
     })
+     **/
 
     /**
     it("should have a map of apps of length 2", async () => {
-      axios.post('http://localhost:20443/v2/map_entry/' + contractKey + "/appmap/app-map").then((response) => {
+      axios.post('http://localhost:20443/v2/map_entry/' + contractKey + "/loopbomb/app-map").then((response) => {
         console.log(response.data)
       }).catch((error) => {
         assert.isTrue(error.response.status === 200, "Call failed");

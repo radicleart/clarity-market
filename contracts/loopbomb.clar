@@ -1,6 +1,6 @@
 ;; Interface definitions
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.transferable-nft-trait)
-(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
+;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
 
 ;; Non Fungible Token, modeled after ERC-721 via transferable-nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
@@ -10,12 +10,12 @@
 (define-non-fungible-token my-nft uint)
 
 ;; data structures
-(define-map my-nft-data ((nft-index uint)) ((asset-hash (buff 32)) (date uint)))
-(define-map sale-data ((nft-index uint)) ((sale-type uint) (increment-stx uint) (reserve-stx uint) (amount-stx uint) (bidding-end-time uint)))
-(define-map beneficiaries ((nft-index uint)) ((royalties (list 10 { address: principal, amount: uint}))))
-(define-map my-nft-lookup ((asset-hash (buff 32))) ((nft-index uint)))
-(define-map transfer-map ((nft-index uint)) ((transfer-count uint)))
-(define-map transfer-history-map ((nft-index uint) (transfer-count uint)) ((from principal) (to principal) (sale-type uint) (when uint) (amount uint)))
+(define-map my-nft-data {nft-index: uint} {asset-hash: (buff 32), date: uint})
+(define-map sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint})
+(define-map beneficiaries {nft-index: uint} {royalties: (list 10 { address: principal, amount: uint})})
+(define-map my-nft-lookup {asset-hash: (buff 32)} {nft-index: uint})
+(define-map transfer-map {nft-index: uint} {transfer-count: uint})
+(define-map transfer-history-map {nft-index: uint, transfer-count: uint} {from: principal, to: principal, sale-type: uint, when: uint, amount: uint})
 
 ;; variables
 (define-data-var administrator principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
@@ -85,15 +85,15 @@
 ;; provides a reverse lookup based on the asset hash - this allows tokens to be located
 ;; from just a knowledge of the original asset.
 ;; 4. allows a list of beneficiaries defined against the new token.
-(define-public (mint-token (asset-hash (buff 32)) (royalties (list 10 {address: principal, amount: uint})))
+(define-public (mint-token (asset-hash (buff 32)))
     (begin
         (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) failed-to-mint-err)
         (as-contract
             (stx-transfer? (var-get mint-price) tx-sender (var-get administrator))) ;; transfer stx if there is enough to pay for mint, otherwith throws an error
         (nft-mint? my-nft (var-get mint-counter) tx-sender)
-        (map-insert my-nft-data ((nft-index (var-get mint-counter))) ((asset-hash asset-hash) (date block-height)))
-        (map-insert my-nft-lookup ((asset-hash asset-hash)) ((nft-index (var-get mint-counter))))
-        (map-insert beneficiaries ((nft-index (var-get mint-counter))) ((royalties royalties)))
+        (map-insert my-nft-data {nft-index: (var-get mint-counter)} {asset-hash: asset-hash, date: block-height})
+        (map-insert my-nft-lookup {asset-hash: asset-hash} {nft-index: (var-get mint-counter)})
+        ;;(map-insert beneficiaries ((nft-index (var-get mint-counter))) ((royalties royalties)))
         (var-set mint-counter (+ (var-get mint-counter) u1))
         (ok (var-get mint-counter))
     )
@@ -105,11 +105,11 @@
 (define-public (set-sale-data (asset-hash (buff 32)) (sale-type uint) (increment-stx uint) (reserve-stx uint) (amount-stx uint) (bidding-end-time uint))
     (let
         (
-            (myIndex (unwrap! (get nft-index (map-get? my-nft-lookup ((asset-hash asset-hash)))) not-found))
+            (myIndex (unwrap! (get nft-index (map-get? my-nft-lookup {asset-hash: asset-hash})) not-found))
         )
         (if
             (is-ok (is-nft-owner myIndex))
-            (if (map-set sale-data {nft-index: myIndex} ((sale-type sale-type) (increment-stx increment-stx) (reserve-stx reserve-stx) (amount-stx amount-stx) (bidding-end-time bidding-end-time)))
+            (if (map-set sale-data {nft-index: myIndex} {sale-type: sale-type, increment-stx: increment-stx, reserve-stx: reserve-stx, amount-stx: amount-stx, bidding-end-time: bidding-end-time})
                 (ok myIndex) not-allowed
             )
             not-allowed
@@ -179,7 +179,7 @@
     (var-get mint-price))
 
 (define-read-only (get-token-info (nft-index uint))
-    (map-get? my-nft-data ((nft-index nft-index)))
+    (map-get? my-nft-data {nft-index: nft-index})
 )
 
 (define-read-only (get-token-info-full (nft-index uint))
@@ -249,7 +249,7 @@
 
 (define-private (add-transfer (nft-index uint) (transfer-count uint) (from principal) (to principal) (sale-type uint) (when uint) (amount uint))
   (if (is-eq to tx-sender)
-    (ok (map-insert transfer-history-map {nft-index: nft-index, transfer-count: transfer-count} ((from from) (to to) (sale-type sale-type) (when when) (amount amount))))
+    (ok (map-insert transfer-history-map {nft-index: nft-index, transfer-count: transfer-count} {from: from, to: to, sale-type: sale-type, when: when, amount: amount}))
     not-allowed
   )
 )
