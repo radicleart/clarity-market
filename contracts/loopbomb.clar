@@ -139,6 +139,7 @@
             (editionCounter (unwrap! (get current-edition (map-get? my-nft-edition-pointer {nft-index: nft-index})) failed-to-mint-err))
             (saleType (unwrap! (get sale-type (map-get? sale-data {nft-index: nft-index})) amount-not-set))
             (amount (unwrap! (get amount-stx (map-get? sale-data {nft-index: nft-index})) amount-not-set))
+            (currentAmount (get amount (map-get? my-nft-high-bid-pointer {nft-index: nft-index})))
             (increment (unwrap! (get increment-stx (map-get? sale-data {nft-index: nft-index})) amount-not-set))
             (maxEditions (unwrap! (get max-editions (map-get? my-nft-data {nft-index: nft-index})) failed-to-mint-err))
         )
@@ -151,12 +152,13 @@
         ;; saleType=1 -> buy now - nextBidAmount must equal buy now amount-stx
         ;; saleType=2 -> bidding - nextBidAmount must equal amount-stx plus the increment
         ;; throws - user is not expecting to pay this amount.
-        (asserts! 
-            (or 
-                (and (is-eq saleType u1) (is-eq nextBidAmount amount)) 
-                (and (is-eq saleType u2) (is-eq nextBidAmount (+ amount increment)))
+        (if (is-eq saleType u1)
+            (asserts! (is-eq nextBidAmount amount) user-amount-different)
+            (if (is-some currentAmount)
+                (asserts! (is-eq nextBidAmount (+ (unwrap! currentAmount failed-to-mint-err) increment)) user-amount-different)
+                (asserts! (is-eq nextBidAmount (+ amount increment)) user-amount-different)
             )
-            user-amount-different)
+        )
 
         ;; check the buyer/bidder has enough funds..
         (asserts! (> (stx-get-balance tx-sender) nextBidAmount) failed-to-mint-err)
@@ -186,6 +188,7 @@
 ;; set-sale-data updates the sale type and purchase info for a given NFT. Only the owner can call this method
 ;; and doing so make the asset transferable by the recipient - on condition of meeting the conditions of sale
 ;; This is equivalent to the setApprovalForAll method in ERC 721 contracts.
+;; Assumption being made here is that all editions have the same sale data associated
 (define-public (set-sale-data (myIndex uint) (sale-type uint) (increment-stx uint) (reserve-stx uint) (amount-stx uint) (bidding-end-time uint) (auction-id uint))
     (begin
         (if
@@ -200,28 +203,29 @@
 
 ;; close-bidding
 ;; nft-index: index of the NFT
-;; close-type: type of closure, values are;
+;; closeType: type of closure, values are;
 ;;             1 = buy now closure - uses the last bid (thats held in escrow) to transfer the item to the bidder and to pay royalties
 ;;             2 = refund closure - the last bid gets refunded and sale is closed. The item ownership does not change.
 ;; Note bidding can also be closed automatically - if a bid is received after the bidding end time.
 ;; In the context of a 'live auction' items have no end time and are closed by the 'auctioneer'.
-(define-public (close-bidding (nft-index uint) (close-type uint))
+(define-public (close-bidding (nft-index uint) (closeType uint))
     (let
         (
+            (saleType (unwrap! (get sale-type (map-get? sale-data {nft-index: nft-index})) amount-not-set))
             (currentBidder (get bidder (map-get? my-nft-high-bid-pointer {nft-index: nft-index})))
             (currentBidIndex (get bid-index (map-get? my-nft-high-bid-pointer {nft-index: nft-index})))
             (currentAmount (get amount (map-get? my-nft-high-bid-pointer {nft-index: nft-index})))
             (auctionId (unwrap! (get auction-id (map-get? sale-data {nft-index: nft-index})) failed-to-close-1))
         )
-        (asserts! (or (is-eq close-type u1) (is-eq close-type u2)) failed-to-close-1)
+        (asserts! (or (is-eq closeType u1) (is-eq closeType u2)) failed-to-close-1)
 
         ;; Check for a current bid - if none then just reset the sale data to not selling
         (if (is-none currentAmount)
             (map-set sale-data { nft-index: nft-index } { auction-id: auctionId, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
-            (if (close-type u1)
+            (if (is-eq closeType u1)
                 (begin
                     ;; buy now closure - pay and transfer ownership
-                    (is-ok (payment-split nft-index))
+                    (unwrap! (payment-split nft-index) failed-to-close-2)
                     (unwrap! (nft-transfer? my-nft nft-index (unwrap! currentBidder failed-to-close-3) tx-sender) failed-to-close-2)
                 )
                 (begin
