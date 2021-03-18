@@ -22,12 +22,12 @@
 
 ;; data structures
 (define-map beneficiaries {nft-index: uint} {addresses: (list 10 principal), shares: (list 10 uint)})
-(define-map my-nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
 (define-map my-nft-data {nft-index: uint} {asset-hash: (buff 32), max-editions: uint, edition: uint, date: uint, series-original: uint})
 (define-map my-nft-edition-pointer {nft-index: uint} {current-edition: uint})
 (define-map sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint})
 (define-map transfer-map {nft-index: uint} {transfer-count: uint})
 (define-map transfer-history-map {nft-index: uint, transfer-count: uint} {from: principal, to: principal, sale-type: uint, when: uint, amount: uint})
+(define-map my-nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
 
 (define-constant not-allowed (err u10))
 (define-constant not-found (err u11))
