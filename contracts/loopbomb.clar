@@ -21,10 +21,10 @@
 (define-non-fungible-token my-nft uint)
 
 ;; data structures
-(define-map beneficiaries {nft-index: uint} {addresses: (list 10 principal), shares: (list 10 uint)})
+(define-map beneficiaries {nft-index: uint} { addresses: (list 10 principal), shares: (list 10 uint) })
+(define-map my-nft-edition-pointer {nft-index: uint} {current-edition: uint})
 (define-map my-nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
 (define-map my-nft-data {nft-index: uint} {asset-hash: (buff 32), max-editions: uint, edition: uint, date: uint, series-original: uint})
-(define-map my-nft-edition-pointer {nft-index: uint} {current-edition: uint})
 (define-map my-nft-bidding {nft-index: uint} {bid-index: uint, bidder: principal, amount: uint, when-bid: uint, auction-id: uint})
 (define-map my-nft-bid-history {nft-index: uint, bid-index: uint} {bidder: principal, amount: uint, when-bid: uint, auction-id: uint})
 (define-map sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint, auction-id: uint})
@@ -111,7 +111,7 @@
         (map-insert my-nft-edition-pointer {nft-index: mintCounter} {current-edition: u1})
         (map-insert my-nft-lookup {asset-hash: asset-hash, edition: u0} {nft-index: mintCounter})
 
-        (map-insert beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares})
+        ;;(map-insert beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares})
         ;; finally - mint the NFT and step the counter
         (unwrap! (as-contract
             (stx-transfer? (var-get mint-price) tx-sender (var-get administrator))) failed-to-stx-transfer)
