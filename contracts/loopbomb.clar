@@ -47,6 +47,7 @@
 (define-constant failed-to-close-1 (err u23))
 (define-constant failed-to-close-2 (err u24))
 (define-constant failed-to-close-3 (err u24))
+(define-constant cant-pay-mint-price (err u25))
 
 ;; public methods
 ;; --------------
@@ -106,7 +107,7 @@
             (mintCounter (var-get mint-counter))
             (ahash (get asset-hash (map-get? my-nft-data {nft-index: (var-get mint-counter)})))
         )
-        (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) failed-to-mint-err)
+        (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
         (asserts! (is-none ahash) asset-not-registered)
 
         ;; transfer stx if there is enough to pay for mint, otherwith throws an error
@@ -116,8 +117,13 @@
 
         ;;(map-insert beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares})
         ;; finally - mint the NFT and step the counter
-        (unwrap! (as-contract
-            (stx-transfer? (var-get mint-price) tx-sender (var-get administrator))) failed-to-stx-transfer)
+        (if (is-eq tx-sender (var-get administrator))
+            (print "tx-sender is contract - skipping mint price")
+            (begin 
+                (unwrap! (stx-transfer? (var-get mint-price) tx-sender (var-get administrator)) failed-to-stx-transfer)
+                (print "tx-sender paid mint price")
+            )
+        )
         (unwrap! (nft-mint? my-nft mintCounter tx-sender) failed-to-mint-err)
         (var-set mint-counter (+ mintCounter u1))
         (ok mintCounter)
@@ -458,6 +464,7 @@
             (owner (unwrap! (nft-get-owner? my-nft nft-index) seller-not-found))
         )
         (asserts! (or (is-eq saleType u1) (is-eq saleType u2)) not-approved-to-sell)
+        ;; is there a way to also pass nft-index in this map function? (ok (map pay-royalty addresses shares)))
         (if (>= (len addresses) u1)
             (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u0) not-allowed) (unwrap! (element-at shares u0) not-allowed)) not-allowed)
             (unwrap! (ok true) not-allowed)

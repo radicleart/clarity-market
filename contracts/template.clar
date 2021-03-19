@@ -46,6 +46,7 @@
 (define-constant failed-to-close-1 (err u23))
 (define-constant failed-to-close-2 (err u24))
 (define-constant failed-to-close-3 (err u24))
+(define-constant cant-pay-mint-price (err u25))
 
 ;; public methods
 ;; --------------
@@ -105,7 +106,7 @@
             (mintCounter (var-get mint-counter))
             (ahash (get asset-hash (map-get? my-nft-data {nft-index: (var-get mint-counter)})))
         )
-        (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) failed-to-mint-err)
+        (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
         (asserts! (is-none ahash) asset-not-registered)
 
         ;; transfer stx if there is enough to pay for mint, otherwith throws an error
