@@ -42,7 +42,7 @@ describe("Loopbomb contract test suite", () => {
 
     it("Should return the administrator address", async () => {
       const result = await readFromContract(loopbombClient, "get-administrator", [], false)
-      assert.isOk(result.rawResult == "(ok ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)")
+      assert.isOk(result.rawResult == "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW")
     });
 
     it("Should return the initial mint-counter", async () => {
@@ -52,7 +52,7 @@ describe("Loopbomb contract test suite", () => {
 
     it("Should return the token name", async () => {
       const result = await readFromContract(loopbombClient, "get-token-name", [], false)
-      assert.isOk(result.rawResult == "(ok loopbomb)")
+      assert.isOk(result.rawResult == "(ok \"loopbomb\")")
     });
 
     it("Should only be able to modify the mint price if we are an administartor", async () => {
@@ -67,19 +67,18 @@ describe("Loopbomb contract test suite", () => {
   describe("Minting a first NFT", () => {
 
     it("Should be able to mint a first NFT as anyone", async () => {
-      const args = ["cdfd455d3dd114ad1c74a79405ea5668c1ba13d24b9eab54607444df213bf0da",
+      const args = ["123456789111213141516171872829457",
                    "u5",
-                   "list " + project1Key + " " + project2Key,
-                   "list 5000 5000"]
+                   project1Key + " " + project2Key,
+                   "5000 5000"]
       const txresult = await execMethod(loopbombClient, 
                                       project2Key, 
                                       "mint-token", 
                                       args,
-                                      false)
+                                      true)
       assert.isOk(txresult.success)
     });
-  })
-
+  });
 
   after(async () => {
     await provider.close();
