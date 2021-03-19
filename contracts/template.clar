@@ -47,6 +47,7 @@
 (define-constant failed-to-close-2 (err u24))
 (define-constant failed-to-close-3 (err u24))
 (define-constant cant-pay-mint-price (err u25))
+(define-constant editions-error (err u26))
 
 ;; public methods
 ;; --------------
@@ -106,18 +107,29 @@
             (mintCounter (var-get mint-counter))
             (ahash (get asset-hash (map-get? my-nft-data {nft-index: (var-get mint-counter)})))
         )
+        (asserts! (> max-editions u0) editions-error)
         (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
         (asserts! (is-none ahash) asset-not-registered)
 
-        ;; transfer stx if there is enough to pay for mint, otherwith throws an error
+        ;; Note: series original is really for later editions to refer back to this one - this one IS the series original
         (map-insert my-nft-data {nft-index: mintCounter} {asset-hash: asset-hash, max-editions: max-editions, edition: u0, date: block-height, series-original: mintCounter})
+        
+        ;; Note editions are 1 based and <= max-editions - the one minted here is #1
         (map-insert my-nft-edition-pointer {nft-index: mintCounter} {current-edition: u1})
-        (map-insert my-nft-lookup {asset-hash: asset-hash, edition: u0} {nft-index: mintCounter})
+        
+        (map-insert my-nft-lookup {asset-hash: asset-hash, edition: u1} {nft-index: mintCounter})
 
-        ;;(map-insert beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares})
+        ;; The payment is split between the beneficiaries with share > 0 they are set per edition
+        (map-insert beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares})
+
         ;; finally - mint the NFT and step the counter
-        (unwrap! (as-contract
-            (stx-transfer? (var-get mint-price) tx-sender (var-get administrator))) failed-to-stx-transfer)
+        (if (is-eq tx-sender (var-get administrator))
+            (print "tx-sender is contract - skipping mint price")
+            (begin 
+                (unwrap! (stx-transfer? (var-get mint-price) tx-sender (var-get administrator)) failed-to-stx-transfer)
+                (print "tx-sender paid mint price")
+            )
+        )
         (unwrap! (nft-mint? my-nft mintCounter tx-sender) failed-to-mint-err)
         (var-set mint-counter (+ mintCounter u1))
         (ok mintCounter)
@@ -136,11 +148,11 @@
             ;; before we start... check the hash corresponds to a minted asset
             (ahash (unwrap! (get asset-hash (map-get? my-nft-data {nft-index: nft-index})) failed-to-mint-err))
             (mintCounter (var-get mint-counter))
-            (editionCounter (unwrap! (get current-edition (map-get? my-nft-edition-pointer {nft-index: nft-index})) failed-to-mint-err))
             (saleType (unwrap! (get sale-type (map-get? sale-data {nft-index: nft-index})) amount-not-set))
             (amount (unwrap! (get amount-stx (map-get? sale-data {nft-index: nft-index})) amount-not-set))
             (currentAmount (get amount (map-get? my-nft-high-bid-pointer {nft-index: nft-index})))
             (increment (unwrap! (get increment-stx (map-get? sale-data {nft-index: nft-index})) amount-not-set))
+            (editionCounter (unwrap! (get current-edition (map-get? my-nft-edition-pointer {nft-index: nft-index})) failed-to-mint-err))
             (maxEditions (unwrap! (get max-editions (map-get? my-nft-data {nft-index: nft-index})) failed-to-mint-err))
         )
         (asserts! (or (is-eq saleType u1) (is-eq saleType u2)) not-approved-to-sell)
@@ -170,7 +182,7 @@
         (map-insert my-nft-data {nft-index: mintCounter} {asset-hash: ahash, max-editions: u0, edition: editionCounter, date: block-height, series-original: nft-index})
 
         ;; put the nft index into the list of editions in the look up map
-        (map-insert my-nft-lookup {asset-hash: ahash, edition: editionCounter} {nft-index: mintCounter})
+        (map-insert my-nft-lookup {asset-hash: ahash, edition: (+ editionCounter u1)} {nft-index: mintCounter})
 
         ;; mint the NFT and update the counter for the next..
         (unwrap! (nft-mint? my-nft mintCounter tx-sender) failed-to-mint-err)
@@ -306,27 +318,48 @@
 (define-read-only (get-mint-price)
     (var-get mint-price))
 
-(define-read-only (get-token-info (nft-index uint))
-    (map-get? my-nft-data {nft-index: nft-index})
+(define-read-only (get-token-by-index (nftIndex uint))
+    (ok (get-all-data nftIndex))
+    ;;(let
+    ;;    (
+    ;;        (the-token-info (map-get? my-nft-data {nft-index: nft-index}))
+    ;;        (the-sale-data (map-get? sale-data {nft-index: nft-index}))
+    ;;        (the-owner (unwrap-panic (nft-get-owner? my-nft nft-index)))
+    ;;        (the-tx-count (default-to u0 (get transfer-count (map-get? transfer-map (tuple (nft-index nft-index))))))
+    ;;    )
+    ;;    (ok (tuple (token-info the-token-info) (sale-data the-sale-data) (owner the-owner) (transfer-count the-tx-count)))
+    ;;)
 )
 
-(define-read-only (get-token-info-full (nft-index uint))
+;; Get the edition from a knowledge of the #1 edition and the specific edition number
+(define-read-only (get-edition-by-hash (asset-hash (buff 32)) (edition uint))
     (let
         (
-            (the-token-info (map-get? my-nft-data {nft-index: nft-index}))
-            (the-sale-data (map-get? sale-data {nft-index: nft-index}))
-            (the-owner (unwrap-panic (nft-get-owner? my-nft nft-index)))
-            (the-tx-count (default-to u0 (get transfer-count (map-get? transfer-map (tuple (nft-index nft-index))))))
+            (nftIndex (unwrap! (get nft-index (map-get? my-nft-lookup {asset-hash: asset-hash, edition: edition})) amount-not-set))
         )
-        (ok (tuple (token-info the-token-info) (sale-data the-sale-data) (owner the-owner) (transfer-count the-tx-count)))
+        (ok (get-all-data nftIndex))
     )
 )
 
-(define-read-only (get-index (asset-hash (buff 32)))
-    (match (map-get? my-nft-lookup {asset-hash: asset-hash, edition: u0})
-        indices
-        (ok (get nft-index indices))
-        not-found
+
+(define-read-only (get-token-by-hash (asset-hash (buff 32)))
+    (let
+        (
+            (nftIndex (unwrap! (get nft-index (map-get? my-nft-lookup {asset-hash: asset-hash, edition: u1})) amount-not-set))
+        )
+        (ok (get-all-data nftIndex))
+    )
+)
+
+(define-private (get-all-data (nftIndex uint))
+    (let
+        (
+            (the-token-info (map-get? my-nft-data {nft-index: nftIndex}))
+            (the-sale-data (map-get? sale-data {nft-index: nftIndex}))
+            (the-owner (unwrap-panic (nft-get-owner? my-nft nftIndex)))
+            (the-tx-count (default-to u0 (get transfer-count (map-get? transfer-map (tuple (nft-index nftIndex))))))
+        )
+        (ok (tuple (token-info the-token-info) (sale-data the-sale-data) (owner the-owner) (transfer-count the-tx-count)))
     )
 )
 
@@ -458,6 +491,7 @@
             (owner (unwrap! (nft-get-owner? my-nft nft-index) seller-not-found))
         )
         (asserts! (or (is-eq saleType u1) (is-eq saleType u2)) not-approved-to-sell)
+        ;; is there a way to also pass nft-index in this map function? (ok (map pay-royalty addresses shares)))
         (if (>= (len addresses) u1)
             (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u0) not-allowed) (unwrap! (element-at shares u0) not-allowed)) not-allowed)
             (unwrap! (ok true) not-allowed)
