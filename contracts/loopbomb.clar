@@ -1,6 +1,6 @@
 ;; Interface definitions
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.transferable-nft-trait)
-;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
+(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
@@ -35,7 +35,7 @@
 ;;       b) number of offers made (0 based index)  
 ;;       c) number of bids made (0 based index)  
 (define-map nft-offer-counter {nft-index: uint} {offer-counter: uint, sale-cycle: uint})
-(define-map nft-edition-counter {nft-index: uint} {edition-counter: uint, sale-cycle: uint})
+(define-map nft-edition-counter {nft-index: uint} {edition-counter: uint})
 (define-map nft-high-bid-counter {nft-index: uint} {high-bid-counter: uint, bidder: principal, amount: uint, when-bid: uint, sale-cycle: uint})
 (define-map nft-transfer-counter {nft-index: uint} {transfer-counter: uint})
 
@@ -150,7 +150,7 @@
         (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, max-editions: max-editions, edition: u1, date: block-height, series-original: mintCounter})
         
         ;; Note editions are 1 based and <= max-editions - the one minted here is #1
-        (map-insert nft-edition-counter {nft-index: mintCounter} {sale-cycle: u1, edition-counter: u1})
+        (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u1})
         
         ;; By default we accept offers - sale type can be changed via the UI.
         (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u3, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
@@ -181,7 +181,6 @@
             (ahash (unwrap! (get asset-hash (map-get? nft-data {nft-index: nft-index})) failed-to-mint-err))
             (mintCounter (var-get mint-counter))
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
             (amount (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
             (currentAmount (get amount (map-get? nft-high-bid-counter {nft-index: nft-index})))
             (increment (unwrap! (get increment-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
@@ -191,7 +190,7 @@
         (asserts! (or (is-eq saleType u1) (is-eq saleType u2)) not-approved-to-sell)
         (asserts! (is-none (get nft-index (map-get? nft-lookup {asset-hash: ahash, edition: editionCounter}))) failed-to-mint-err)
         (asserts! (> editionCounter u0) edition-counter-error)
-        (asserts! (<= editionCounter maxEditions) edition-limit-reached)
+        (asserts! (< editionCounter maxEditions) edition-limit-reached)
         (asserts! (> (stx-get-balance tx-sender) amount) failed-to-mint-err)
         
         ;; saleType=1 -> buy now - nextBidAmount must equal buy now amount-stx
@@ -209,13 +208,16 @@
         (asserts! (> (stx-get-balance tx-sender) nextBidAmount) failed-to-mint-err)
 
         ;; set the edition-counter counter to next edition
-        (map-set nft-edition-counter {nft-index: nft-index} {sale-cycle: saleCycleIndex, edition-counter: (+ editionCounter u1)})
+        (map-set nft-edition-counter {nft-index: nft-index} {edition-counter: (+ editionCounter u1)})
 
         ;; set max editions to zero and edition to current edition counter to indicate this is an edition
         (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, max-editions: u0, edition: editionCounter, date: block-height, series-original: nft-index})
 
         ;; put the nft index into the list of editions in the look up map
         (map-insert nft-lookup {asset-hash: ahash, edition: (+ editionCounter u1)} {nft-index: mintCounter})
+
+        ;; By default we accept offers - sale type can be changed via the UI.
+        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u3, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
 
         ;; mint the NFT and update the counter for the next..
         (unwrap! (nft-mint? my-nft mintCounter tx-sender) failed-to-mint-err)
