@@ -471,7 +471,7 @@
                     (unwrap! (last-bid nft-index nextBidAmount (unwrap! currentBidIndex failed-to-stx-transfer) whenBid saleCycle) failed-to-stx-transfer)
                 )
             )
-            (if (and (is-none currentBidIndex) (< block-time bidding-end-time))
+            (if (is-none currentBidIndex)
                 ;; only place bid if block time is less than end time
                 (unwrap! (first-bid nft-index nextBidAmount whenBid saleCycle) failed-to-stx-transfer)
                 (begin 
