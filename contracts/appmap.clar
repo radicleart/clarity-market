@@ -48,16 +48,29 @@
 ;; -- read only --
 ;; Get app by index
 (define-read-only (get-app (index int))
-  (match (map-get? app-map {index: index})
-    myProject (ok myProject) not-found
-  )
+    (match (map-get? app-map {index: index})
+        myProject (ok myProject) not-found
+    )
 )
 (define-read-only (get-app-counter)
-  (ok (var-get app-counter))
+    (ok (var-get app-counter))
 )
 ;; Get current administrator
 (define-read-only (get-administrator)
-  (ok (var-get administrator))
+    (ok (var-get administrator))
+)
+(define-read-only (get-contract-data)
+    (let
+        (
+            (the-app-counter    (var-get app-counter))
+            (the-administrator  (var-get administrator))
+        )
+        (ok (tuple 
+                (appCounter the-app-counter)
+                (administrator the-administrator)
+            )
+        )
+    )
 )
 
 ;; -- private --
