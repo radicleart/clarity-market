@@ -1,6 +1,6 @@
 ;; Interface definitions
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.transferable-nft-trait)
-;;(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
+(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
@@ -387,11 +387,17 @@
         (ok (tuple  (offerCounter the-offer-counter) 
                     (bidCounter the-high-bid-counter) 
                     (editionCounter the-edition-counter) 
+                    (transferCounter the-transfer-counter)
                     (nftIndex nftIndex) 
                     (tokenInfo the-token-info) 
                     (saleData the-sale-data)
+                    (bidHistory the-bid-history)
+                    (transferMap the-transfer-map)
+                    (transferHistoryMap the-transfer-history-map)
+                    (offers the-offers)
                     (owner the-owner) 
-                    (transferCounter the-transfer-counter)))
+            )
+        )
     )
 )
 
