@@ -21,7 +21,7 @@
 
 ;; data structures
 (define-map nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
-(define-map nft-data {nft-index: uint} {asset-hash: (buff 32), max-editions: uint, edition: uint, date: uint, series-original: uint})
+(define-map nft-data {nft-index: uint} {asset-hash: (buff 32), gaia-username: (buff 32), max-editions: uint, edition: uint, date: uint, series-original: uint})
 (define-map nft-sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint, sale-cycle-index: uint})
 (define-map nft-beneficiaries {nft-index: uint} { addresses: (list 10 principal), shares: (list 10 uint) })
 ;; Phase III ? -- (define-map my-catalogue {nft-index: uint} { auction-id: uint })
@@ -134,7 +134,7 @@
 ;; Note series-original in the case of the original in series is just
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
-(define-public (mint-token (asset-hash (buff 32)) (max-editions uint) (addresses (list 10 principal)) (shares (list 10 uint)))
+(define-public (mint-token (asset-hash (buff 32)) (gaia-username (buff 32)) (max-editions uint) (addresses (list 10 principal)) (shares (list 10 uint)))
     (let
         (
             (mintCounter (var-get mint-counter))
@@ -146,7 +146,7 @@
         (asserts! (is-none ahash) asset-not-registered)
 
         ;; Note: series original is really for later editions to refer back to this one - this one IS the series original
-        (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, max-editions: max-editions, edition: u1, date: block-height, series-original: mintCounter})
+        (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, gaia-username: gaia-username, max-editions: max-editions, edition: u1, date: block-height, series-original: mintCounter})
         
         ;; Note editions are 1 based and <= max-editions - the one minted here is #1
         (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u1})
@@ -178,6 +178,7 @@
         (
             ;; before we start... check the hash corresponds to a minted asset
             (ahash (unwrap! (get asset-hash (map-get? nft-data {nft-index: nft-index})) failed-to-mint-err))
+            (gaia-username (unwrap! (get asset-hash (map-get? nft-data {nft-index: nft-index})) failed-to-mint-err))
             (block-time (unwrap! (get-block-info? time u0) amount-not-set))
             (mintCounter (var-get mint-counter))
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
@@ -213,7 +214,7 @@
         (map-set nft-edition-counter {nft-index: nft-index} {edition-counter: (+ editionCounter u1)})
 
         ;; set max editions to zero and edition to current edition counter to indicate this is an edition
-        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, max-editions: u0, edition: editionCounter, date: block-height, series-original: nft-index})
+        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaia-username, max-editions: u0, edition: editionCounter, date: block-height, series-original: nft-index})
 
         ;; put the nft index into the list of editions in the look up map
         (map-insert nft-lookup {asset-hash: ahash, edition: (+ editionCounter u1)} {nft-index: mintCounter})

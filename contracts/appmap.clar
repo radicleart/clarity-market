@@ -1,6 +1,6 @@
 ;; application registry for applications  wishing to sell NFTs throug the marketplace
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-map app-map {index: int} {owner: (buff 80), app-contract-id: (buff 100), storage-model: int, status: int})
+(define-map app-map {index: int} {owner: (buff 80), gaia-filename: (buff 80), app-contract-id: (buff 100), storage-model: int, status: int})
 (define-data-var app-counter int 0)
 
 (define-constant not-found (err u100))
@@ -15,11 +15,11 @@
         (ok true)))
 
 ;; Insert new app at current index
-(define-public (register-app (owner (buff 80)) (app-contract-id (buff 100)) (storage-model int))
+(define-public (register-app (owner (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int))
   (begin
     (if (is-storage-allowed storage-model)
       (begin
-        (map-insert app-map {index: (var-get app-counter)} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
+        (map-insert app-map {index: (var-get app-counter)} {owner: owner, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
         (var-set app-counter (+ (var-get app-counter) 1))
         (print (var-get app-counter))
         (ok (var-get app-counter))
@@ -30,13 +30,13 @@
 )
 
 ;; Make app live - set status to 1
-(define-public (set-app-live (index int) (owner (buff 80)) (app-contract-id (buff 100)) (storage-model int))
+(define-public (set-app-live (index int) (owner (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int))
   (begin
     (if (is-update-allowed)
     (begin
       (match (map-get? app-map {index: index})
         myProject 
-        (ok (map-set app-map {index: index} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: 1}))
+        (ok (map-set app-map {index: index} {owner: owner, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: 1}))
         not-found
       )
     )
