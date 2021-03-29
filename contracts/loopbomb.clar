@@ -1,6 +1,6 @@
 ;; Interface definitions
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.transferable-nft-trait)
-(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
+;;(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
@@ -327,6 +327,24 @@
 
 (define-read-only (get-token-by-index (nftIndex uint))
     (ok (get-all-data nftIndex))
+)
+
+(define-read-only (get-offer-at-index (nftIndex uint) (offerIndex uint))
+    (let
+        (
+            (the-offer (map-get? nft-offer-history {nft-index: nftIndex, offer-index: offerIndex}))
+        )
+        (ok the-offer)
+    )
+)
+
+(define-read-only (get-bid-at-index (nftIndex uint) (bidIndex uint))
+    (let
+        (
+            (the-bid (map-get? nft-bid-history {nft-index: nftIndex, bid-index: bidIndex}))
+        )
+        (ok the-bid)
+    )
 )
 
 ;; Get the edition from a knowledge of the #1 edition and the specific edition number

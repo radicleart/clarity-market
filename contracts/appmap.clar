@@ -1,6 +1,7 @@
 ;; application registry for applications  wishing to sell NFTs throug the marketplace
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
 (define-map app-map {index: int} {owner: (buff 80), gaia-filename: (buff 80), app-contract-id: (buff 100), storage-model: int, status: int})
+(define-map app-map-reverse {app-contract-id: (buff 100)} {index: int})
 (define-data-var app-counter int 0)
 
 (define-constant not-found (err u100))
@@ -14,18 +15,27 @@
         (var-set administrator new-administrator)
         (ok true)))
 
-;; Insert new app at current index
+;; Insert new app at current index - can't have two apps with the same contract id here!
 (define-public (register-app (owner (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int))
-  (begin
-    (if (is-storage-allowed storage-model)
-      (begin
-        (map-insert app-map {index: (var-get app-counter)} {owner: owner, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
-        (var-set app-counter (+ (var-get app-counter) 1))
-        (print (var-get app-counter))
-        (ok (var-get app-counter))
+  (let
+      (
+          (index (get index (map-get? app-map-reverse {app-contract-id: app-contract-id})))
       )
-      illegal-storage
-    )
+      (if (is-none index)
+        (begin
+          (if (is-storage-allowed storage-model)
+            (begin
+              (map-insert app-map {index: (var-get app-counter)} {owner: owner, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
+              (map-insert app-map-reverse {app-contract-id: app-contract-id} {index: (var-get app-counter)})
+              (var-set app-counter (+ (var-get app-counter) 1))
+              (print (var-get app-counter))
+              (ok (var-get app-counter))
+            )
+            illegal-storage
+          )
+        )
+        not-allowed
+      )
   )
 )
 
@@ -52,6 +62,15 @@
         myProject (ok myProject) not-found
     )
 )
+(define-read-only (get-app-index (app-contract-id (buff 100)))
+    (let
+        (
+            (index (unwrap! (get index (map-get? app-map-reverse {app-contract-id: app-contract-id})) not-found))
+        )
+        (ok index)
+    )
+)
+
 (define-read-only (get-app-counter)
     (ok (var-get app-counter))
 )

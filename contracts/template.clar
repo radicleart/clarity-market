@@ -328,6 +328,24 @@
     (ok (get-all-data nftIndex))
 )
 
+(define-read-only (get-offer-at-index (nftIndex uint) (offerIndex uint))
+    (let
+        (
+            (the-offer (map-get? nft-offer-history {nft-index: nftIndex, offer-index: offerIndex}))
+        )
+        (ok the-offer)
+    )
+)
+
+(define-read-only (get-bid-at-index (nftIndex uint) (bidIndex uint))
+    (let
+        (
+            (the-bid (map-get? nft-bid-history {nft-index: nftIndex, bid-index: bidIndex}))
+        )
+        (ok the-bid)
+    )
+)
+
 ;; Get the edition from a knowledge of the #1 edition and the specific edition number
 (define-read-only (get-edition-by-hash (asset-hash (buff 32)) (edition uint))
     (let
