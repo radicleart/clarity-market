@@ -40,16 +40,16 @@
 )
 
 ;; Make app live - set status to 1
-(define-public (set-app-live (index int) (owner (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int))
+(define-public (set-app-status (index int) (owner (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int) (status int))
   (begin
     (if (is-update-allowed)
-    (begin
-      (match (map-get? app-map {index: index})
-        myProject 
-        (ok (map-set app-map {index: index} {owner: owner, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: 1}))
-        not-found
+      (begin
+        (match (map-get? app-map {index: index})
+          myProject 
+          (ok (map-set app-map {index: index} {owner: owner, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: status}))
+          not-found
+        )
       )
-    )
       not-allowed
     )
   )
