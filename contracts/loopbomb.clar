@@ -21,15 +21,6 @@
 (define-non-fungible-token my-nft uint)
 
 ;; data structures
-<<<<<<< HEAD
-(define-map beneficiaries {nft-index: uint} {addresses: (list 10 principal), shares: (list 10 uint)})
-(define-map my-nft-data {nft-index: uint} {asset-hash: (buff 32), max-editions: uint, edition: uint, date: uint, series-original: uint})
-(define-map my-nft-edition-pointer {nft-index: uint} {current-edition: uint})
-(define-map sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint})
-(define-map transfer-map {nft-index: uint} {transfer-count: uint})
-(define-map transfer-history-map {nft-index: uint, transfer-count: uint} {from: principal, to: principal, sale-type: uint, when: uint, amount: uint})
-(define-map my-nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
-=======
 (define-map nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
 (define-map nft-data {nft-index: uint} {asset-hash: (buff 32), max-editions: uint, edition: uint, date: uint, series-original: uint})
 (define-map nft-sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint, sale-cycle-index: uint})
@@ -47,7 +38,6 @@
 (define-map nft-edition-counter {nft-index: uint} {edition-counter: uint})
 (define-map nft-high-bid-counter {nft-index: uint} {high-bid-counter: uint, bidder: principal, amount: uint, when-bid: uint, sale-cycle: uint})
 (define-map nft-transfer-counter {nft-index: uint} {transfer-counter: uint})
->>>>>>> main
 
 (define-constant not-allowed (err u10))
 (define-constant not-found (err u11))
