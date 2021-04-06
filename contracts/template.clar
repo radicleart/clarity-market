@@ -1,11 +1,12 @@
 ;; Interface definitions
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.transferable-nft-trait)
-(impl-trait 'params.platformAddress.nft-interface.tradable-nft-trait)
+;; (impl-trait 'params.platformAddress.nft-interface.tradable-nft-trait)
+;;(impl-trait 'params.platformAddress.nft-trait.nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'params.contractOwner)
 (define-data-var mint-price uint uparams.mintPrice)
-(define-data-var base-token-uri (buff 100) params.callBack)
+(define-data-var base-token-uri (string-ascii 256) params.callBack)
 (define-data-var mint-counter uint u0)
 (define-data-var platform-fee uint u5)
 ;; constants
@@ -56,6 +57,43 @@
 (define-constant failed-to-close-3 (err u24))
 (define-constant cant-pay-mint-price (err u25))
 (define-constant editions-error (err u26))
+(define-constant nft-not-owned-err (err u401)) ;; unauthorized
+(define-constant sender-equals-recipient-err (err u405)) ;; method not allowed
+(define-constant nft-not-found-err (err u404)) ;; not found
+
+;; interface methods
+;; from nft-trait: Last token ID, limited to uint range
+;; note decrement as mint counter is the id of the next nft
+(define-read-only (get-last-token-id)
+  (ok (- (var-get mint-counter) u1))
+)
+
+;; from nft-trait: URI for metadata associated with the token
+(define-read-only (get-token-uri (token-id uint))
+  (ok (some (var-get base-token-uri)))
+)
+
+;; from nft-trait: Gets the owner of the 'SPecified token ID.
+(define-read-only (get-owner (nftIndex uint))
+  (ok (nft-get-owner? my-nft nftIndex))
+)
+
+;; Transfers tokens to a 'SPecified principal.
+(define-public (transfer (nftIndex uint) (sender principal) (recipient principal))
+  (if (and (is-owner nftIndex sender) (is-eq sender tx-sender))
+    (match (nft-transfer? my-nft nftIndex sender recipient)
+      success (ok success)
+      error (nft-transfer-err error))
+    nft-not-owned-err)
+)
+(define-private (nft-transfer-err (code uint))
+  (if (is-eq u1 code)
+    nft-not-owned-err
+    (if (is-eq u2 code)
+      sender-equals-recipient-err
+      (if (is-eq u3 code)
+        nft-not-found-err
+        (err code)))))
 
 ;; public methods
 ;; --------------
@@ -79,7 +117,7 @@
 
 ;; the contract administrator can change the base uri - where meta data for tokens in this contract
 ;; are located
-(define-public (update-base-token-uri (new-base-token-uri (buff 100)))
+(define-public (update-base-token-uri (new-base-token-uri (string-ascii 256)))
     (begin
         (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
         (var-set base-token-uri new-base-token-uri)
@@ -97,27 +135,17 @@
 )
 
 ;; the contract administrator can change the mint price
-(define-public (make-offer (nft-index uint) (amount uint))
+(define-public (make-offer (nft-index uint) (amount uint) (made-date uint))
     (let
         (
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) not-allowed))
-            (offerCounter (get offer-counter (map-get? nft-offer-counter {nft-index: nft-index})))
-            (block-time (unwrap! (get-block-info? time u0) not-allowed))
+            (offerCounter (default-to u0 (get offer-counter (map-get? nft-offer-counter {nft-index: nft-index}))))
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
         )
         (asserts! (is-eq saleType u3) not-allowed)
-        (if (is-none offerCounter)
-            (begin 
-                (map-insert nft-offer-history {nft-index: nft-index, offer-index: u0} {sale-cycle: saleCycleIndex, offerer: tx-sender, made-date: block-time, amount: amount})
-                (map-insert nft-offer-counter {nft-index: nft-index} {sale-cycle: saleCycleIndex, offer-counter: u0})
-                (ok u1)
-            )
-            (begin
-                (map-insert nft-offer-history {nft-index: nft-index, offer-index: (+ (unwrap! offerCounter not-allowed) u1)} {sale-cycle: saleCycleIndex, offerer: tx-sender, made-date: block-time, amount: amount})
-                (map-insert nft-offer-counter {nft-index: nft-index} {sale-cycle: saleCycleIndex, offer-counter: (+ (unwrap! offerCounter not-allowed) u1)})
-                (ok u2)
-            )
-        )
+        (map-insert nft-offer-history {nft-index: nft-index, offer-index: offerCounter} {sale-cycle: saleCycleIndex, offerer: tx-sender, made-date: made-date, amount: amount})
+        (map-set nft-offer-counter {nft-index: nft-index} {sale-cycle: saleCycleIndex, offer-counter: (+ offerCounter u1)})
+        (ok u1)
     )
 )
 
@@ -247,7 +275,7 @@
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
         )
         (if
-            (is-ok (is-nft-owner nftIndex))
+            (is-owner nftIndex tx-sender)
             ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
             (if (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: sale-type, increment-stx: increment-stx, reserve-stx: reserve-stx, amount-stx: amount-stx, bidding-end-time: bidding-end-time})
                 (ok nftIndex) not-allowed
@@ -257,13 +285,9 @@
     )
 )
 
-;; transfer - differs from blockstack nft contract in that the tx-sender is the recipient
-;; of the asset rather than the owner.
-;; tx-sender / buyer transfers 'platform-fee'% of the buy now amount to the
-;; contract miner-address remainder to the seller address. Reset the
-;; map data in nft-sale-data and my-nft data to indicate not for sale and BNS
-;; name of new owner.
-(define-public (transfer-from (nft-index uint))
+;; buy-now
+;; transfer royalties and asset ownership to tx-sender.
+(define-public (buy-now (nft-index uint))
     (let
         (
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
@@ -288,13 +312,6 @@
         (unwrap! (stx-transfer? (/ (* amount (- u100 platformFee)) u100) tx-sender owner) failed-to-stx-transfer)
         (unwrap! (nft-transfer? my-nft nft-index owner tx-sender) failed-to-mint-err)
         (ok nft-index)
-    )
-)
-
-;; Transfers tokens to a specified principal.
-(define-public (transfer (seller principal) (nft-index uint))
-    (if (is-ok (transfer-from nft-index))
-        (ok u0) (err u1)
     )
 )
 
@@ -654,11 +671,10 @@
     )
 )
 
-(define-private (is-nft-owner (nft-index uint))
-    (if (is-eq (some tx-sender) (nft-get-owner? my-nft nft-index))
-        (ok true)
-        not-allowed
-    )
+(define-private (is-owner (nft-index uint)  (user principal))
+  (is-eq user
+       ;; if no owner, return false
+       (unwrap! (nft-get-owner? my-nft nft-index) false))
 )
 
 (define-private (inc-transfer-count (nft-index uint))
