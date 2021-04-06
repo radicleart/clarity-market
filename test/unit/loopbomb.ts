@@ -3,6 +3,7 @@ import { assert } from "chai";
 import { readFromContract, execMethod } from "./query-utils"
 import * as fs from "fs";
 import { exec } from "child_process";
+import { bufferCV, listCV, standardPrincipalCV, uintCV } from "@stacks/transactions";
 
 describe("Loopbomb contract test suite", () => {
 
@@ -67,15 +68,14 @@ describe("Loopbomb contract test suite", () => {
   describe("Minting a first NFT", () => {
 
     it("Should be able to mint a first NFT as anyone", async () => {
-      const args = ["123456789111213141516171872829457",
-                   "u5",
-                   project1Key + " " + project2Key,
-                   "5000 5000"]
-      const txresult = await execMethod(loopbombClient, 
-                                      project2Key, 
-                                      "mint-token", 
-                                      args,
-                                      true)
+      const assetHash = Buffer.from("8d2c4c44ad131300b8d7ac86b14fa1e321f362e9d20c6dd2881c64abf26ff30f")
+      const gaiaUsername = Buffer.from("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      const args = [bufferCV(assetHash),
+                    bufferCV(gaiaUsername),
+                    uintCV(5),
+                    listCV([standardPrincipalCV(project1Key), standardPrincipalCV(project2Key)]),
+                    listCV([uintCV(5000), uintCV(5000)])]
+      const txresult = await execMethod(loopbombClient, project2Key, "mint-token", args, true)
       assert.isOk(txresult.success)
     });
   });
