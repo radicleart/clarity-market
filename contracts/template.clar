@@ -1,7 +1,7 @@
 ;; Interface definitions
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.transferable-nft-trait)
 ;; (impl-trait 'params.platformAddress.nft-interface.tradable-nft-trait)
-;;(impl-trait 'params.platformAddress.nft-trait.nft-trait)
+(impl-trait 'params.platformAddress.nft-trait.nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'params.contractOwner)
@@ -69,7 +69,7 @@
 )
 
 ;; from nft-trait: URI for metadata associated with the token
-(define-read-only (get-token-uri (token-id uint))
+(define-read-only (get-token-uri (nftIndex uint))
   (ok (some (var-get base-token-uri)))
 )
 
@@ -430,7 +430,7 @@
                     (transferMap the-transfer-map)
                     (transferHistoryMap the-transfer-history-map)
                     (offers the-offers)
-                    (owner the-owner) 
+                    (owner the-owner)
             )
         )
     )

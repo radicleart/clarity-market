@@ -72,7 +72,7 @@
 )
 
 ;; from nft-trait: URI for metadata associated with the token
-(define-read-only (get-token-uri (token-id uint))
+(define-read-only (get-token-uri (nftIndex uint))
   (ok (some (var-get base-token-uri)))
 )
 
