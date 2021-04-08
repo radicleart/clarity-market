@@ -8,6 +8,10 @@ import {
   broadcastTransaction,
 } from "@stacks/transactions";
 import { StacksTestnet } from '@stacks/network';
+import { Client, Provider, ProviderRegistry, Result } from "@blockstack/clarity";
+import { describe } from "mocha";
+import { bufferCV, listCV, standardPrincipalCV, uintCV } from "@stacks/transactions";
+
 const BigNum = require("bn.js"); 
 const network = new StacksTestnet();
 const fee = new BigNum(3000);
@@ -18,6 +22,13 @@ const keys = {
   'project1': JSON.parse(fs.readFileSync("./keys-project1.json").toString()),
   'project2': JSON.parse(fs.readFileSync("./keys-project2.json").toString()),
 }
+let loopbombClient: Client;
+let provider: Provider;
+
+before(async () => {
+  provider = await ProviderRegistry.createProvider();
+  loopbombClient = new Client(keys['contract-base'] + ".loopbomb", "loopbomb", provider);
+});
 
 async function deployContract(contractName: string, nonce): Promise<Object> {
   console.log("deploying contract: " + contractName);
@@ -26,30 +37,27 @@ async function deployContract(contractName: string, nonce): Promise<Object> {
   var transaction = await makeContractDeploy({
     contractName,
     codeBody,
-    fee,
     senderKey: keys['contract-base'].secretKey, // using same key allows contract-call?
     // nonce: nonce,   // watch for nonce increments if this works - may need to restart mocknet!
     network,
   });
   var result = await broadcastTransaction(transaction, network);
-  await new Promise((r) => setTimeout(r, 30000));
+  await new Promise((r) => setTimeout(r, 10000)); 
   return result;
 }
-async function callContract(nonce, sender: string, contractName: string, functionName: string, functionArgs: ClarityValue[]): Promise<StacksTransaction> {
-  console.log("transaction: contract=" + contractName + " sender=" + sender + " function=" + functionName + " args= .. ");
+async function callContract(nonce, sender: string, contractName: string, functionName: string, functionArgs: ClarityValue[]): Promise<any> {
+  console.log("transaction: contract=" + contractName + " sender=" + keys[sender].stacksAddress + " function=" + functionName + " args= .. " + functionArgs);
   var transaction = await makeContractCall({
     contractAddress: keys['contract-base'].stacksAddress,
     contractName,
     functionName,
     functionArgs,
-    fee,
     senderKey: keys[sender].secretKey,
-    nonce,
     network,
   });
   var result = await broadcastTransaction(transaction, network);
   // console.log(transaction);
-  // console.log(result);
+  console.log(result);
   return result;
 }
 
@@ -61,67 +69,55 @@ async function callReadOnly(nonce, sender: string, contractName: string, functio
     functionName,
     functionArgs: functionArgs,
     network,
-    senderAddress: keys[sender].secretKey,
+    senderAddress: keys[sender].stacksAddress,
   };  
   var result = await callReadOnlyFunction(options);
+  console.log(result)
   return result;
 }
 
 describe("Deploying contracts", () => {
+
+  it("should have a valid syntax", async () => {
+    await loopbombClient.checkContract();
+  });
+
   it("should deploy loopbomb and projects and wait for confirmation", async () => {
     let result: any = await deployContract("loopbomb", new BigNum(0));
-    assert.isNotOk(result.error, "Transaction succeeded");
-    console.log(result.error)
+    assert.equal(result.error, null, result.error);
   });
 });
 
 describe("Check contracts deployed", () => {
-  it("should read address of administrator", async () => {
+  it("should read the address of the administrator", async () => {
     let result: any = await callReadOnly(new BigNum(0), "contract-base", "loopbomb", "get-administrator", []);
-    assert.isOk(result.error, "Transaction succeeded");
-  })
-})
-/**
-describe("Test project admin functions", () => {
-  it("should allow insert if tx-sender is contract owner", async () => {
-    let args = [standardPrincipalCV(keys['project1'].stacksAddress), bufferCV(Buffer.from("http://project1.com/assets/v1")), uintCV(0x5000)];
-    let result: any = await callContract(new BigNum(2), "contract-base", "loopbomb", "add-project", args);
-    assert.isNotOk(result.error, "Transaction succeeded");
-    console.log(result.error)
-  })
-  it("should allow read of inserted project", async () => {
-    let args = [standardPrincipalCV(keys['project1'].stacksAddress)];
-    let result: any = await callContract(new BigNum(0), "project1", "loopbomb", "get-project", args);
-  })
-  it("should return error if no project found", async () => {
-    let args = [standardPrincipalCV(keys['project1'].stacksAddress)];
-    let result: any = await callContract(new BigNum(0), "project2", "loopbomb", "get-project", args);
-    assert.isNotOk(result.error, "Transaction succeeded");
-    console.log(result.error)
-  })
+    assert.equal(result.address.hash160, '5d9f3212597e5aae391a7b661c1683024e2af32f', result);
+  });
 });
 
-describe("Test minting functions", () => {
-  it("should mint a non fungible token", async () => {
-    let args = [intCV(0x100),  uintCV(0x5000), bufferCV(Buffer.from("asset1"))];
-    let result: any = await callContract(new BigNum(0), "minter", "loopbomb", "mint-to", args);
-    assert.isNotOk(result.error, "Transaction succeeded");
-    console.log(result.error)
+describe("Test the main functions", () => {
+  it("Should mint a new token, using the mint-token function", async () => {
+    const assetHash = Buffer.from("9d20c6dd2881c64abf26ff30f")
+    const gaiaUsername = Buffer.from("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    const args = [bufferCV(assetHash),
+                  bufferCV(gaiaUsername),
+                  uintCV(5),
+                  listCV([standardPrincipalCV(keys['project1'].stacksAddress), standardPrincipalCV(keys['project2'].stacksAddress)]),
+                  listCV([uintCV(5000), uintCV(5000)])]
+    let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "mint-token", args)
+    assert.equal(result.error, null, result.error)
+    await new Promise((r) => setTimeout(r, 10000)); 
   });
-  it("should override the mint fee with the projects fee", async () => {
-    let args = [intCV(0x100),  uintCV(0x5000), bufferCV(Buffer.from("asset1"))];
-    let result: any = await callContract(new BigNum(0), "minter", "loopbomb", "mint-to", args);
-    assert.isNotOk(result.error, "Transaction succeeded");
-    console.log(result.error)
-  });
-  it("should return a project for an asset", async () => {
-    let args = [bufferCV(Buffer.from("asset1"))];
-    let result: any = await callContract(new BigNum(0), "minter", "loopbomb", "get-project-id", args);
-    assert.isNotOk(result.error, "Transaction succeeded");
-    console.log(result.error)
+
+  it("Should mint a new edition of an existing token, using the mint-edition function", async () => {
+    const nftIndex = uintCV(0)
+    const nextBidAmount = uintCV(0)
+    let args = [nftIndex, nextBidAmount]
+    let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "mint-edition", args)
+    assert.equal(result.error, null, result.error)
+    await new Promise((r) => setTimeout(r, 10000));
   });
 });
-  **/
 
 after(async () => {
   // await provider.close();
