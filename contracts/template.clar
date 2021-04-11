@@ -27,7 +27,7 @@
 (define-map nft-beneficiaries {nft-index: uint} { addresses: (list 10 principal), shares: (list 10 uint) })
 ;; Phase III ? -- (define-map my-catalogue {nft-index: uint} { auction-id: uint })
 (define-map nft-bid-history {nft-index: uint, bid-index: uint} {sale-cycle: uint, bidder: principal, amount: uint, when-bid: uint})
-(define-map nft-offer-history {nft-index: uint, offer-index: uint} {sale-cycle: uint, offerer: principal, made-date: uint, amount: uint})
+(define-map nft-offer-history {nft-index: uint, offer-index: uint} {sale-cycle: uint, offerer: principal, made-date: uint, amount: uint, accepted: uint})
 (define-map nft-transfer-history {nft-index: uint, transfer-counter: uint} {sale-cycle: uint, from: principal, to: principal, sale-type: uint, when: uint, amount: uint})
 
 ;; counters keep track per NFT of the... 
@@ -79,9 +79,9 @@
 )
 
 ;; Transfers tokens to a 'SPecified principal.
-(define-public (transfer (nftIndex uint) (sender principal) (recipient principal))
-  (if (and (is-owner nftIndex sender) (is-eq sender tx-sender))
-    (match (nft-transfer? my-nft nftIndex sender recipient)
+(define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
+  (if (and (is-owner nftIndex owner) (is-eq owner tx-sender))
+    (match (nft-transfer? my-nft nftIndex owner recipient)
       success (ok success)
       error (nft-transfer-err error))
     nft-not-owned-err)
@@ -134,7 +134,7 @@
     )
 )
 
-;; the contract administrator can change the mint price
+;; adds an offer to the list of offers on an NFT
 (define-public (make-offer (nft-index uint) (amount uint) (made-date uint))
     (let
         (
@@ -143,9 +143,26 @@
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
         )
         (asserts! (is-eq saleType u3) not-allowed)
-        (map-insert nft-offer-history {nft-index: nft-index, offer-index: offerCounter} {sale-cycle: saleCycleIndex, offerer: tx-sender, made-date: made-date, amount: amount})
+        (map-insert nft-offer-history {nft-index: nft-index, offer-index: offerCounter} {sale-cycle: saleCycleIndex, offerer: tx-sender, made-date: made-date, amount: amount, accepted: u0})
         (map-set nft-offer-counter {nft-index: nft-index} {sale-cycle: saleCycleIndex, offer-counter: (+ offerCounter u1)})
         (ok u1)
+    )
+)
+
+;; accept-offer
+;; marks offer as accepted and transfers ownership to the recipient
+(define-public (accept-offer (nft-index uint) (offer-index uint) (owner principal) (recipient principal))
+    (let
+        (
+            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) not-allowed))
+            (offerer (unwrap! (get offerer (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
+            (made-date (unwrap! (get made-date (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
+            (sale-cycle (unwrap! (get sale-cycle (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
+            (amount (unwrap! (get amount (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
+        )
+        (asserts! (is-eq saleType u3) not-allowed)
+        (map-set nft-offer-history {nft-index: nft-index, offer-index: offer-index} {sale-cycle: sale-cycle, offerer: offerer, made-date: made-date, amount: amount, accepted: u1})
+        (ok (transfer nft-index owner recipient))
     )
 )
 
@@ -216,7 +233,7 @@
             (editionCounter (unwrap! (get edition-counter (map-get? nft-edition-counter {nft-index: nft-index})) failed-to-mint-err))
             (maxEditions (unwrap! (get max-editions (map-get? nft-data {nft-index: nft-index})) failed-to-mint-err))
         )
-        (asserts! (or (is-eq saleType u1) (is-eq saleType u2)) not-approved-to-sell)
+        (asserts! (or (or (is-eq saleType u1) (is-eq saleType u2)) (is-eq saleType u3)) not-approved-to-sell)
         (asserts! (is-none (get nft-index (map-get? nft-lookup {asset-hash: ahash, edition: editionCounter}))) failed-to-mint-err)
         ;; Note - the edition index is 1 based and incremented before insertion in this methid - therefore the test is '<=' here! 
         (asserts! (<= editionCounter maxEditions) edition-limit-reached)
@@ -408,10 +425,6 @@
     (let
         (
             (the-owner                  (unwrap-panic (nft-get-owner? my-nft nftIndex)))
-            (the-bid-history            (map-get? nft-bid-history {nft-index: nftIndex, bid-index: u0}))
-            (the-transfer-map           (map-get? nft-transfer-counter {nft-index: nftIndex}))
-            (the-transfer-history-map   (map-get? nft-transfer-history {nft-index: nftIndex, transfer-counter: u0}))
-            (the-offers                 (map-get? nft-offer-history {nft-index: nftIndex, offer-index: u0}))
             (the-token-info             (map-get? nft-data {nft-index: nftIndex}))
             (the-sale-data              (map-get? nft-sale-data {nft-index: nftIndex}))
             (the-transfer-counter       (default-to u0 (get transfer-counter (map-get? nft-transfer-counter {nft-index: nftIndex}))))
@@ -426,10 +439,6 @@
                     (nftIndex nftIndex) 
                     (tokenInfo the-token-info) 
                     (saleData the-sale-data)
-                    (bidHistory the-bid-history)
-                    (transferMap the-transfer-map)
-                    (transferHistoryMap the-transfer-history-map)
-                    (offers the-offers)
                     (owner the-owner)
             )
         )

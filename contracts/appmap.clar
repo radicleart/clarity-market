@@ -1,6 +1,6 @@
 ;; application registry for applications  wishing to sell NFTs throug the marketplace
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-map app-map {index: int} {owner: (buff 80), gaia-filename: (buff 80), app-contract-id: (buff 100), storage-model: int, status: int})
+(define-map app-map {index: int} {owner: principal, app-origin: (buff 80), gaia-filename: (buff 80), app-contract-id: (buff 100), storage-model: int, status: int})
 (define-map app-map-reverse {app-contract-id: (buff 100)} {index: int})
 (define-data-var app-counter int 0)
 
@@ -16,7 +16,7 @@
         (ok true)))
 
 ;; Insert new app at current index - can't have two apps with the same contract id here!
-(define-public (register-app (owner (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int))
+(define-public (register-app (owner principal) (app-origin (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int))
   (let
       (
           (index (get index (map-get? app-map-reverse {app-contract-id: app-contract-id})))
@@ -25,7 +25,7 @@
         (begin
           (if (is-storage-allowed storage-model)
             (begin
-              (map-insert app-map {index: (var-get app-counter)} {owner: owner, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
+              (map-insert app-map {index: (var-get app-counter)} {owner: owner, app-origin: app-origin, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
               (map-insert app-map-reverse {app-contract-id: app-contract-id} {index: (var-get app-counter)})
               (var-set app-counter (+ (var-get app-counter) 1))
               (print (var-get app-counter))
@@ -39,19 +39,25 @@
   )
 )
 
-;; Make app live - set status to 1
-(define-public (set-app-status (index int) (owner (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int) (status int))
+(define-public (update-app (index int) (owner principal) (app-origin (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int) (status int))
   (begin
-    (if (is-update-allowed)
-      (begin
-        (match (map-get? app-map {index: index})
-          myProject 
-          (ok (map-set app-map {index: index} {owner: owner, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: status}))
-          not-found
-        )
+      (asserts! (is-ok (is-update-allowed index)) not-allowed)
+      (ok (map-set app-map {index: index} {owner: owner, app-origin: app-origin, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: status}))
+  )
+)
+
+;; Make app live - set status to 1
+(define-public (set-app-status (index int) (status int))
+  (let
+      (
+          (owner (unwrap! (get owner (map-get? app-map {index: index})) not-allowed))
+          (app-origin (unwrap! (get app-origin (map-get? app-map {index: index})) not-allowed))
+          (gaia-filename (unwrap! (get gaia-filename (map-get? app-map {index: index})) not-allowed))
+          (app-contract-id (unwrap! (get app-contract-id (map-get? app-map {index: index})) not-allowed))
+          (storage-model (unwrap! (get storage-model (map-get? app-map {index: index})) not-allowed))
       )
-      not-allowed
-    )
+      (asserts! (is-ok (is-update-allowed index)) not-allowed)
+      (ok (map-set app-map {index: index} {owner: owner, app-origin: app-origin, gaia-filename: gaia-filename, app-contract-id: app-contract-id, storage-model: storage-model, status: status}))
   )
 )
 
@@ -93,9 +99,18 @@
 )
 
 ;; -- private --
-(define-private (is-update-allowed)
-  (is-eq (var-get administrator) contract-caller)
+(define-private (is-update-allowed (index int))
+    (let
+        (
+          (owner (unwrap! (get owner (map-get? app-map {index: index})) not-allowed))
+        )
+        (if (or (is-eq (var-get administrator) contract-caller) (is-eq owner contract-caller)) 
+          (ok true)
+          not-allowed
+        )
+    )
 )
+
 (define-private (is-storage-allowed (storage int))
   (<= storage 10)
 )
