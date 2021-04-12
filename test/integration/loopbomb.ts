@@ -57,7 +57,7 @@ async function callContract(nonce, sender: string, contractName: string, functio
   });
   var result = await broadcastTransaction(transaction, network);
   // console.log(transaction);
-  console.log(result);
+  console.log("Result for the callContract : " + result);
   return result;
 }
 
@@ -72,7 +72,7 @@ async function callReadOnly(nonce, sender: string, contractName: string, functio
     senderAddress: keys[sender].stacksAddress,
   };  
   var result = await callReadOnlyFunction(options);
-  console.log(result)
+  console.log("Result for the readonly : " + result)
   return result;
 }
 
@@ -106,16 +106,23 @@ describe("Test the main functions", () => {
                   listCV([uintCV(5000), uintCV(5000)])]
     let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "mint-token", args)
     assert.equal(result.error, null, result.error)
-    await new Promise((r) => setTimeout(r, 10000)); 
+    await new Promise((r) => setTimeout(r, 20000)); 
   });
 
   it("Should mint a new edition of an existing token, using the mint-edition function", async () => {
     const nftIndex = uintCV(0)
-    const nextBidAmount = uintCV(0)
+    const nextBidAmount = uintCV(10000)
     let args = [nftIndex, nextBidAmount]
     let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "mint-edition", args)
     assert.equal(result.error, null, result.error)
-    await new Promise((r) => setTimeout(r, 10000));
+    await new Promise((r) => setTimeout(r, 20000));
+  });
+
+  it("Should not be able to buy now because the token is in u3 sale type", async () => {
+    const nftIndex = uintCV(1)
+    let args = [nftIndex]
+    let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "buy-now", args)
+    assert.equal(result.error, "u16", result)
   });
 });
 
