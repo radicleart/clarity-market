@@ -5,7 +5,7 @@
 ;;(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-trait.nft-trait)
 
 ;; contract variables
-(define-data-var administrator principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
+(define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
 (define-data-var mint-price uint u10000)
 ;; (define-data-var base-token-uri (buff 100) 0x68747470733a2f2f6c6f6f70626f6d622e7269736964696f2e636f6d2f696e6465782f76312f61737365742f)
 (define-data-var base-token-uri (string-ascii 256) "https://staging.thisisnumberone.com/index/v2/asset/")
@@ -200,7 +200,7 @@
         (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u1})
         
         ;; By default we accept offers - sale type can be changed via the UI.
-        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u3, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
+        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
         
         (map-insert nft-lookup {asset-hash: asset-hash, edition: u1} {nft-index: mintCounter})
 
@@ -269,7 +269,7 @@
 
         ;; By default we accept offers - sale type can be changed via the UI.
         ;; Note + block-time u1814400 (secs) - means we set the end time to be 3 weeks in advance.
-        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u3, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
+        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
 
         ;; mint the NFT and update the counter for the next..
         (unwrap! (nft-mint? my-nft mintCounter tx-sender) failed-to-mint-err)

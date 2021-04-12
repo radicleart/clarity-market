@@ -39,13 +39,13 @@ async function performQuery(client: Client, name: string, args: string[]): Promi
     return {rawResult: result, strings: unwrapStrings(result)};
 }
 
-async function readFromContract(client: Client, method: string, args: string[], printResult?: boolean): Promise<any> {
+async function readFromContract(client: Client, method: string, args, printResult?: boolean): Promise<any> {
     const res = await performQuery(client, method, args);
     if (printResult) logResult(res);
     return res
 };
 
-async function execMethod(client: Client, signature: string, method: string, args: string[], printResult?: boolean): Promise<Receipt> {
+async function execMethod(client: Client, signature: string, method: string, args, printResult?: boolean): Promise<Receipt> {
     const tx = client.createTransaction({
         method: {
             name: method,
