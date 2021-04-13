@@ -60,12 +60,7 @@
 (define-constant failed-to-close-3 (err u24))
 (define-constant cant-pay-mint-price (err u25))
 (define-constant editions-error (err u26))
-(define-constant payment-split-error (err u27))
 (define-constant payment-error (err u28))
-(define-constant payment-error1 (err u29))
-(define-constant payment-error2 (err u30))
-(define-constant payment-error11 (err u31))
-(define-constant payment-error12 (err u32))
 (define-constant payment-address-error (err u33))
 (define-constant payment-share-error (err u34))
 
