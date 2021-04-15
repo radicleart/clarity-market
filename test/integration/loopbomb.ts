@@ -1,3 +1,6 @@
+//---------------------------------------------------------------------------------------------
+// Importing the packages needed and creating global variables
+//---------------------------------------------------------------------------------------------
 import { assert } from "chai";
 import * as fs from "fs";
 import {
@@ -10,12 +13,14 @@ import {
 import { StacksTestnet } from '@stacks/network';
 import { Client, Provider, ProviderRegistry, Result } from "@blockstack/clarity";
 import { describe } from "mocha";
-import { bufferCV, listCV, standardPrincipalCV, uintCV } from "@stacks/transactions";
+import axios from 'axios'
+import { bufferCV, listCV, standardPrincipalCV, uintCV, hexToCV } from "@stacks/transactions";
 
 const BigNum = require("bn.js"); 
 const network = new StacksTestnet();
 const fee = new BigNum(3000);
 const port = 20443;
+const portAPI = 3999;
 const keys = {
   'contract-base': JSON.parse(fs.readFileSync("./keys-contract-base.json").toString()),
   'minter': JSON.parse(fs.readFileSync("./keys-minter.json").toString()),
@@ -29,6 +34,10 @@ before(async () => {
   provider = await ProviderRegistry.createProvider();
   loopbombClient = new Client(keys['contract-base'] + ".loopbomb", "loopbomb", provider);
 });
+
+//---------------------------------------------------------------------------------------------
+// Defining the functions used to call the contract
+//---------------------------------------------------------------------------------------------
 
 async function deployContract(contractName: string, nonce): Promise<Object> {
   console.log("deploying contract: " + contractName);
@@ -46,7 +55,6 @@ async function deployContract(contractName: string, nonce): Promise<Object> {
   return result;
 }
 async function callContract(nonce, sender: string, contractName: string, functionName: string, functionArgs: ClarityValue[]): Promise<any> {
-  console.log("transaction: contract=" + contractName + " sender=" + keys[sender].stacksAddress + " function=" + functionName + " args= .. " + functionArgs);
   var transaction = await makeContractCall({
     contractAddress: keys['contract-base'].stacksAddress,
     contractName,
@@ -56,25 +64,34 @@ async function callContract(nonce, sender: string, contractName: string, functio
     network,
   });
   var result = await broadcastTransaction(transaction, network);
-  // console.log(transaction);
-  console.log("Result for the callContract : " + result);
-  return result;
+  await new Promise((r) => setTimeout(r, 10000)); 
+  const url = "http://localhost:" + portAPI + "/extended/v1/tx/" + result
+  const output = await axios.get(url)
+  return output.data
 }
 
-async function callReadOnly(nonce, sender: string, contractName: string, functionName: string, functionArgs: ClarityValue[]): Promise<any> {
-  console.log("transaction: contract=" + contractName + " sender=" + keys[sender].stacksAddress + " function=" + functionName + " args= .. " + functionArgs);
+async function callReadOnly(nonce, sender: string, contractName: string, functionName: string, functionArgs: any): Promise<any> {
   const options = {
-    contractAddress: keys[sender].stacksAddress,
-    contractName,
-    functionName,
-    functionArgs: functionArgs,
-    network,
-    senderAddress: keys[sender].stacksAddress,
-  };  
-  var result = await callReadOnlyFunction(options);
-  console.log("Result for the readonly : " + result)
-  return result;
+    arguments : functionArgs,
+    sender : keys[sender].stacksAddress
+  }
+  const headers = {
+    'Content-Type': 'application/json'
+  }
+  const url = "http://localhost:" + portAPI + "/v2/contracts/call-read/" + keys[sender].stacksAddress + "/" + contractName + "/" + functionName
+  const output = await axios.post(url, options, { headers: headers })
+  let uncryptedOutput = null;
+  try {
+    uncryptedOutput = hexToCV(output.data.result)
+  } catch {
+    uncryptedOutput = output
+  }
+  return uncryptedOutput;
 }
+
+//---------------------------------------------------------------------------------------------
+// Starting the tests
+//---------------------------------------------------------------------------------------------
 
 describe("Deploying contracts", () => {
 
@@ -88,14 +105,52 @@ describe("Deploying contracts", () => {
   });
 });
 
-describe("Check contracts deployed", () => {
-  it("should read the address of the administrator", async () => {
-    let result: any = await callReadOnly(new BigNum(0), "contract-base", "loopbomb", "get-administrator", []);
-    assert.equal(result.address.hash160, '5d9f3212597e5aae391a7b661c1683024e2af32f', result);
-  });
-});
+//---------------------------------------------------------------------------------------------
+// 1) Read only functions and parameters of the contract
+//---------------------------------------------------------------------------------------------
 
-describe("Test the main functions", () => {
+// describe("Read only functions and parameters of the contract", () => {
+//   it("should read the address of the administrator", async () => {
+//     let result: any = await callReadOnly(new BigNum(0), "contract-base", "loopbomb", "get-administrator", []);
+//     assert.equal(result.address.hash160, '5d9f3212597e5aae391a7b661c1683024e2af32f', result);
+//   });
+
+//   it("should read the contract data", async () => {
+//     let result: any = await callReadOnly(new BigNum(0), "contract-base", "loopbomb", "get-contract-data", []);
+//     assert.equal(result.value.data.tokenSymbol.data, 'LOOP', result);
+//   });
+
+//   it("should update the minting price if it is the administrator", async () => {
+//     let result: any = await callContract(new BigNum(0), "project1", "loopbomb", "update-mint-price", [uintCV(5000)]);
+//     assert.equal(result.tx_result.repr, '(err u10)', result);
+
+//     result = await callContract(new BigNum(0), "contract-base", "loopbomb", "update-mint-price", [uintCV(5000)]);
+//     assert.equal(result.tx_result.repr, '(ok true)', result)
+//   }); 
+
+//   it("should update the fees only if it is the administrator", async () => {
+//     let result: any = await callContract(new BigNum(0), "contract-base", "loopbomb", "change-fee", [uintCV(4)]);
+//     assert.equal(result.tx_result.repr, '(ok true)', result);
+//   });
+
+//   it("Should be able to change the administrator", async () => {
+//     let result: any = await callContract(new BigNum(0), "contract-base", "loopbomb", "transfer-administrator", [standardPrincipalCV(keys['project1'].stacksAddress)]);
+//     assert.equal(result.tx_result.repr, '(ok true)', result)
+
+//     result = await callReadOnly(new BigNum(0), "contract-base", "loopbomb", "get-administrator", []);
+//     assert.notEqual(result.address.hash160, '5d9f3212597e5aae391a7b661c1683024e2af32f', result)
+
+//     await callContract(new BigNum(0), "project1", "loopbomb", "transfer-administrator", [standardPrincipalCV(keys['contract-base'].stacksAddress)]);
+//     result = await callReadOnly(new BigNum(0), "contract-base", "loopbomb", "get-administrator", []);
+//     assert.equal(result.address.hash160, '5d9f3212597e5aae391a7b661c1683024e2af32f', result);
+//   });
+// });
+
+//---------------------------------------------------------------------------------------------
+// 2) Minting process
+//---------------------------------------------------------------------------------------------
+
+describe("Minting process", () => {
   it("Should mint a new token, using the mint-token function", async () => {
     const assetHash = Buffer.from("9d20c6dd2881c64abf26ff30f")
     const gaiaUsername = Buffer.from("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
@@ -105,24 +160,81 @@ describe("Test the main functions", () => {
                   listCV([standardPrincipalCV(keys['project1'].stacksAddress), standardPrincipalCV(keys['project2'].stacksAddress)]),
                   listCV([uintCV(5000), uintCV(5000)])]
     let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "mint-token", args)
-    assert.equal(result.error, null, result.error)
-    await new Promise((r) => setTimeout(r, 20000)); 
+    assert.equal(result.tx_result.repr, '(ok u0)', result)
+  });
+
+  it("Should set the sale-data of the previous token", async () => {
+    const nftIndex = uintCV(0)
+    const saleType = uintCV(1)
+    const incrementStx = uintCV(1)
+    const reserveStx = uintCV(0)
+    const amountStx = uintCV(5)
+    const biddingEndTime = uintCV(181440000)
+    const args = [nftIndex, saleType, incrementStx, reserveStx, amountStx, biddingEndTime]
+    let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "set-sale-data", args)
+    assert.equal(result.tx_result.repr, '(ok u0)', result)
+  });
+
+  it("Should return the mintCounter variable", async () => {
+    let result = await callReadOnly(new BigNum(0), "contract-base", "loopbomb", "get-mint-counter", [])
+    assert.equal(result.value.value.toNumber(), '1', result)
   });
 
   it("Should mint a new edition of an existing token, using the mint-edition function", async () => {
     const nftIndex = uintCV(0)
-    const nextBidAmount = uintCV(10000)
+    const nextBidAmount = uintCV(5)
     let args = [nftIndex, nextBidAmount]
     let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "mint-edition", args)
-    assert.equal(result.error, null, result.error)
-    await new Promise((r) => setTimeout(r, 20000));
+    assert.equal(result.tx_result.repr, '(ok u1)', result)
   });
 
-  it("Should not be able to buy now because the token is in u3 sale type", async () => {
-    const nftIndex = uintCV(1)
+  it("Should return the mintCounter variable", async () => {
+    let result = await callReadOnly(new BigNum(0), "contract-base", "loopbomb", "get-mint-counter", [])
+    console.log(result.value.value.toNumber())
+    assert.equal(result.value.value.toNumber(), '2', result)
+  });
+
+  it("Should mint another new token, using the mint-token function", async () => {
+    const assetHash = Buffer.from("65775868aac1c64abf26ff30f")
+    const gaiaUsername = Buffer.from("bbbbbbbbbbbbbbbbbbbbbbbbbbb")
+    const args = [bufferCV(assetHash),
+                  bufferCV(gaiaUsername),
+                  uintCV(2),
+                  listCV([standardPrincipalCV(keys['project1'].stacksAddress), standardPrincipalCV(keys['project2'].stacksAddress)]),
+                  listCV([uintCV(3000), uintCV(1000)])]
+    let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "mint-token", args)
+    assert.equal(result.tx_result.repr, '(ok u2)', result)
+  });
+
+  it("Should set the sale-data of the previous token", async () => {
+    const nftIndex = uintCV(2)
+    const saleType = uintCV(2)
+    const incrementStx = uintCV(1)
+    const reserveStx = uintCV(0)
+    const amountStx = uintCV(6)
+    const biddingEndTime = uintCV(181440000)
+    const args = [nftIndex, saleType, incrementStx, reserveStx, amountStx, biddingEndTime]
+    let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "set-sale-data", args)
+    assert.equal(result.tx_result.repr, '(ok u2)', result)
+  });
+
+  it("Should mint two new editions of an existing token, using the mint-edition function. The second one should fail.", async () => {
+    const nftIndex = uintCV(2)
+    const nextBidAmount = uintCV(6)
+    let args = [nftIndex, nextBidAmount]
+    let result = await callContract(new BigNum(0), "project1", "loopbomb", "mint-edition", args)
+    assert.equal(result.tx_result.repr, '(ok u3)', result)
+
+    result = await callContract(new BigNum(0), "project2", "loopbomb", "mint-edition", args)
+    assert.equal(result.tx_result.repr, '(err u20)', result)
+  });
+
+
+  it("Should be able to buy now because the first token is in u1 sale type", async () => {
+    const nftIndex = uintCV(0)
     let args = [nftIndex]
-    let result = await callContract(new BigNum(0), "contract-base", "loopbomb", "buy-now", args)
-    assert.equal(result.error, "u16", result)
+    let result = await callContract(new BigNum(0), "project1", "loopbomb", "buy-now", args)
+    assert.equal(result.tx_result.repr, '(ok u0)', result)
   });
 });
 
