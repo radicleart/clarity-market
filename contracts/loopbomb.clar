@@ -1,6 +1,6 @@
 ;; Interface definitions
 ;;(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
-(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-trait.nft-trait)
+;;(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-trait.nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'STGPPTWJEZ2YAA7XMPVZ7EGKH0WX9F2DBNHTG5EY)
@@ -201,7 +201,7 @@
         (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, gaia-username: gaia-username, max-editions: max-editions, edition: u1, date: block-height, series-original: mintCounter})
 
         ;; Note editions are 1 based and <= max-editions - the one minted here is #1
-        (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u1})
+        (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u2})
 
         ;; By default we accept offers - sale type can be changed via the UI.
         (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u3, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
@@ -213,10 +213,10 @@
 
         ;; finally - mint the NFT and step the counter
         (if (is-eq tx-sender (var-get administrator))
-            (print "tx-sender is contract - skipping mint price")
+            (print "mint-token : tx-sender is contract - skipping mint price")
             (begin
                 (unwrap! (stx-transfer? (var-get mint-price) tx-sender (var-get administrator)) failed-to-stx-transfer)
-                (print "tx-sender paid mint price")
+                (print "mint-token : tx-sender paid mint price")
             )
         )
         (unwrap! (nft-mint? my-nft mintCounter tx-sender) failed-to-mint-err)
@@ -225,65 +225,64 @@
     )
 )
 
-(define-public (mint-edition (nft-index uint) (nextBidAmount uint))
+(define-public (mint-edition (nft-index uint) (uiAmount uint))
     (let
         (
             ;; before we start... check the hash corresponds to a minted asset
-            (ahash (unwrap! (get asset-hash (map-get? nft-data {nft-index: nft-index})) failed-to-mint-err))
-            (gaia-username (unwrap! (get asset-hash (map-get? nft-data {nft-index: nft-index})) failed-to-mint-err))
-            (block-time (unwrap! (get-block-info? time u0) amount-not-set))
+            (ahash (unwrap!          (get asset-hash   (map-get? nft-data {nft-index: nft-index})) not-allowed))
+            (gaia-username (unwrap!  (get asset-hash   (map-get? nft-data {nft-index: nft-index})) not-allowed))
+            (maxEditions (unwrap!    (get max-editions (map-get? nft-data {nft-index: nft-index})) not-allowed))
+            (saleType (unwrap!       (get sale-type       (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
+            (amount (unwrap!         (get amount-stx      (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
+            (editionCounter (unwrap! (get edition-counter (map-get? nft-edition-counter {nft-index: nft-index})) edition-counter-error))
+            (this-edition-nft-index  (get nft-index       (map-get? nft-lookup {asset-hash: ahash, edition: editionCounter})))
             (mintCounter (var-get mint-counter))
-            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (amount (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (currentAmount (get amount (map-get? nft-high-bid-counter {nft-index: nft-index})))
-            (increment (unwrap! (get increment-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (editionCounter (unwrap! (get edition-counter (map-get? nft-edition-counter {nft-index: nft-index})) failed-to-mint-err))
-            (maxEditions (unwrap! (get max-editions (map-get? nft-data {nft-index: nft-index})) failed-to-mint-err))
+            (block-time (unwrap!    (get-block-info? time u0) amount-not-set))
         )
-        (asserts! (or (or (is-eq saleType u1) (is-eq saleType u2)) (is-eq saleType u3)) not-approved-to-sell)
-        (asserts! (is-none (get nft-index (map-get? nft-lookup {asset-hash: ahash, edition: editionCounter}))) failed-to-mint-err)
+        ;; can only mint an edition via buy now or bidding - not offers
+        (print "mint-edition : minting an edition for base nft, buy now price, sale type and edition; ")
+        (print nft-index)
+        (print uiAmount)
+        (print saleType)
+        (print editionCounter)
+        (asserts! (is-eq saleType u1) not-approved-to-sell)
+        (asserts! (is-none this-edition-nft-index) edition-counter-error)
         ;; Note - the edition index is 1 based and incremented before insertion in this methid - therefore the test is '<=' here!
         (asserts! (<= editionCounter maxEditions) edition-limit-reached)
         ;; This asserts the first one has been minted already - see mint-token.
-        (asserts! (> editionCounter u0) edition-counter-error)
-        (asserts! (> (stx-get-balance tx-sender) amount) failed-to-mint-err)
+        (asserts! (> editionCounter u1) edition-counter-error)
+        (asserts! (> (stx-get-balance tx-sender) amount) cant-pay-mint-price)
 
-        ;; saleType=1 -> buy now - nextBidAmount must equal buy now amount-stx
-        ;; saleType=2 -> bidding - nextBidAmount must equal amount-stx plus the increment
+        ;; saleType=1 -> buy now - uiAmount must equal buy now amount-stx
+        ;; saleType=2 -> bidding - uiAmount must equal amount-stx plus the increment
         ;; throws - user is not expecting to pay this amount.
-        (if (is-eq saleType u1)
-            (asserts! (is-eq nextBidAmount amount) user-amount-different)
-            (if (is-some currentAmount)
-                (asserts! (is-eq nextBidAmount (+ (unwrap! currentAmount failed-to-mint-err) increment)) user-amount-different)
-                (asserts! (is-eq nextBidAmount (+ amount increment)) user-amount-different)
-            )
-        )
-
+        (print "mint-edition : minting new nft at index; ")
+        (print mintCounter)
+        (asserts! (is-eq uiAmount amount) user-amount-different)
         ;; check the buyer/bidder has enough funds..
-        (asserts! (> (stx-get-balance tx-sender) nextBidAmount) failed-to-mint-err)
+        (asserts! (> (stx-get-balance tx-sender) uiAmount) failed-to-mint-err)
 
-        ;; set the edition-counter counter to next edition
-        (map-set nft-edition-counter {nft-index: nft-index} {edition-counter: (+ editionCounter u1)})
-
-        ;; set max editions to zero and edition to current edition counter to indicate this is an edition
-        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaia-username, max-editions: u0, edition: editionCounter, date: block-height, series-original: nft-index})
-
+        ;; set max editions so we know where we are in the series
+        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaia-username, max-editions: maxEditions, edition: editionCounter, date: block-height, series-original: nft-index})
         ;; put the nft index into the list of editions in the look up map
-        (map-insert nft-lookup {asset-hash: ahash, edition: (+ editionCounter u1)} {nft-index: mintCounter})
-
-        ;; By default we accept offers - sale type can be changed via the UI.
-        ;; Note + block-time u1814400 (secs) - means we set the end time to be 3 weeks in advance.
-        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u3, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
+        (map-insert nft-lookup {asset-hash: ahash, edition: editionCounter} {nft-index: mintCounter})
 
         ;; mint the NFT and update the counter for the next..
         (unwrap! (nft-mint? my-nft mintCounter tx-sender) failed-to-mint-err)
-        (var-set mint-counter (+ mintCounter u1))
 
         ;; saleType = 1 (buy now) - split out the payments according to royalties - or roll everything back.
-        (if (is-eq saleType u1)
-            (is-ok (payment-split nft-index))
-            (is-ok (place-bid nft-index nextBidAmount))
+        (if (> amount u0)
+            (begin (unwrap! (payment-split nft-index) failed-to-mint-err) (print "mint-edition : payment split made"))
+            (print "mint-edition : payment not required")
         )
+        (print "mint-edition : payment managed")
+
+        ;; initialise the sale data - not for sale until the owner sets it.
+        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
+        ;; inncrement the mint counter and edition counter ready for the next edition
+        (map-set nft-edition-counter {nft-index: nft-index} {edition-counter: (+ u1 editionCounter)})
+        (var-set mint-counter (+ mintCounter u1))
+
         (ok mintCounter)
     )
 )
