@@ -19,9 +19,9 @@
 (define-public (register-app (owner principal) (app-origin (buff 80)) (gaia-filename (buff 80)) (app-contract-id (buff 100)) (storage-model int))
   (let
       (
-          (index (get index (map-get? app-map-reverse {app-contract-id: app-contract-id})))
+          (appIndex (get index (map-get? app-map-reverse {app-contract-id: app-contract-id})))
       )
-      (if (is-none index)
+      (if (is-none appIndex)
         (begin
           (if (is-storage-allowed storage-model)
             (begin
