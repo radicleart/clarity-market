@@ -40,6 +40,7 @@
 (define-map nft-high-bid-counter {nft-index: uint} {high-bid-counter: uint, bidder: principal, amount: uint, when-bid: uint, sale-cycle: uint})
 (define-map nft-transfer-counter {nft-index: uint} {transfer-counter: uint})
 
+;; (define-constant percentage-with-twodp u10000000000)
 (define-constant percentage-with-twodp u10000)
 
 (define-constant not-allowed (err u10))
@@ -638,7 +639,7 @@
 )
 
 ;; sends payments to each recipient listed in the royalties
-(define-public (payment-split (nft-index uint))
+(define-private (payment-split (nft-index uint))
     (let
         (
             (addresses (unwrap! (get addresses (map-get? nft-beneficiaries {nft-index: nft-index})) failed-to-mint-err))
@@ -675,9 +676,9 @@
         (ok split)
     )
 )
-;; In the pay-royalty function, the unit of saleAmount is in Satoshi and the share variable is a percentage (ex for 5% it will be equal to 5)
 
-(define-public (pay-royalty (saleAmount uint) (payee principal) (share uint))
+;; In the pay-royalty function, the unit of saleAmount is in Satoshi and the share variable is a percentage (ex for 5% it will be equal to 5)
+(define-private (pay-royalty (saleAmount uint) (payee principal) (share uint))
     (begin
         (if (> share u0)
             (let
