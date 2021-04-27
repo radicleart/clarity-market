@@ -22,12 +22,12 @@
 
 ;; data structures
 (define-map nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
-(define-map nft-data {nft-index: uint} {asset-hash: (buff 32), gaia-username: (buff 32), max-editions: uint, edition: uint, date: uint, series-original: uint})
+(define-map nft-data {nft-index: uint} {asset-hash: (buff 32), gaia-username: (buff 32), max-editions: uint, edition: uint, mint-block-height: uint, series-original: uint})
 (define-map nft-sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint, sale-cycle-index: uint})
 (define-map nft-beneficiaries {nft-index: uint} { addresses: (list 10 principal), shares: (list 10 uint) })
 ;; Phase III ? -- (define-map my-catalogue {nft-index: uint} { auction-id: uint })
-(define-map nft-bid-history {nft-index: uint, bid-index: uint} {sale-cycle: uint, bidder: principal, amount: uint, when-bid: uint})
-(define-map nft-offer-history {nft-index: uint, offer-index: uint} {sale-cycle: uint, offerer: principal, made-date: uint, amount: uint, accepted: uint})
+(define-map nft-bid-history {nft-index: uint, bid-index: uint} {sale-cycle: uint, bidder: principal, amount: uint, app-timestamp: uint})
+(define-map nft-offer-history {nft-index: uint, offer-index: uint} {sale-cycle: uint, offerer: principal, app-timestamp: uint, amount: uint, accepted: uint})
 (define-map nft-transfer-history {nft-index: uint, transfer-index: uint} {sale-cycle: uint, from: principal, to: principal, sale-type: uint, when: uint, amount: uint})
 
 ;; counters keep track per NFT of the...
@@ -36,7 +36,7 @@
 ;;       c) number of bids made (0 based index)
 (define-map nft-offer-counter {nft-index: uint} {offer-counter: uint, sale-cycle: uint})
 (define-map nft-edition-counter {nft-index: uint} {edition-counter: uint})
-(define-map nft-high-bid-counter {nft-index: uint} {high-bid-counter: uint, bidder: principal, amount: uint, when-bid: uint, sale-cycle: uint})
+(define-map nft-high-bid-counter {nft-index: uint} {high-bid-counter: uint, sale-cycle: uint})
 (define-map nft-transfer-counter {nft-index: uint} {transfer-counter: uint})
 
 (define-constant percentage-with-twodp u10000000000)
@@ -63,6 +63,8 @@
 (define-constant payment-error (err u28))
 (define-constant payment-address-error (err u33))
 (define-constant payment-share-error (err u34))
+(define-constant bidding-error (err u35))
+(define-constant prevbid-bidding-error (err u36))
 
 (define-constant nft-not-owned-err (err u401)) ;; unauthorized
 (define-constant sender-equals-recipient-err (err u405)) ;; method not allowed
@@ -142,7 +144,7 @@
 )
 
 ;; adds an offer to the list of offers on an NFT
-(define-public (make-offer (nft-index uint) (amount uint) (made-date uint))
+(define-public (make-offer (nft-index uint) (amount uint) (app-timestamp uint))
     (let
         (
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) not-allowed))
@@ -150,9 +152,9 @@
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
         )
         (asserts! (is-eq saleType u3) not-allowed)
-        (map-insert nft-offer-history {nft-index: nft-index, offer-index: offerCounter} {sale-cycle: saleCycleIndex, offerer: tx-sender, made-date: made-date, amount: amount, accepted: u0})
+        (map-insert nft-offer-history {nft-index: nft-index, offer-index: offerCounter} {sale-cycle: saleCycleIndex, offerer: tx-sender, app-timestamp: app-timestamp, amount: amount, accepted: u0})
         (map-set nft-offer-counter {nft-index: nft-index} {sale-cycle: saleCycleIndex, offer-counter: (+ offerCounter u1)})
-        (ok u1)
+        (ok (+ offerCounter u1))
     )
 )
 
@@ -163,12 +165,12 @@
         (
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) not-allowed))
             (offerer (unwrap! (get offerer (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
-            (made-date (unwrap! (get made-date (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
+            (app-timestamp (unwrap! (get app-timestamp (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
             (sale-cycle (unwrap! (get sale-cycle (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
             (amount (unwrap! (get amount (map-get? nft-offer-history {nft-index: nft-index, offer-index: offer-index})) not-allowed))
         )
         (asserts! (is-eq saleType u3) not-allowed)
-        (map-set nft-offer-history {nft-index: nft-index, offer-index: offer-index} {sale-cycle: sale-cycle, offerer: offerer, made-date: made-date, amount: amount, accepted: u1})
+        (map-set nft-offer-history {nft-index: nft-index, offer-index: offer-index} {sale-cycle: sale-cycle, offerer: offerer, app-timestamp: app-timestamp, amount: amount, accepted: u1})
         (ok (transfer nft-index owner recipient))
     )
 )
@@ -198,7 +200,7 @@
         (asserts! (is-none ahash) asset-not-registered)
 
         ;; Note: series original is really for later editions to refer back to this one - this one IS the series original
-        (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, gaia-username: gaia-username, max-editions: max-editions, edition: u1, date: block-height, series-original: mintCounter})
+        (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, gaia-username: gaia-username, max-editions: max-editions, edition: u1, mint-block-height: block-height, series-original: mintCounter})
 
         ;; Note editions are 1 based and <= max-editions - the one minted here is #1
         (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u2})
@@ -225,23 +227,23 @@
     )
 )
 
-(define-public (mint-edition (nft-index uint) (uiAmount uint))
+(define-public (mint-edition (nftIndex uint) (uiAmount uint))
     (let
         (
             ;; before we start... check the hash corresponds to a minted asset
-            (ahash (unwrap!          (get asset-hash   (map-get? nft-data {nft-index: nft-index})) not-allowed))
-            (gaia-username (unwrap!  (get asset-hash   (map-get? nft-data {nft-index: nft-index})) not-allowed))
-            (maxEditions (unwrap!    (get max-editions (map-get? nft-data {nft-index: nft-index})) not-allowed))
-            (saleType (unwrap!       (get sale-type       (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (amount (unwrap!         (get amount-stx      (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (editionCounter (unwrap! (get edition-counter (map-get? nft-edition-counter {nft-index: nft-index})) edition-counter-error))
+            (ahash (unwrap!          (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (gaia-username (unwrap!  (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (maxEditions (unwrap!    (get max-editions (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (saleType (unwrap!       (get sale-type       (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (amount (unwrap!         (get amount-stx      (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (editionCounter (unwrap! (get edition-counter (map-get? nft-edition-counter {nft-index: nftIndex})) edition-counter-error))
             (this-edition-nft-index  (get nft-index       (map-get? nft-lookup {asset-hash: ahash, edition: editionCounter})))
             (mintCounter (var-get mint-counter))
             (block-time (unwrap!    (get-block-info? time u0) amount-not-set))
         )
         ;; can only mint an edition via buy now or bidding - not offers
         (print "mint-edition : minting an edition for base nft, buy now price, sale type and edition; ")
-        (print nft-index)
+        (print nftIndex)
         (print uiAmount)
         (print saleType)
         (print editionCounter)
@@ -263,7 +265,7 @@
         (asserts! (> (stx-get-balance tx-sender) uiAmount) failed-to-mint-err)
 
         ;; set max editions so we know where we are in the series
-        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaia-username, max-editions: maxEditions, edition: editionCounter, date: block-height, series-original: nft-index})
+        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaia-username, max-editions: maxEditions, edition: editionCounter, mint-block-height: block-height, series-original: nftIndex})
         ;; put the nft index into the list of editions in the look up map
         (map-insert nft-lookup {asset-hash: ahash, edition: editionCounter} {nft-index: mintCounter})
 
@@ -272,7 +274,7 @@
 
         ;; saleType = 1 (buy now) - split out the payments according to royalties - or roll everything back.
         (if (> amount u0)
-            (begin (unwrap! (payment-split nft-index) failed-to-mint-err) (print "mint-edition : payment split made"))
+            (begin (unwrap! (payment-split nftIndex amount) failed-to-mint-err) (print "mint-edition : payment split made"))
             (print "mint-edition : payment not required")
         )
         (print "mint-edition : payment managed")
@@ -280,7 +282,7 @@
         ;; initialise the sale data - not for sale until the owner sets it.
         (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
         ;; inncrement the mint counter and edition counter ready for the next edition
-        (map-set nft-edition-counter {nft-index: nft-index} {edition-counter: (+ u1 editionCounter)})
+        (map-set nft-edition-counter {nft-index: nftIndex} {edition-counter: (+ u1 editionCounter)})
         (var-set mint-counter (+ mintCounter u1))
 
         (ok mintCounter)
@@ -296,9 +298,10 @@
         (
             ;; before we start... check the hash corresponds to a minted asset
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
         )
-        (if
-            (is-owner nftIndex tx-sender)
+        (asserts! (not (is-eq saleType u2)) bidding-error)
+        (if (is-owner nftIndex tx-sender)
             ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
             (if (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: sale-type, increment-stx: increment-stx, reserve-stx: reserve-stx, amount-stx: amount-stx, bidding-end-time: bidding-end-time})
                 (ok nftIndex) not-allowed
@@ -315,13 +318,13 @@
 ;;             b) on sale via buy now
 ;;             c) amount is set
 ;;
-(define-public (buy-now (nft-index uint) (owner principal) (recipient principal))
+(define-public (buy-now (nftIndex uint) (owner principal) (recipient principal))
     (let
         (
-            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (amount (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (ahash (get asset-hash (map-get? nft-data {nft-index: nft-index})))
+            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (amount (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (ahash (get asset-hash (map-get? nft-data {nft-index: nftIndex})))
             (platformFee (var-get platform-fee))
         )
         (asserts! (is-some ahash) asset-not-registered)
@@ -330,71 +333,131 @@
         
         ;; Make the royalty payments - then zero out the sale data and register the transfer
         (print "buy-now : Make the royalty payments")
-        (print (unwrap! (payment-split nft-index) payment-error))
-
-        (unwrap! (add-transfer nft-index owner recipient) transfer-error)
-        (map-set nft-sale-data { nft-index: nft-index } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
+        (print (unwrap! (payment-split nftIndex amount) payment-error))
+        (unwrap! (add-transfer nftIndex owner recipient) transfer-error)
+        (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
         (print "buy-now : Added internal transfer - transfering nft...")
         ;; finally transfer ownership to the buyer (note: via the buyers transaction!)
-        (nft-transfer? my-nft nft-index owner recipient)
+        (nft-transfer? my-nft nftIndex owner recipient)
     )
+)
+
+;; opening-bid
+;; nft-index: unique index for NFT
+;; The opening bid in the given sale cycle a given item.
+(define-public (opening-bid (nftIndex uint) (bidAmount uint) (appTimestamp uint))
+    (let
+        (
+            (amount (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (saleCycle (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (biddingEndTime (unwrap! (get bidding-end-time (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (bidCounter (default-to u0 (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex}))))
+        )
+
+        ;; Check the user bid amount is the opening price OR the current bid plus increment
+        (asserts! (is-eq bidCounter u0) bidding-error)
+        (asserts! (is-eq bidAmount amount) bidding-error)
+        (asserts! (> biddingEndTime appTimestamp) bidding-error)
+        
+        (print "place-bid : sending this much to; ")
+        (print bidAmount)
+        (print (as-contract tx-sender))
+        (print "place-bid : when")
+        (print appTimestamp)
+        (unwrap! (stx-transfer? bidAmount tx-sender (as-contract tx-sender)) failed-to-stx-transfer)
+        (map-insert nft-bid-history {nft-index: nftIndex, bid-index: u0} {bidder: tx-sender, amount: bidAmount, app-timestamp: appTimestamp, sale-cycle: saleCycle})
+        (map-set nft-high-bid-counter {nft-index: nftIndex} {high-bid-counter: u1, sale-cycle: saleCycle})
+        (ok bidAmount)
+    )
+)
+
+(define-private (get-current-bidder (nftIndex uint) (currentBidIndex uint))
+  (let
+      (
+        (currentBidder (unwrap! (get bidder (map-get? nft-bid-history {nft-index: nftIndex, bid-index: (- currentBidIndex u1)})) bidding-error))
+      )
+      (ok currentBidder)
+  )
+)
+
+(define-private (get-current-bid-amount (nftIndex uint) (currentBidIndex uint))
+  (let
+      (
+        (currentAmount (unwrap! (get amount (map-get? nft-bid-history {nft-index: nftIndex, bid-index: (- currentBidIndex u1)})) bidding-error))
+      )
+      (ok currentAmount)
+  )
 )
 
 ;; place-bid
 ;; nft-index: unique index for NFT
 ;; nextBidAmount: amount the user is bidding - i.e the amount display on th place bid button.
-(define-public (place-bid (nft-index uint) (nextBidAmount uint) (whenBid uint))
+(define-public (place-bid (nftIndex uint) (nextBidAmount uint) (appTimestamp uint))
     (let
         (
-            (block-time (unwrap! (get-block-info? time u0) amount-not-set))
-            (bidding-end-time (unwrap! (get bidding-end-time (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (saleCycle (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (amountStart (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (increment (unwrap! (get increment-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (reserve (unwrap! (get reserve-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (currentBidder (get bidder (map-get? nft-high-bid-counter {nft-index: nft-index})))
-            (currentBidIndex (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nft-index})))
-            (currentAmount (get amount (map-get? nft-high-bid-counter {nft-index: nft-index})))
+            (bidding-end-time (unwrap! (get bidding-end-time (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (saleCycle (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (amountStart (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (increment (unwrap! (get increment-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (reserve (unwrap! (get reserve-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (currentBidIndex (unwrap! (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex})) not-allowed))
+            (currentBidder (unwrap! (get-current-bidder nftIndex currentBidIndex) bidding-error))
+            (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
+            (owner (unwrap! (nft-get-owner? my-nft nftIndex) nft-not-owned-err))
         )
 
         ;; Check the user bid amount is the opening price OR the current bid plus increment
-        (if (is-none currentAmount)
-            (asserts! (is-eq nextBidAmount amountStart) user-amount-different)
-            (asserts! (is-eq nextBidAmount (+ (unwrap! currentAmount user-amount-different) increment)) user-amount-different)
-        )
+        (print "place-bid : assert there is an opening bid - otherwise client calls opening-bid")
+        (print currentAmount)
+        (asserts! (> currentAmount u0) user-amount-different)
+        (asserts! (is-eq nextBidAmount (+ currentAmount increment)) user-amount-different)
 
-        ;; if (bidding-end-time > block-time) then this is either the last-bid or a too late bid on the NFT
+        ;; if (appTimestamp > bidding-end-time) then this is either the winning or a too late bid on the NFT
         ;; a too late bid will have been rejected as the last bid resets the sale/bidding data on the item.
         ;; if its the last bid...
         ;;               1. Refund the currentBid to the bidder
         ;;               2. move currentBid to bid history
         ;;               3. Set the bid in nft-high-bid-counter - note 'set' so we overwrite the previous bid
-        ;; if (!currentBid) then this is the first-bid on the NFT
-        ;;               1. Transfer amount into the contract
-        ;;               2. Save the bid in nft-bid-history
-        ;;               3. Insert the bid in nft-high-bid-counter
-        ;; otherwise (next-bid) we
+        ;; (next-bid) we
         ;;               1. Refund the currentBid to the bidder
         ;;               2. Insert currentBid to bid history
         ;;               3. Set the bid in nft-high-bid-counter - note 'set' so we overwrite the previous bid
 
-        (if (and (is-some currentBidIndex) (> block-time bidding-end-time))
+        (print "place-bid : currentBidIndex")
+        (print currentBidIndex)
+        (print "place-bid : bidding-end-time")
+        (print bidding-end-time)
+        (print "place-bid : appTimestamp")
+        (print appTimestamp)
+        (print "place-bid : reserve")
+        (print reserve)
+        (if (> appTimestamp bidding-end-time)
             (begin
-                (unwrap! (refund-bid nft-index (unwrap! currentBidder failed-to-stx-transfer) (unwrap! currentAmount failed-to-stx-transfer)) failed-to-stx-transfer)
+                (print "place-bid : bid is after end time refund current bid")
+                (unwrap! (refund-bid nftIndex currentBidder currentAmount) failed-to-stx-transfer)
                 (if (< nextBidAmount reserve)
                     ;; if this bid is less than reserve & its the last bid then just refund previous bid
                     (unwrap! (ok true) failed-to-stx-transfer)
-                    (unwrap! (last-bid nft-index nextBidAmount (unwrap! currentBidIndex failed-to-stx-transfer) whenBid saleCycle) failed-to-stx-transfer)
+                    (begin
+                        ;; WINNING BID - is the FIRST bid after bidding close.
+                        (print "place-bid : Make the royalty payments")
+                        (unwrap! (payment-split nftIndex nextBidAmount) payment-error)
+                        (unwrap! (add-transfer nftIndex owner tx-sender) transfer-error)
+                        (unwrap! (record-bid nftIndex nextBidAmount currentBidIndex appTimestamp saleCycle) failed-to-stx-transfer)
+                        (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycle u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
+                        (print "place-bid : Added internal transfer - transfering nft...")
+                        ;; finally transfer ownership to the buyer (note: via the buyers transaction!)
+                        (unwrap! (nft-transfer? my-nft nftIndex owner tx-sender) failed-to-stx-transfer)
+                    )
                 )
             )
-            (if (is-none currentBidIndex)
-                ;; only place bid if block time is less than end time
-                (unwrap! (first-bid nft-index nextBidAmount whenBid saleCycle) failed-to-stx-transfer)
-                (begin
-                    (unwrap! (refund-bid nft-index (unwrap! currentBidder failed-to-stx-transfer) (unwrap! currentAmount failed-to-stx-transfer)) failed-to-stx-transfer)
-                    (unwrap! (next-bid nft-index nextBidAmount (unwrap! currentBidIndex failed-to-stx-transfer) whenBid saleCycle) failed-to-stx-transfer)
-                )
+            (begin
+                (print "place-bid : bid is before end time refund current bid from the contract")
+                (unwrap! (refund-bid nftIndex currentBidder currentAmount) failed-to-stx-transfer)
+                (print "place-bid : and transfer this bid into the contract")
+                (unwrap! (next-bid nftIndex nextBidAmount currentBidIndex appTimestamp saleCycle) failed-to-stx-transfer)
             )
         )
         ;;
@@ -420,35 +483,36 @@
 ;;             2 = refund closure - the last bid gets refunded and sale is closed. The item ownership does not change.
 ;; Note bidding can also be closed automatically - if a bid is received after the bidding end time.
 ;; In the context of a 'live auction' items have no end time and are closed by the 'auctioneer'.
-(define-public (close-bidding (nft-index uint) (closeType uint))
+(define-public (close-bidding (nftIndex uint) (closeType uint))
     (let
         (
-            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (currentBidder (get bidder (map-get? nft-high-bid-counter {nft-index: nft-index})))
-            (currentBidIndex (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nft-index})))
-            (currentAmount (get amount (map-get? nft-high-bid-counter {nft-index: nft-index})))
-            (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nft-index})) failed-to-close-1))
+            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) failed-to-close-1))
+            (currentBidIndex (unwrap! (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex})) not-allowed))
+            (currentBidder (unwrap! (get-current-bidder nftIndex currentBidIndex) bidding-error))
+            (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
         )
         (asserts! (or (is-eq closeType u1) (is-eq closeType u2)) failed-to-close-1)
+        (asserts! (or (is-owner nftIndex tx-sender) (unwrap! (is-administrator) failed-to-close-1)) failed-to-close-1)
 
         ;; Check for a current bid - if none then just reset the sale data to not selling
-        (if (is-none currentAmount)
-            (map-set nft-sale-data { nft-index: nft-index } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
+        (if (is-eq currentAmount u0)
+            (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
             (if (is-eq closeType u1)
                 (begin
                     ;; buy now closure - pay and transfer ownership
-                    (unwrap! (payment-split nft-index) failed-to-close-2)
-                    (unwrap! (add-transfer nft-index (unwrap! (nft-get-owner? my-nft nft-index) failed-to-close-3) tx-sender) transfer-error)
-                    (unwrap! (nft-transfer? my-nft nft-index (unwrap! currentBidder failed-to-close-3) tx-sender) failed-to-close-2)
+                    (unwrap! (payment-split nftIndex currentAmount) failed-to-close-2)
+                    (unwrap! (add-transfer nftIndex (unwrap! (nft-get-owner? my-nft nftIndex) failed-to-close-3) tx-sender) transfer-error)
+                    (unwrap! (nft-transfer? my-nft nftIndex currentBidder tx-sender) failed-to-close-2)
                 )
                 (begin
                     ;; refund closure - refund the bid and reset sale data
-                    (unwrap! (refund-bid nft-index (unwrap! currentBidder failed-to-close-1) (unwrap! currentAmount failed-to-stx-transfer)) failed-to-close-2)
-                    (map-set nft-sale-data { nft-index: nft-index } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
+                    (unwrap! (refund-bid nftIndex currentBidder currentAmount) failed-to-close-2)
+                    (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
                 )
             )
         )
-        (ok nft-index)
+        (ok nftIndex)
     )
 )
 
@@ -585,18 +649,18 @@
     )
 )
 
-(define-read-only (get-sale-data (nft-index uint))
-    (match (map-get? nft-sale-data {nft-index: nft-index})
+(define-read-only (get-sale-data (nftIndex uint))
+    (match (map-get? nft-sale-data {nft-index: nftIndex})
         mySaleData
         (ok mySaleData)
         not-found
     )
 )
 
-(define-read-only (get-transfer-count (nft-index uint))
+(define-read-only (get-transfer-count (nftIndex uint))
   (let
       (
-          (count (default-to u0 (get transfer-counter (map-get? nft-transfer-counter (tuple (nft-index nft-index))))))
+          (count (default-to u0 (get transfer-counter (map-get? nft-transfer-counter (tuple (nft-index nftIndex))))))
       )
       (ok count)
   )
@@ -631,47 +695,54 @@
     )
 )
 
-(define-private (refund-bid (nft-index uint) (currentBidder principal) (currentAmount uint))
+(define-private (refund-bid (nftIndex uint) (currentBidder principal) (currentAmount uint))
     (begin
-        (as-contract (stx-transfer? currentAmount tx-sender currentBidder))
+        (print "refund-bid : nftIndex, currentBidder, currentAmount")
+        (print nftIndex)
+        (print currentBidder)
+        (print currentAmount)
+        (unwrap! (as-contract (stx-transfer? currentAmount tx-sender currentBidder)) failed-to-stx-transfer)
+        (print "refund-bid : refunded bid to biddder")
+        (ok true)
     )
 )
 
 ;; need to account for reserve-stx
-(define-private (last-bid (nft-index uint) (bidAmount uint) (currentBidIndex uint) (whenBid uint) (saleCycle uint))
+(define-private (record-bid (nftIndex uint) (bidAmount uint) (bidCounter uint) (appTimestamp uint) (saleCycle uint))
     (begin
-        (unwrap! (stx-transfer? bidAmount tx-sender (var-get administrator)) failed-to-stx-transfer)
-        (map-insert nft-bid-history {nft-index: nft-index, bid-index: (+ currentBidIndex u1)} {bidder: tx-sender, amount: bidAmount, when-bid: whenBid, sale-cycle: saleCycle})
-        (map-insert nft-high-bid-counter {nft-index: nft-index} {high-bid-counter: (+ currentBidIndex u1), bidder: tx-sender, amount: bidAmount, when-bid: whenBid, sale-cycle: saleCycle})
+        (print "record-bid : nftIndex, bidAmount, bidCounter, appTimestamp, saleCycle")
+        (print nftIndex)
+        (print bidAmount)
+        (print bidCounter)
+        (print appTimestamp)
+        (print saleCycle)
+        ;; see place-bid for the payment - no need for this (unwrap! (stx-transfer? bidAmount tx-sender (as-contract tx-sender)) failed-to-stx-transfer)
+        (map-insert nft-bid-history {nft-index: nftIndex, bid-index: bidCounter} {bidder: tx-sender, amount: bidAmount, app-timestamp: appTimestamp, sale-cycle: saleCycle})
+        (map-set nft-high-bid-counter {nft-index: nftIndex} {high-bid-counter: (+ bidCounter u1), sale-cycle: saleCycle})
+        (print "record-bid : added to map nft-bid-history and updated bid-counter - nft-high-bid-counter")
         (ok true)
     )
 )
 
-(define-private (next-bid (nft-index uint) (bidAmount uint) (currentBidIndex uint) (whenBid uint) (saleCycle uint))
+(define-private (next-bid (nftIndex uint) (bidAmount uint) (bidCounter uint) (appTimestamp uint) (saleCycle uint))
     (begin
-        (unwrap! (stx-transfer? bidAmount tx-sender (var-get administrator)) failed-to-stx-transfer)
-        (map-insert nft-bid-history {nft-index: nft-index, bid-index: (+ currentBidIndex u1)} {bidder: tx-sender, amount: bidAmount, when-bid: whenBid, sale-cycle: saleCycle})
-        (map-set nft-high-bid-counter {nft-index: nft-index} {high-bid-counter: (+ currentBidIndex u1), bidder: tx-sender, amount: bidAmount, when-bid: whenBid, sale-cycle: saleCycle})
-        (ok true)
-    )
-)
-(define-private (first-bid (nft-index uint) (bidAmount uint) (whenBid uint) (saleCycle uint))
-    (begin
-        (unwrap! (stx-transfer? bidAmount tx-sender (var-get administrator)) failed-to-stx-transfer)
-        (map-insert nft-bid-history {nft-index: nft-index, bid-index: u0} {bidder: tx-sender, amount: bidAmount, when-bid: whenBid, sale-cycle: saleCycle})
-        (map-insert nft-high-bid-counter {nft-index: nft-index} {high-bid-counter: u0, bidder: tx-sender, amount: bidAmount, when-bid: whenBid, sale-cycle: saleCycle})
+        (unwrap! (stx-transfer? bidAmount tx-sender (as-contract tx-sender)) failed-to-stx-transfer)
+        (print "next-bid : transferred bid to contract")
+        (map-insert nft-bid-history {nft-index: nftIndex, bid-index: bidCounter} {bidder: tx-sender, amount: bidAmount, app-timestamp: appTimestamp, sale-cycle: saleCycle})
+        (print "next-bid : inserted into history")
+        (map-set nft-high-bid-counter {nft-index: nftIndex} {high-bid-counter: (+ bidCounter u1), sale-cycle: saleCycle})
+        (print "next-bid : stepped bid counter")
         (ok true)
     )
 )
 
 ;; sends payments to each recipient listed in the royalties
-(define-private (payment-split (nft-index uint))
+(define-private (payment-split (nftIndex uint) (saleAmount uint))
     (let
         (
-            (addresses (unwrap! (get addresses (map-get? nft-beneficiaries {nft-index: nft-index})) failed-to-mint-err))
-            (shares (unwrap! (get shares (map-get? nft-beneficiaries {nft-index: nft-index})) failed-to-mint-err))
-            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
-            (saleAmount (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
+            (addresses (unwrap! (get addresses (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
+            (shares (unwrap! (get shares (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
+            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (split u0)
         )
         (asserts! (or (is-eq saleType u1) (is-eq saleType u2)) not-approved-to-sell)
@@ -717,7 +788,11 @@
                 (print split)
                 (print "pay-royalty : from account")
                 (print tx-sender)
-                (unwrap! (stx-transfer? split tx-sender payee) transfer-error)
+                ;; ignore royalty payment if its to the tx-sender.
+                (if (not (is-eq tx-sender payee))
+                    (unwrap! (stx-transfer? split tx-sender payee) transfer-error)
+                    (unwrap! (ok true) transfer-error)
+                )
                 (print "pay-royalty : returning after stx-transfer?")
                 (ok split)
             )
