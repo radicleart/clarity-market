@@ -274,7 +274,7 @@
 
         ;; saleType = 1 (buy now) - split out the payments according to royalties - or roll everything back.
         (if (> amount u0)
-            (begin (unwrap! (payment-split nftIndex amount) failed-to-mint-err) (print "mint-edition : payment split made"))
+            (begin (unwrap! (payment-split nftIndex amount tx-sender) failed-to-mint-err) (print "mint-edition : payment split made"))
             (print "mint-edition : payment not required")
         )
         (print "mint-edition : payment managed")
@@ -333,7 +333,7 @@
         
         ;; Make the royalty payments - then zero out the sale data and register the transfer
         (print "buy-now : Make the royalty payments")
-        (print (unwrap! (payment-split nftIndex amount) payment-error))
+        (print (unwrap! (payment-split nftIndex amount tx-sender) payment-error))
         (unwrap! (add-transfer nftIndex owner recipient) transfer-error)
         (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
         (print "buy-now : Added internal transfer - transfering nft...")
@@ -443,7 +443,7 @@
                     (begin
                         ;; WINNING BID - is the FIRST bid after bidding close.
                         (print "place-bid : Make the royalty payments")
-                        (unwrap! (payment-split nftIndex nextBidAmount) payment-error)
+                        (unwrap! (payment-split nftIndex nextBidAmount tx-sender) payment-error)
                         (unwrap! (add-transfer nftIndex owner tx-sender) transfer-error)
                         (unwrap! (record-bid nftIndex nextBidAmount currentBidIndex appTimestamp saleCycle) failed-to-stx-transfer)
                         (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycle u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
@@ -486,14 +486,20 @@
 (define-public (close-bidding (nftIndex uint) (closeType uint))
     (let
         (
+            (bidding-end-time (unwrap! (get bidding-end-time (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) failed-to-close-1))
+            (block-time (unwrap! (get-block-info? time u0) not-allowed))
             (currentBidIndex (unwrap! (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex})) not-allowed))
             (currentBidder (unwrap! (get-current-bidder nftIndex currentBidIndex) bidding-error))
             (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
         )
         (asserts! (or (is-eq closeType u1) (is-eq closeType u2)) failed-to-close-1)
-        (asserts! (or (is-owner nftIndex tx-sender) (unwrap! (is-administrator) failed-to-close-1)) failed-to-close-1)
+        ;; only the owner or administrator can call close
+        (asserts! (or (is-owner nftIndex tx-sender) (unwrap! (is-administrator) failed-to-close-2)) failed-to-close-2)
+        ;; only the administrator can call close BEFORE the end time - note we use the less accurate 
+        ;; but fool proof block time here to prevent owner/client code jerry mandering the close function
+        (asserts! (or (> block-time bidding-end-time) (unwrap! (is-administrator) failed-to-close-3)) failed-to-close-3)
 
         ;; Check for a current bid - if none then just reset the sale data to not selling
         (if (is-eq currentAmount u0)
@@ -501,9 +507,10 @@
             (if (is-eq closeType u1)
                 (begin
                     ;; buy now closure - pay and transfer ownership
-                    (unwrap! (payment-split nftIndex currentAmount) failed-to-close-2)
-                    (unwrap! (add-transfer nftIndex (unwrap! (nft-get-owner? my-nft nftIndex) failed-to-close-3) tx-sender) transfer-error)
-                    (unwrap! (nft-transfer? my-nft nftIndex currentBidder tx-sender) failed-to-close-2)
+                    ;; note that the money to pay with is in the contract!
+                    (unwrap! (payment-split nftIndex currentAmount (as-contract tx-sender)) payment-error)
+                    (unwrap! (add-transfer nftIndex (unwrap! (nft-get-owner? my-nft nftIndex) nft-not-owned-err) tx-sender) transfer-error)
+                    (unwrap! (nft-transfer? my-nft nftIndex (unwrap! (nft-get-owner? my-nft nftIndex) nft-not-owned-err) tx-sender) failed-to-close-2)
                 )
                 (begin
                     ;; refund closure - refund the bid and reset sale data
@@ -737,7 +744,7 @@
 )
 
 ;; sends payments to each recipient listed in the royalties
-(define-private (payment-split (nftIndex uint) (saleAmount uint))
+(define-private (payment-split (nftIndex uint) (saleAmount uint) (payer principal))
     (let
         (
             (addresses (unwrap! (get addresses (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
@@ -748,25 +755,25 @@
         (asserts! (or (is-eq saleType u1) (is-eq saleType u2)) not-approved-to-sell)
 
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u0) payment-address-error) (unwrap! (element-at shares u0) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u0) payment-address-error) (unwrap! (element-at shares u0) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u1) payment-address-error) (unwrap! (element-at shares u1) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u1) payment-address-error) (unwrap! (element-at shares u1) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u2) payment-address-error) (unwrap! (element-at shares u2) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u2) payment-address-error) (unwrap! (element-at shares u2) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u3) payment-address-error) (unwrap! (element-at shares u3) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u3) payment-address-error) (unwrap! (element-at shares u3) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u4) payment-address-error) (unwrap! (element-at shares u4) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u4) payment-address-error) (unwrap! (element-at shares u4) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u5) payment-address-error) (unwrap! (element-at shares u5) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u5) payment-address-error) (unwrap! (element-at shares u5) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u6) payment-address-error) (unwrap! (element-at shares u6) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u6) payment-address-error) (unwrap! (element-at shares u6) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u7) payment-address-error) (unwrap! (element-at shares u7) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u7) payment-address-error) (unwrap! (element-at shares u7) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u8) payment-address-error) (unwrap! (element-at shares u8) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u8) payment-address-error) (unwrap! (element-at shares u8) payment-share-error)) payment-share-error))
         (print split)
-        (+ split (unwrap! (pay-royalty saleAmount (unwrap! (element-at addresses u9) payment-address-error) (unwrap! (element-at shares u9) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u9) payment-address-error) (unwrap! (element-at shares u9) payment-share-error)) payment-share-error))
 
         (print "payment-split : split")
         (print split)
@@ -775,7 +782,7 @@
 )
 
 ;; In the pay-royalty function, the unit of saleAmount is in Satoshi and the share variable is a percentage (ex for 5% it will be equal to 5)
-(define-private (pay-royalty (saleAmount uint) (payee principal) (share uint))
+(define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
     (begin
         (if (> share u0)
             (let
@@ -786,11 +793,12 @@
                 (print payee)
                 (print "pay-royalty : split")
                 (print split)
-                (print "pay-royalty : from account")
+                (print "pay-royalty : tx-sender and payer can be different (close-bidding, place bid) as the contract can also be the payer")
                 (print tx-sender)
-                ;; ignore royalty payment if its to the tx-sender.
+                (print payer)
+                ;; ignore royalty payment if its to the buyer / tx-sender.
                 (if (not (is-eq tx-sender payee))
-                    (unwrap! (stx-transfer? split tx-sender payee) transfer-error)
+                    (unwrap! (stx-transfer? split payer payee) transfer-error)
                     (unwrap! (ok true) transfer-error)
                 )
                 (print "pay-royalty : returning after stx-transfer?")
