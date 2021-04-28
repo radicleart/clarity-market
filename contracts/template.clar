@@ -13,7 +13,7 @@
 (define-constant token-name "params.tokenName")
 (define-constant token-symbol "params.tokenSymbol")
 
-;; Non Fungible Token, modeled after ERC-721 via transferable-nft-trait
+;; Non Fungible Token, modeled after ERC-721 via nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
 ;; NFT are identified by nft-index (uint) which is tied via a reverse lookup to a real world
 ;; asset hash - SHA 256 32 byte value. The Asset Hash is used to tie arbitrary real world
@@ -22,7 +22,7 @@
 
 ;; data structures
 (define-map nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
-(define-map nft-data {nft-index: uint} {asset-hash: (buff 32), gaia-username: (buff 32), max-editions: uint, edition: uint, mint-block-height: uint, series-original: uint})
+(define-map nft-data {nft-index: uint} {asset-hash: (buff 32), gaia-username: (buff 32), max-editions: uint, edition: uint, edition-cost: uint, mint-block-height: uint, series-original: uint})
 (define-map nft-sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint, sale-cycle-index: uint})
 (define-map nft-beneficiaries {nft-index: uint} { addresses: (list 10 principal), shares: (list 10 uint) })
 ;; Phase III ? -- (define-map my-catalogue {nft-index: uint} { auction-id: uint })
@@ -65,6 +65,7 @@
 (define-constant payment-share-error (err u34))
 (define-constant bidding-error (err u35))
 (define-constant prevbid-bidding-error (err u36))
+(define-constant not-originale (err u37))
 
 (define-constant nft-not-owned-err (err u401)) ;; unauthorized
 (define-constant sender-equals-recipient-err (err u405)) ;; method not allowed
@@ -188,25 +189,25 @@
 ;; Note series-original in the case of the original in series is just
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
-(define-public (mint-token (asset-hash (buff 32)) (gaia-username (buff 32)) (max-editions uint) (addresses (list 10 principal)) (shares (list 10 uint)))
+(define-public (mint-token (asset-hash (buff 32)) (gaiaUsername (buff 32)) (maxEditions uint) (editionCost uint) (addresses (list 10 principal)) (shares (list 10 uint)))
     (let
         (
             (mintCounter (var-get mint-counter))
             (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
             (block-time (unwrap! (get-block-info? time u0) amount-not-set))
         )
-        (asserts! (> max-editions u0) editions-error)
+        (asserts! (> maxEditions u0) editions-error)
         (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
         (asserts! (is-none ahash) asset-not-registered)
 
         ;; Note: series original is really for later editions to refer back to this one - this one IS the series original
-        (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, gaia-username: gaia-username, max-editions: max-editions, edition: u1, mint-block-height: block-height, series-original: mintCounter})
+        (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, gaia-username: gaiaUsername, max-editions: maxEditions, edition: u1, edition-cost: editionCost, mint-block-height: block-height, series-original: mintCounter})
 
-        ;; Note editions are 1 based and <= max-editions - the one minted here is #1
+        ;; Note editions are 1 based and <= maxEditions - the one minted here is #1
         (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u2})
 
         ;; By default we accept offers - sale type can be changed via the UI.
-        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u3, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
+        (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
 
         (map-insert nft-lookup {asset-hash: asset-hash, edition: u1} {nft-index: mintCounter})
 
@@ -227,54 +228,40 @@
     )
 )
 
-(define-public (mint-edition (nftIndex uint) (uiAmount uint))
+(define-public (mint-edition (nftIndex uint))
     (let
         (
             ;; before we start... check the hash corresponds to a minted asset
-            (ahash (unwrap!          (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
-            (gaia-username (unwrap!  (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
-            (maxEditions (unwrap!    (get max-editions (map-get? nft-data {nft-index: nftIndex})) not-allowed))
-            (saleType (unwrap!       (get sale-type       (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
-            (amount (unwrap!         (get amount-stx      (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (ahash          (unwrap! (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (gaia-username  (unwrap! (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (maxEditions    (unwrap! (get max-editions (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (editionCost    (unwrap! (get edition-cost (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (editionCounter (unwrap! (get edition-counter (map-get? nft-edition-counter {nft-index: nftIndex})) edition-counter-error))
-            (this-edition-nft-index  (get nft-index       (map-get? nft-lookup {asset-hash: ahash, edition: editionCounter})))
-            (mintCounter (var-get mint-counter))
-            (block-time (unwrap!    (get-block-info? time u0) amount-not-set))
+            (thisEdition    (default-to u0 (get nft-index (map-get? nft-lookup {asset-hash: ahash, edition: editionCounter}))))
+            (block-time     (unwrap!  (get-block-info? time u0) amount-not-set))
+            (mintCounter    (var-get mint-counter))
         )
         ;; can only mint an edition via buy now or bidding - not offers
         (print "mint-edition : minting an edition for base nft, buy now price, sale type and edition; ")
         (print nftIndex)
-        (print uiAmount)
-        (print saleType)
         (print editionCounter)
-        (asserts! (is-eq saleType u1) not-approved-to-sell)
-        (asserts! (is-none this-edition-nft-index) edition-counter-error)
+        (print mintCounter)
+        (asserts! (is-eq thisEdition u0) edition-counter-error)
         ;; Note - the edition index is 1 based and incremented before insertion in this methid - therefore the test is '<=' here!
         (asserts! (<= editionCounter maxEditions) edition-limit-reached)
         ;; This asserts the first one has been minted already - see mint-token.
         (asserts! (> editionCounter u1) edition-counter-error)
-        (asserts! (> (stx-get-balance tx-sender) amount) cant-pay-mint-price)
-
-        ;; saleType=1 -> buy now - uiAmount must equal buy now amount-stx
-        ;; saleType=2 -> bidding - uiAmount must equal amount-stx plus the increment
-        ;; throws - user is not expecting to pay this amount.
-        (print "mint-edition : minting new nft at index; ")
-        (print mintCounter)
-        (asserts! (is-eq uiAmount amount) user-amount-different)
-        ;; check the buyer/bidder has enough funds..
-        (asserts! (> (stx-get-balance tx-sender) uiAmount) failed-to-mint-err)
-
+        ;; check the buyer has enough funds..
+        (asserts! (> (stx-get-balance tx-sender) editionCost) cant-pay-mint-price)
         ;; set max editions so we know where we are in the series
-        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaia-username, max-editions: maxEditions, edition: editionCounter, mint-block-height: block-height, series-original: nftIndex})
+        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaia-username, max-editions: maxEditions, edition: editionCounter, edition-cost: editionCost, mint-block-height: block-height, series-original: nftIndex})
         ;; put the nft index into the list of editions in the look up map
         (map-insert nft-lookup {asset-hash: ahash, edition: editionCounter} {nft-index: mintCounter})
-
         ;; mint the NFT and update the counter for the next..
         (unwrap! (nft-mint? my-nft mintCounter tx-sender) failed-to-mint-err)
-
         ;; saleType = 1 (buy now) - split out the payments according to royalties - or roll everything back.
-        (if (> amount u0)
-            (begin (unwrap! (payment-split nftIndex amount tx-sender) failed-to-mint-err) (print "mint-edition : payment split made"))
+        (if (> editionCost u0)
+            (begin (unwrap! (payment-split nftIndex editionCost tx-sender) failed-to-mint-err) (print "mint-edition : payment split made"))
             (print "mint-edition : payment not required")
         )
         (print "mint-edition : payment managed")
@@ -288,6 +275,26 @@
         (ok mintCounter)
     )
 )
+
+;; allow the owner of the series original to set the cost of minting editions
+;; the cost for each edition is taken from the series original and so we need to 
+;; operate on the the original here - ie nftIndex is the index of thee original
+;; and NOT the edition andd only the creator of the series original can change this.
+(define-public (set-edition-cost (nftIndex uint) (maxEditions uint) (editionCost uint))
+    (let
+        (
+            (ahash          (unwrap! (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (gaiaUsername   (unwrap! (get gaia-username   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (edition        (unwrap! (get edition (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (mintBlockHeight (unwrap! (get mint-block-height (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (seriesOriginal  (unwrap! (get series-original (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+        )
+        (asserts! (is-owner nftIndex tx-sender) failed-to-close-2)
+        (asserts! (is-eq nftIndex seriesOriginal) not-originale)
+        (ok (map-set nft-data {nft-index: nftIndex} {asset-hash: ahash, gaia-username: gaiaUsername, max-editions: maxEditions, edition: edition, edition-cost: editionCost, mint-block-height: mintBlockHeight, series-original: seriesOriginal}))
+    )
+)
+
 
 ;; set-sale-data updates the sale type and purchase info for a given NFT. Only the owner can call this method
 ;; and doing so make the asset transferable by the recipient - on condition of meeting the conditions of sale
@@ -325,7 +332,6 @@
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (amount (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (ahash (get asset-hash (map-get? nft-data {nft-index: nftIndex})))
-            (platformFee (var-get platform-fee))
         )
         (asserts! (is-some ahash) asset-not-registered)
         (asserts! (is-eq saleType u1) not-approved-to-sell)
@@ -521,14 +527,6 @@
         )
         (ok nftIndex)
     )
-)
-
-;; not yet implemented
-(define-public (balance-of (recipient principal))
-  (if (is-eq tx-sender recipient)
-      (ok u0)
-      (err u1)
-  )
 )
 
 ;; read only methods
@@ -744,16 +742,14 @@
 )
 
 ;; sends payments to each recipient listed in the royalties
+;; Note this is called by mint-edition where thee nftIndex actuallt referes to the series orginal and is where the royalties are stored.
 (define-private (payment-split (nftIndex uint) (saleAmount uint) (payer principal))
     (let
         (
             (addresses (unwrap! (get addresses (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
             (shares (unwrap! (get shares (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
-            (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (split u0)
         )
-        (asserts! (or (is-eq saleType u1) (is-eq saleType u2)) not-approved-to-sell)
-
         (print split)
         (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u0) payment-address-error) (unwrap! (element-at shares u0) payment-share-error)) payment-share-error))
         (print split)
