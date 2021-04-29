@@ -233,7 +233,7 @@
         (
             ;; before we start... check the hash corresponds to a minted asset
             (ahash          (unwrap! (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
-            (gaia-username  (unwrap! (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (gaiaUsername   (unwrap! (get gaia-username   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (maxEditions    (unwrap! (get max-editions (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (editionCost    (unwrap! (get edition-cost (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (editionCounter (unwrap! (get edition-counter (map-get? nft-edition-counter {nft-index: nftIndex})) edition-counter-error))
@@ -254,7 +254,7 @@
         ;; check the buyer has enough funds..
         (asserts! (> (stx-get-balance tx-sender) editionCost) cant-pay-mint-price)
         ;; set max editions so we know where we are in the series
-        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaia-username, max-editions: maxEditions, edition: editionCounter, edition-cost: editionCost, mint-block-height: block-height, series-original: nftIndex})
+        (map-insert nft-data {nft-index: mintCounter} {asset-hash: ahash, gaia-username: gaiaUsername, max-editions: maxEditions, edition: editionCounter, edition-cost: editionCost, mint-block-height: block-height, series-original: nftIndex})
         ;; put the nft index into the list of editions in the look up map
         (map-insert nft-lookup {asset-hash: ahash, edition: editionCounter} {nft-index: mintCounter})
         ;; mint the NFT and update the counter for the next..
