@@ -1,5 +1,7 @@
 ;; application registry for applications  wishing to sell NFTs throug the marketplace
-(define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
+;; (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
+(define-data-var administrator principal 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT)
+;; (define-data-var administrator principal 'SP1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRTH2ZTMX)
 (define-map app-map {index: int} {owner: principal, app-origin: (buff 80), gaia-filename: (buff 80), app-contract-id: (buff 100), storage-model: int, status: int})
 (define-map app-map-reverse {app-contract-id: (buff 100)} {index: int})
 (define-data-var app-counter int 0)
