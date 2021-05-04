@@ -1,10 +1,10 @@
 ;; Interface definitions
 ;;(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.tradable-nft-trait)
-;;(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-trait.nft-trait)
+(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-trait.nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var mint-price uint u10000)
+(define-data-var mint-price uint u1000000)
 ;; (define-data-var base-token-uri (buff 100) 0x68747470733a2f2f6c6f6f70626f6d622e7269736964696f2e636f6d2f696e6465782f76312f61737365742f)
 (define-data-var base-token-uri (string-ascii 256) "https://staging.thisisnumberone.com/index/v2/asset/")
 (define-data-var mint-counter uint u0)
@@ -290,7 +290,7 @@
             (mintBlockHeight (unwrap! (get mint-block-height (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (seriesOriginal  (unwrap! (get series-original (map-get? nft-data {nft-index: nftIndex})) not-allowed))
         )
-        (asserts! (is-owner nftIndex tx-sender) failed-to-close-2)
+        (asserts! (is-owner nftIndex tx-sender) nft-not-owned-err)
         (asserts! (is-eq nftIndex seriesOriginal) not-originale)
         (ok (map-set nft-data {nft-index: nftIndex} {asset-hash: ahash, gaia-username: gaiaUsername, max-editions: maxEditions, edition: edition, edition-cost: editionCost, mint-block-height: mintBlockHeight, series-original: seriesOriginal}))
     )
