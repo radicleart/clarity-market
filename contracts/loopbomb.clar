@@ -413,7 +413,6 @@
         )
 
         ;; Check the user bid amount is the opening price OR the current bid plus increment
-        (asserts! (is-eq bidCounter u0) bidding-opening-error)
         (asserts! (is-eq bidAmount amount) bidding-amount-error)
         (asserts! (> biddingEndTime appTimestamp) bidding-endtime-error)
         
