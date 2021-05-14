@@ -1,8 +1,6 @@
 ;; Interface definitions
-;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-interface.transferable-nft-trait)
-;; (impl-trait 'params.platformAddress.nft-interface.tradable-nft-trait)
-;; mocknet
-;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-trait.nft-trait)
+(impl-trait 'params.platformAddress.nft-approvable-trait.nft-approvable-trait)
+;; (impl-trait 'params.platformAddress.nft-tradable-trait.nft-tradable-trait)
 ;; mainnet
 ;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 (impl-trait 'params.platformAddress.nft-trait.nft-trait)
@@ -25,6 +23,7 @@
 (define-non-fungible-token my-nft uint)
 
 ;; data structures
+(define-map nft-approvals {nft-index: uint} {approval: principal})
 (define-map nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
 (define-map nft-data {nft-index: uint} {asset-hash: (buff 32), meta-data-url: (buff 200), max-editions: uint, edition: uint, edition-cost: uint, mint-block-height: uint, series-original: uint})
 (define-map nft-sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint, sale-cycle-index: uint})
@@ -40,8 +39,8 @@
 (define-map nft-edition-counter {nft-index: uint} {edition-counter: uint})
 (define-map nft-high-bid-counter {nft-index: uint} {high-bid-counter: uint, sale-cycle: uint})
 
+(define-constant percentage-on-secondary u10)
 (define-constant percentage-with-twodp u10000000000)
-;; (define-constant percentage-with-twodp u10000)
 
 (define-constant not-allowed (err u10))
 (define-constant not-found (err u11))
@@ -92,14 +91,31 @@
   (ok (nft-get-owner? my-nft nftIndex))
 )
 
+;; from nft-trait: Gets the owner of the 'SPecified token ID.
+(define-read-only (get-approval (nftIndex uint))
+  (ok (unwrap! (get approval (map-get? nft-approvals {nft-index: nftIndex})) not-found))
+)
+
+;; sets an approval principal - allowed to call transfer on owner behalf.
+(define-public (set-approval-for (nftIndex uint) (approval principal))
+    (if (is-owner nftIndex tx-sender)
+        (begin
+            (map-set nft-approvals {nft-index: nftIndex} {approval: approval})
+            (ok true)
+        )
+        nft-not-owned-err
+    )
+)
+
 ;; Transfers tokens to a 'SPecified principal.
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
-  (if (and (is-owner nftIndex owner) (is-eq owner tx-sender))
+  (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
     (match (nft-transfer? my-nft nftIndex owner recipient)
         success (ok true)
         error (nft-transfer-err error))
     nft-not-owned-err)
 )
+
 (define-private (nft-transfer-err (code uint))
   (if (is-eq u1 code)
     nft-not-owned-err
@@ -108,6 +124,18 @@
       (if (is-eq u3 code)
         nft-not-found-err
         (err code)))))
+
+(define-private (is-owner (nftIndex uint) (user principal))
+  (is-eq user (unwrap! (nft-get-owner? my-nft nftIndex) false))
+)
+(define-private (is-approval (nftIndex uint) (user principal))
+  (is-eq user (unwrap! (get approval (map-get? nft-approvals {nft-index: nftIndex})) false))
+)
+(define-private (is-owner-or-approval (nftIndex uint) (user principal))
+    (if (is-owner nftIndex) true
+        (if (is-approval nftIndex) true false)
+    )
+)
 
 ;; public methods
 ;; --------------
@@ -300,9 +328,9 @@
 (define-public (set-edition-cost (nftIndex uint) (maxEditions uint) (editionCost uint))
     (let
         (
-            (ahash          (unwrap! (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
-            (metaDataUrl   (unwrap! (get meta-data-url   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
-            (edition        (unwrap! (get edition (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (ahash           (unwrap! (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (metaDataUrl     (unwrap! (get meta-data-url   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (edition         (unwrap! (get edition (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (mintBlockHeight (unwrap! (get mint-block-height (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (seriesOriginal  (unwrap! (get series-original (map-get? nft-data {nft-index: nftIndex})) not-allowed))
         )
@@ -323,6 +351,8 @@
             ;; before we start... check the hash corresponds to a minted asset
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (currentBidIndex (default-to u0 (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex}))))
+            (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
         )
         (asserts! (not (is-eq saleType u2)) bidding-error)
         (print {evt: "set-sale-data", nftIndex: nftIndex, saleType: sale-type, increment: increment-stx, reserve: reserve-stx, amount: amount-stx, biddingEndTime: bidding-end-time})
@@ -407,11 +437,14 @@
 )
 
 (define-private (get-current-bid-amount (nftIndex uint) (currentBidIndex uint))
-  (let
-      (
-        (currentAmount (unwrap! (get amount (map-get? nft-bid-history {nft-index: nftIndex, bid-index: (- currentBidIndex u1)})) bidding-error))
-      )
-      (ok currentAmount)
+  (if (is-eq currentBidIndex u0)
+    (ok u0)
+    (let
+        (
+            (currentAmount (default-to u0 (get amount (map-get? nft-bid-history {nft-index: nftIndex, bid-index: (- currentBidIndex u1)}))))
+        )
+        (ok currentAmount)
+    )
   )
 )
 
@@ -427,7 +460,7 @@
             (amountStart (unwrap! (get amount-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (increment (unwrap! (get increment-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (reserve (unwrap! (get reserve-stx (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
-            (currentBidIndex (unwrap! (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex})) not-allowed))
+            (currentBidIndex (default-to u0 (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex}))))
             (currentBidder (unwrap! (get-current-bidder nftIndex currentBidIndex) bidding-error))
             (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
             (owner (unwrap! (nft-get-owner? my-nft nftIndex) nft-not-owned-err))
@@ -450,14 +483,6 @@
         ;;               2. Insert currentBid to bid history
         ;;               3. Set the bid in nft-high-bid-counter - note 'set' so we overwrite the previous bid
 
-        (print "place-bid : currentBidIndex")
-        (print currentBidIndex)
-        (print "place-bid : bidding-end-time")
-        (print bidding-end-time)
-        (print "place-bid : appTimestamp")
-        (print appTimestamp)
-        (print "place-bid : reserve")
-        (print reserve)
         (if (> appTimestamp bidding-end-time)
             (begin
                 (print "place-bid : bid is after end time refund current bid")
@@ -515,7 +540,7 @@
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) failed-to-close-1))
             (block-time (unwrap! (get-block-info? time u0) not-allowed))
-            (currentBidIndex (unwrap! (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex})) not-allowed))
+            (currentBidIndex (default-to u0 (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex}))))
             (currentBidder (unwrap! (get-current-bidder nftIndex currentBidIndex) bidding-error))
             (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
         )
@@ -725,57 +750,52 @@
         (
             (addresses (unwrap! (get addresses (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
             (shares (unwrap! (get shares (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
+            (saleCycle (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (split u0)
+            ;; If secondary sale (sale-cycle > 1) - the seller gets half the sale value and each royalty payment is half the original amount
+            (scalor (if (> (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set) u1)
+                percentage-on-secondary  u1))
         )
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u0) payment-address-error) (unwrap! (element-at shares u0) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u1) payment-address-error) (unwrap! (element-at shares u1) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u2) payment-address-error) (unwrap! (element-at shares u2) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u3) payment-address-error) (unwrap! (element-at shares u3) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u4) payment-address-error) (unwrap! (element-at shares u4) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u5) payment-address-error) (unwrap! (element-at shares u5) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u6) payment-address-error) (unwrap! (element-at shares u6) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u7) payment-address-error) (unwrap! (element-at shares u7) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u8) payment-address-error) (unwrap! (element-at shares u8) payment-share-error)) payment-share-error))
-        (print split)
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u9) payment-address-error) (unwrap! (element-at shares u9) payment-share-error)) payment-share-error))
-        (print {evt: "payment-split", nftIndex: nftIndex, payer: payer, saleAmount: saleAmount, txSender: tx-sender})
-        (print split)
+        (if (is-eq scalor percentage-on-secondary)
+            ;; If secondary sale - pay the seller then split the royalties
+            (unwrap! (stx-transfer? (/ (* saleAmount (- u100 percentage-on-secondary)) u100) payer (unwrap! (nft-get-owner? my-nft nftIndex) payment-share-error)) transfer-error)
+            ;; Primary sale - split the royalties
+            true
+        )
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u0) payment-address-error) (unwrap! (element-at shares u0) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u1) payment-address-error) (unwrap! (element-at shares u1) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u2) payment-address-error) (unwrap! (element-at shares u2) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u3) payment-address-error) (unwrap! (element-at shares u3) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u4) payment-address-error) (unwrap! (element-at shares u4) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u5) payment-address-error) (unwrap! (element-at shares u5) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u6) payment-address-error) (unwrap! (element-at shares u6) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u7) payment-address-error) (unwrap! (element-at shares u7) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u8) payment-address-error) (unwrap! (element-at shares u8) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u9) payment-address-error) (unwrap! (element-at shares u9) payment-share-error)) payment-share-error))
+        (print {evt: "payment-split", nftIndex: nftIndex, scalor: scalor, payer: payer, saleAmount: saleAmount, seller: (/ (* saleAmount (- u100 percentage-on-secondary)) u100), txSender: tx-sender})
         (ok split)
     )
 )
 
-;; In the pay-royalty function, the unit of saleAmount is in Satoshi and the share variable is a percentage (ex for 5% it will be equal to 5)
-(define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
+;; unit of saleAmount is in Satoshi and the share variable is a percentage (ex for 5% it will be equal to 5)
+;; also the scalor is 1 on first purchase - direct from artist and 2 for secondary sales - so the seller gets half the 
+;; sale value and each royalty address gets half their original amount.
+(define-private (pay-royalty (scalor uint) (payer principal) (saleAmount uint) (payee principal) (share uint))
     (begin
         (if (> share u0)
             (let
                 (
-                    (split (/ (* saleAmount share) percentage-with-twodp))
+                    (split (/ (* saleAmount (/ share scalor)) percentage-with-twodp))
                 )
                 ;; ignore royalty payment if its to the buyer / tx-sender.
                 (if (not (is-eq tx-sender payee))
                     (unwrap! (stx-transfer? split payer payee) transfer-error)
                     (unwrap! (ok true) transfer-error)
                 )
-                (print {evt: "pay-royalty", payee: payee, payer: payer, saleAmount: saleAmount, share: share, txSender: tx-sender})
+                (print {evt: "pay-royalty-primary", payee: payee, payer: payer, saleAmount: saleAmount, scalor: scalor, share: share, split: split, txSender: tx-sender})
                 (ok split)
             )
             (ok u0)
         )
     )
-)
-
-(define-private (is-owner (nft-index uint) (user principal))
-  (is-eq user
-       ;; if no owner, return false
-       (unwrap! (nft-get-owner? my-nft nft-index) false))
 )
