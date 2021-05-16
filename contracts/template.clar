@@ -1,9 +1,10 @@
 ;; Interface definitions
-(impl-trait 'params.platformAddress.nft-approvable-trait.nft-approvable-trait)
-;; (impl-trait 'params.platformAddress.nft-tradable-trait.nft-tradable-trait)
+;; test/mocknet
+;; (impl-trait 'params.platformAddress.nft-approvable-trait.nft-approvable-trait)
+;; (impl-trait 'params.platformAddress.nft-trait.nft-trait)
 ;; mainnet
-;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
-(impl-trait 'params.platformAddress.nft-trait.nft-trait)
+(impl-trait SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ.nft-approvable-trait.nft-approvable-trait)
+(impl-trait SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'params.contractOwner)
@@ -56,7 +57,7 @@
 (define-constant user-amount-different (err u21))
 (define-constant failed-to-stx-transfer (err u22))
 (define-constant failed-to-close-1 (err u23))
-(define-constant failed-to-close-2 (err u24))
+(define-constant failed-refund (err u24))
 (define-constant failed-to-close-3 (err u24))
 (define-constant cant-pay-mint-price (err u25))
 (define-constant editions-error (err u26))
@@ -132,8 +133,8 @@
   (is-eq user (unwrap! (get approval (map-get? nft-approvals {nft-index: nftIndex})) false))
 )
 (define-private (is-owner-or-approval (nftIndex uint) (user principal))
-    (if (is-owner nftIndex) true
-        (if (is-approval nftIndex) true false)
+    (if (is-owner nftIndex user) true
+        (if (is-approval nftIndex user) true false)
     )
 )
 
@@ -184,7 +185,7 @@
         )
         (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
         (unwrap! (stx-transfer? balance (as-contract tx-sender) recipient) failed-to-stx-transfer)
-        (print "refund-bid : refunded bid to biddder")
+        (print {evt: "transfer-balance", recipient: recipient, balance: balance})
         (ok balance)
     )
 )
@@ -197,7 +198,6 @@
             (offerCounter (default-to u0 (get offer-counter (map-get? nft-offer-counter {nft-index: nft-index}))))
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nft-index})) amount-not-set))
         )
-        (asserts! (is-eq saleType u3) not-allowed)
         (map-insert nft-offer-history {nft-index: nft-index, offer-index: offerCounter} {sale-cycle: saleCycleIndex, offerer: tx-sender, app-timestamp: app-timestamp, amount: amount, accepted: u0})
         (map-set nft-offer-counter {nft-index: nft-index} {sale-cycle: saleCycleIndex, offer-counter: (+ offerCounter u1)})
         (ok (+ offerCounter u1))
@@ -354,7 +354,7 @@
             (currentBidIndex (default-to u0 (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex}))))
             (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
         )
-        (asserts! (not (is-eq saleType u2)) bidding-error)
+        (asserts! (not (and (> currentAmount u0) (is-eq saleType u2))) bidding-error)
         (print {evt: "set-sale-data", nftIndex: nftIndex, saleType: sale-type, increment: increment-stx, reserve: reserve-stx, amount: amount-stx, biddingEndTime: bidding-end-time})
         (if (is-owner nftIndex tx-sender)
             ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
@@ -419,8 +419,8 @@
         (print "place-bid : when")
         (print appTimestamp)
         (unwrap! (stx-transfer? bidAmount tx-sender (as-contract tx-sender)) failed-to-stx-transfer)
-        (map-insert nft-bid-history {nft-index: nftIndex, bid-index: u0} {bidder: tx-sender, amount: bidAmount, app-timestamp: appTimestamp, sale-cycle: saleCycle})
-        (map-set nft-high-bid-counter {nft-index: nftIndex} {high-bid-counter: u1, sale-cycle: saleCycle})
+        (map-insert nft-bid-history {nft-index: nftIndex, bid-index: bidCounter} {bidder: tx-sender, amount: bidAmount, app-timestamp: appTimestamp, sale-cycle: saleCycle})
+        (map-set nft-high-bid-counter {nft-index: nftIndex} {high-bid-counter: (+ bidCounter u1), sale-cycle: saleCycle})
         (print {evt: "opening-bid", nftIndex: nftIndex, txSender: tx-sender, appTimestamp: appTimestamp, amount: bidAmount})
         (ok bidAmount)
     )
@@ -484,7 +484,7 @@
 
         (if (> appTimestamp bidding-end-time)
             (begin
-                (print "place-bid : bid is after end time refund current bid")
+                (print {evt: "place-bid-closure", nftIndex: nftIndex, appTimestamp: appTimestamp, biddingEndTime: bidding-end-time, amount: nextBidAmount, reserve: reserve})
                 (unwrap! (refund-bid nftIndex currentBidder currentAmount) failed-to-stx-transfer)
                 (if (< nextBidAmount reserve)
                     ;; if this bid is less than reserve & its the last bid then just refund previous bid
@@ -502,9 +502,8 @@
                 )
             )
             (begin
-                (print "place-bid : bid is before end time refund current bid from the contract")
-                (unwrap! (refund-bid nftIndex currentBidder currentAmount) failed-to-stx-transfer)
-                (print "place-bid : and transfer this bid into the contract")
+                (print {evt: "place-bid-refund", nftIndex: nftIndex, appTimestamp: appTimestamp, biddingEndTime: bidding-end-time, amount: nextBidAmount})
+                (unwrap! (refund-bid nftIndex currentBidder currentAmount) failed-refund)
                 (unwrap! (next-bid nftIndex nextBidAmount currentBidIndex appTimestamp saleCycle) failed-to-stx-transfer)
             )
         )
@@ -545,7 +544,7 @@
         )
         (asserts! (or (is-eq closeType u1) (is-eq closeType u2)) failed-to-close-1)
         ;; only the owner or administrator can call close
-        (asserts! (or (is-owner nftIndex tx-sender) (unwrap! (is-administrator) failed-to-close-2)) failed-to-close-2)
+        (asserts! (or (is-owner nftIndex tx-sender) (unwrap! (is-administrator) not-allowed)) not-allowed)
         ;; only the administrator can call close BEFORE the end time - note we use the less accurate 
         ;; but fool proof block time here to prevent owner/client code jerry mandering the close function
         (asserts! (or (> block-time bidding-end-time) (unwrap! (is-administrator) failed-to-close-3)) failed-to-close-3)
@@ -559,12 +558,12 @@
                     ;; note that the money to pay with is in the contract!
                     (print {evt: "close-bidding", nftIndex: nftIndex, payType: "from-contract", txSender: tx-sender, currentBidder: currentBidder, currentAmount: currentAmount, currentBidIndex: currentBidIndex})
                     (unwrap! (payment-split nftIndex currentAmount (as-contract tx-sender)) payment-error)
-                    (unwrap! (nft-transfer? my-nft nftIndex (unwrap! (nft-get-owner? my-nft nftIndex) nft-not-owned-err) tx-sender) failed-to-close-2)
+                    (unwrap! (nft-transfer? my-nft nftIndex (unwrap! (nft-get-owner? my-nft nftIndex) nft-not-owned-err) tx-sender) transfer-error)
                 )
                 (begin
                     ;; refund closure - refund the bid and reset sale data
                     (print {evt: "close-bidding", nftIndex: nftIndex, payType: "refund", txSender: tx-sender, currentBidder: currentBidder, currentAmount: currentAmount})
-                    (unwrap! (refund-bid nftIndex currentBidder currentAmount) failed-to-close-2)
+                    (unwrap! (refund-bid nftIndex currentBidder currentAmount) failed-refund)
                     (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
                 )
             )
