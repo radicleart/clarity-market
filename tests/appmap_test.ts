@@ -8,7 +8,7 @@ import {
 import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
 
 Clarinet.test({
-  name: "Ensure that <...>",
+  name: "Project map tests",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const wallet_1 = accounts.get("wallet_1")!;
@@ -20,7 +20,6 @@ Clarinet.test({
        * Add transactions with:
        * Tx.contractCall(...)
        */
-      Tx.contractCall("appmap", "get-app-counter", [], deployer.address),
     ]);
     assertEquals(block.receipts.length, 0);
     assertEquals(block.height, 2);
