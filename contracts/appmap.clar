@@ -44,7 +44,9 @@
 (define-public (update-app (index int) (owner principal) (app-contract-id (buff 100)) (storage-model int) (status int))
   (begin
       (asserts! (is-ok (is-update-allowed index)) not-allowed)
-      (ok (map-set app-map {index: index} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: status}))
+          (map-set app-map {index: index} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: status})
+          (map-set app-map-reverse {app-contract-id: app-contract-id} {index: index})
+        (ok true)
   )
 )
 

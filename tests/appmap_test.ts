@@ -385,5 +385,26 @@ Clarinet.test({
       "(ok {administrator: ST21HMSJATHZ888PD0S0SSTWP4J61TCRJYEVQ0STB, appCounter: 4})",
       "should be able to get contract data"
     );
+
+    // should be able to get app index
+    block = chain.mineBlock([
+      Tx.contractCall(
+        "appmap",
+        "get-app-index",
+        [
+          types.buff(
+            formatBuffString(`${wallet_1.address}.my-updated-project`)
+          ),
+        ],
+        wallet_1.address
+      ),
+    ]);
+    assertEquals(block.receipts.length, 1);
+    assertEquals(block.height, 19);
+    assertStringIncludes(
+      block.receipts[0].result,
+      "(ok 1)",
+      "should be able to get updated app index"
+    );
   },
 });
