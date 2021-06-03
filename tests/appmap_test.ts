@@ -22,6 +22,7 @@ Clarinet.test({
     const deployer = accounts.get("deployer")!;
     const wallet_1 = accounts.get("wallet_1")!;
     const wallet_2 = accounts.get("wallet_2")!;
+    const newAdministrator = accounts.get("wallet_3")!;
     const asset_map = chain.getAssetsMaps();
 
     // should return admin address and 0 app-counter
@@ -29,16 +30,13 @@ Clarinet.test({
       Tx.contractCall("appmap", "get-administrator", [], deployer.address),
       Tx.contractCall("appmap", "get-app-counter", [], deployer.address),
     ]);
-
     assertEquals(block.receipts.length, 2);
     assertEquals(block.height, 2);
-
     assertStringIncludes(
       block.receipts[0].result,
       "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE",
       "should return the admin address"
     );
-
     assertStringIncludes(
       block.receipts[1].result,
       "(ok 0)",
@@ -58,7 +56,6 @@ Clarinet.test({
         deployer.address
       ),
     ]);
-
     assertEquals(block.receipts.length, 1);
     assertEquals(block.height, 3);
     assertStringIncludes(
@@ -133,10 +130,8 @@ Clarinet.test({
     block = chain.mineBlock([
       Tx.contractCall("appmap", "get-app-counter", [], deployer.address),
     ]);
-
     assertEquals(block.receipts.length, 1);
     assertEquals(block.height, 5);
-
     assertStringIncludes(
       block.receipts[0].result,
       "(ok 2)",
@@ -207,10 +202,8 @@ Clarinet.test({
     block = chain.mineBlock([
       Tx.contractCall("appmap", "get-app-counter", [], deployer.address),
     ]);
-
     assertEquals(block.receipts.length, 1);
     assertEquals(block.height, 7);
-
     assertStringIncludes(
       block.receipts[0].result,
       "(ok 4)",
@@ -222,10 +215,8 @@ Clarinet.test({
       Tx.contractCall("appmap", "get-app", [types.int(0)], deployer.address),
       Tx.contractCall("appmap", "get-app", [types.int(1)], deployer.address),
     ]);
-
     assertEquals(block.receipts.length, 2);
     assertEquals(block.height, 8);
-
     assertStringIncludes(
       block.receipts[0].result,
       "(ok {app-contract-id: 0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374, owner: ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK, status: 0, storage-model: 1})",
@@ -263,13 +254,13 @@ Clarinet.test({
         wallet_1.address
       ),
     ]);
+    assertEquals(block.receipts.length, 1);
+    assertEquals(block.height, 10);
     assertStringIncludes(
       block.receipts[0].result,
       "(ok true)",
       "should be able to set apps to live if contract owner"
     );
-    assertEquals(block.receipts.length, 1);
-    assertEquals(block.height, 10);
 
     // should be able to check status of app set to live
     block = chain.mineBlock([
@@ -292,13 +283,13 @@ Clarinet.test({
         deployer.address
       ),
     ]);
+    assertEquals(block.receipts.length, 1);
+    assertEquals(block.height, 12);
     assertStringIncludes(
       block.receipts[0].result,
       "(ok true)",
-      "should be able to set apps to live if contract owner"
+      "should be able to set apps to live if administrator"
     );
-    assertEquals(block.receipts.length, 1);
-    assertEquals(block.height, 12);
 
     // should be able to check status of app set to live
     block = chain.mineBlock([
@@ -310,6 +301,89 @@ Clarinet.test({
       block.receipts[0].result,
       "(ok {app-contract-id: 0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d66696c65636f696e2d70726f6a656374, owner: ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK, status: 1, storage-model: 2})",
       "should be able to check app 2 status set to live"
+    );
+
+    // should be able to change contract administrator
+    block = chain.mineBlock([
+      Tx.contractCall(
+        "appmap",
+        "transfer-administrator",
+        [types.principal(newAdministrator.address)],
+        deployer.address
+      ),
+    ]);
+    assertEquals(block.receipts.length, 1);
+    assertEquals(block.height, 14);
+    assertStringIncludes(
+      block.receipts[0].result,
+      "(ok true)",
+      "should be able to contract administrator"
+    );
+
+    // should be able to set apps to live if administrator
+    block = chain.mineBlock([
+      Tx.contractCall(
+        "appmap",
+        "set-app-status",
+        [types.int(2), types.int(1)],
+        newAdministrator.address
+      ),
+    ]);
+    assertEquals(block.receipts.length, 1);
+    assertEquals(block.height, 15);
+    assertStringIncludes(
+      block.receipts[0].result,
+      "(ok true)",
+      "should be able to set apps to live if new administrator"
+    );
+
+    // should not be able to get a contract that doesn't exist
+    block = chain.mineBlock([
+      Tx.contractCall("appmap", "get-app", [types.int(6)], deployer.address),
+    ]);
+    assertEquals(block.receipts.length, 1);
+    assertEquals(block.height, 16);
+    assertStringIncludes(
+      block.receipts[0].result,
+      "(err u100)",
+      "should not be able to get a contract that doesn't exist"
+    );
+
+    // should be able to update app
+    block = chain.mineBlock([
+      Tx.contractCall(
+        "appmap",
+        "update-app",
+        [
+          types.int(1),
+          types.principal(wallet_1.address),
+          types.buff(
+            formatBuffString(`${wallet_1.address}.my-updated-project`)
+          ),
+          types.int(1),
+          types.int(1),
+        ],
+        wallet_1.address
+      ),
+    ]);
+    assertEquals(block.receipts.length, 1);
+    assertEquals(block.height, 17);
+    assertStringIncludes(
+      block.receipts[0].result,
+      "(ok true)",
+      "should be able to update app"
+    );
+
+    // should be able to get contract data
+    block = chain.mineBlock([
+      Tx.contractCall("appmap", "get-contract-data", [], wallet_1.address),
+    ]);
+    assertEquals(block.receipts.length, 1);
+    assertEquals(block.height, 18);
+    assertStringIncludes(
+      block.receipts[0].result,
+      "(ok {administrator: ST21HMSJATHZ888PD0S0SSTWP4J61TCRJYEVQ0STB, appCounter: 4})",
+      "should be able to get contract data"
     );
   },
 });
