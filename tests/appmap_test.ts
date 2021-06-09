@@ -4,7 +4,7 @@ import {
   Chain,
   Account,
   types,
-} from "https://deno.land/x/clarinet@v0.6.0/index.ts";
+} from "https://deno.land/x/clarinet@v0.10.0/index.ts";
 import {
   assertEquals,
   assertStringIncludes,
