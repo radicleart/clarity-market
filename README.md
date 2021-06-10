@@ -26,6 +26,22 @@ handles project administration. Common erros are implemented by `error-codes.cla
 We hope to connect these smart contracts to a platform for digital collectible. The project is inspired
 by the Open Sea platform and our work building the radicle art and loopbomb d-apps.
 
+## Clarinet Testing
+Install clarinet by following the instructions [here](https://github.com/hirosystems/clarinet).
+Install lcov as well. You'll have to find the respective instructions on your operating system.
+
+```bash
+clarinet test --coverage
+```
+will generate the file `coverage.lcov`
+
+You can then view the coverage report by running 
+```bash
+genhtml coverage.lcov -o coverage
+```
+and opening the resulting `index.html` in the `coverage/` folder. 
+
+
 ## Unit Testing
 
 ```bash
