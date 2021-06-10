@@ -1,0 +1,6 @@
+[project]
+name = "clarinet-clarity-market"
+requirements = []
+[contracts.appmap]
+path = "contracts/appmap.clar"
+depends_on = []

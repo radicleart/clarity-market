@@ -19,32 +19,28 @@
 
 ;; Insert new app at current index - can't have two apps with the same contract id here!
 (define-public (register-app (owner principal) (app-contract-id (buff 100)) (storage-model int))
-  (let
-      (
-          (appIndex (get index (map-get? app-map-reverse {app-contract-id: app-contract-id})))
-      )
-      (if (is-none appIndex)
-        (begin
-          (if (is-storage-allowed storage-model)
-            (begin
-              (map-insert app-map {index: (var-get app-counter)} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
-              (map-insert app-map-reverse {app-contract-id: app-contract-id} {index: (var-get app-counter)})
-              (var-set app-counter (+ (var-get app-counter) 1))
-              (print (var-get app-counter))
-              (ok (var-get app-counter))
-            )
-            illegal-storage
+    (begin
+      (asserts! (is-ok (is-update-allowed-id app-contract-id)) not-allowed)
+        (if (is-storage-allowed storage-model)
+          (begin
+            (map-insert app-map {index: (var-get app-counter)} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: 0})
+            (map-insert app-map-reverse {app-contract-id: app-contract-id} {index: (var-get app-counter)})
+            (var-set app-counter (+ (var-get app-counter) 1))
+            (print (var-get app-counter))
+            (ok (var-get app-counter))
           )
+          illegal-storage
         )
-        not-allowed
-      )
-  )
+    )
 )
 
 (define-public (update-app (index int) (owner principal) (app-contract-id (buff 100)) (storage-model int) (status int))
   (begin
       (asserts! (is-ok (is-update-allowed index)) not-allowed)
-      (ok (map-set app-map {index: index} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: status}))
+      (asserts! (is-ok (is-update-allowed-id app-contract-id)) not-allowed)
+          (map-set app-map {index: index} {owner: owner, app-contract-id: app-contract-id, storage-model: storage-model, status: status})
+          (map-set app-map-reverse {app-contract-id: app-contract-id} {index: index})
+        (ok true)
   )
 )
 
@@ -108,6 +104,18 @@
           (ok true)
           not-allowed
         )
+    )
+)
+
+(define-private (is-update-allowed-id (app-contract-id (buff 100)))
+    (let 
+      (
+        (appIndex (get index (map-get? app-map-reverse {app-contract-id: app-contract-id})))
+      )
+      (if (is-none appIndex)
+        (ok true)
+        not-allowed
+      )
     )
 )
 
