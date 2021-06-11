@@ -129,20 +129,28 @@ Clarinet.test({
     currentAppCounter.result.expectOk().expectInt(2);
 
     // should be able to get apps from map
-    let app_1 = client.getApp(0);
-    let app_2 = client.getApp(1);
-    app_1.result.expectOk().expectTuple();
-    app_2.result.expectOk().expectTuple();
-    assertStringIncludes(
-      app_1.result,
-      "(ok {app-contract-id: 0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374, owner: ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK, status: 0, storage-model: 1})",
-      "should be able to get app 1 from map"
-    );
-    assertStringIncludes(
-      app_2.result,
-      "(ok {app-contract-id: 0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d66696c65636f696e2d70726f6a656374, owner: ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK, status: 0, storage-model: 2})",
-      "should be able to get app 2 from map"
-    );
+    const app_1 = client.getApp(0);
+    const app_2 = client.getApp(1);
+    const app_1_tuple = app_1.result.expectOk().expectTuple();
+    const app_2_tuple = app_2.result.expectOk().expectTuple();
+
+    const app_1_expected_tuple = {
+      "app-contract-id":
+        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
+      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+      status: "0",
+      "storage-model": "1",
+    };
+    assertEquals(app_1_tuple, app_1_expected_tuple);
+
+    const app_2_expected_tuple = {
+      "app-contract-id":
+        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d66696c65636f696e2d70726f6a656374",
+      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+      status: "0",
+      "storage-model": "2",
+    };
+    assertEquals(app_2_tuple, app_2_expected_tuple);
 
     // allow insert another 2 applications
     block = chain.mineBlock([
@@ -199,12 +207,12 @@ Clarinet.test({
 
     // should be able to get contract data
     let contractData = client.getContractData();
-    contractData.result.expectOk().expectTuple();
-    assertStringIncludes(
-      contractData.result,
-      "(ok {administrator: ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE, appCounter: 4})",
-      "should be able to get contract data"
-    );
+    const contractDataTuple = contractData.result.expectOk().expectTuple();
+    const expectedContractDataTuple = {
+      administrator: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE",
+      appCounter: "4",
+    };
+    assertEquals(contractDataTuple, expectedContractDataTuple);
   },
 });
 
@@ -213,262 +221,144 @@ Clarinet.test({
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet_1, wallet_2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
-    let block = chain.mineBlock([]);
-    assertEquals(block.receipts.length, 0);
 
     // should allow insert 1 new application
-    block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "register-app",
-        [
-          types.principal(wallet_1.address),
-          types.buff(formatBuffString(`${wallet_1.address}.my-gaia-project`)),
-          types.int(1),
-        ],
+    let block = chain.mineBlock([
+      client.registerApp(
+        wallet_1.address,
+        `${wallet_1.address}.my-gaia-project`,
+        1,
         wallet_1.address
       ),
     ]);
-    assertEquals(block.receipts.length, 1);
-    assertArrayIncludes(
-      block.receipts,
-      [
-        {
-          events: [
-            {
-              contract_event: {
-                contract_identifier:
-                  "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
-                topic: "print",
-                value: "1",
-              },
-              type: "contract_event",
-            },
-          ],
-          result: "(ok 1)",
-        },
-      ],
-      "should allow insert 1 new applications"
-    );
+    const expectedEvent_1 = {
+      contract_event: {
+        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        topic: "print",
+        value: "1",
+      },
+      type: "contract_event",
+    };
+    assertEquals(block.receipts[0].events[0], expectedEvent_1);
+    block.receipts[0].result.expectOk().expectInt(1);
 
     // should not be able to update app if index doesn't exist
     block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "update-app",
-        [
-          types.int(1),
-          types.principal(wallet_1.address),
-          types.buff(
-            formatBuffString(`${wallet_1.address}.my-updated-project`)
-          ),
-          types.int(1),
-          types.int(1),
-        ],
+      client.updateApp(
+        1,
+        wallet_1.address,
+        `${wallet_1.address}.my-updated-project`,
+        1,
+        1,
         wallet_1.address
       ),
     ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(err u101)",
-      "should not be able to update app if index doesn't exist"
-    );
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 
-    // should not be able to update app if not owner
+    // should not be able to update app if not owner or administrator
     block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "update-app",
-        [
-          types.int(0),
-          types.principal(wallet_1.address),
-          types.buff(
-            formatBuffString(`${wallet_1.address}.my-updated-project`)
-          ),
-          types.int(1),
-          types.int(1),
-        ],
+      client.updateApp(
+        0,
+        wallet_1.address,
+        `${wallet_1.address}.my-updated-project`,
+        1,
+        1,
         wallet_2.address
       ),
     ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(err u101)",
-      "should not be able to update app if not owner"
-    );
-
-    // should not be able to update app if not administrator
-    block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "update-app",
-        [
-          types.int(0),
-          types.principal(wallet_1.address),
-          types.buff(
-            formatBuffString(`${wallet_1.address}.my-updated-project`)
-          ),
-          types.int(1),
-          types.int(1),
-        ],
-        newAdministrator.address
-      ),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(err u101)",
-      "should not be able to update app if not administrator"
-    );
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 
     // should be able to update app if owner
     block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "update-app",
-        [
-          types.int(0),
-          types.principal(wallet_1.address),
-          types.buff(formatBuffString(`${wallet_1.address}.my-owner-project`)),
-          types.int(1),
-          types.int(0),
-        ],
+      client.updateApp(
+        0,
+        wallet_1.address,
+        `${wallet_1.address}.my-owner-project`,
+        1,
+        0,
         wallet_1.address
       ),
     ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok true)",
-      "should be able to update app if owner"
-    );
+    block.receipts[0].result.expectOk().expectBool(true);
 
     // should be able to get updated app
-    block = chain.mineBlock([
-      Tx.contractCall("appmap", "get-app", [types.int(0)], deployer.address),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok {app-contract-id: 0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d6f776e65722d70726f6a656374, owner: ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK, status: 0, storage-model: 1})",
-      "should be able to get app 1 from map after owner updated"
-    );
+    let app_1 = client.getApp(0);
+    let app_1_tuple = app_1.result.expectOk().expectTuple();
+
+    let app_1_expected_tuple = {
+      "app-contract-id":
+        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d6f776e65722d70726f6a656374",
+      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+      status: "0",
+      "storage-model": "1",
+    };
+    assertEquals(app_1_tuple, app_1_expected_tuple);
 
     // should be able to update app if administrator
     block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "update-app",
-        [
-          types.int(0),
-          types.principal(wallet_1.address),
-          types.buff(
-            formatBuffString(`${wallet_1.address}.my-administrator-project`)
-          ),
-          types.int(1),
-          types.int(0),
-        ],
+      client.updateApp(
+        0,
+        wallet_1.address,
+        `${wallet_1.address}.my-administrator-project`,
+        1,
+        0,
         deployer.address
       ),
     ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok true)",
-      "should be able to update app if administrator"
-    );
+    block.receipts[0].result.expectOk().expectBool(true);
 
     // should be able to get updated app after administrator updated
-    block = chain.mineBlock([
-      Tx.contractCall("appmap", "get-app", [types.int(0)], deployer.address),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok {app-contract-id: 0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d61646d696e6973747261746f722d70726f6a656374, owner: ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK, status: 0, storage-model: 1})",
-      "should be able to get app 1 from map after administrator updated"
-    );
+    app_1 = client.getApp(0);
+    app_1_tuple = app_1.result.expectOk().expectTuple();
+
+    app_1_expected_tuple = {
+      "app-contract-id":
+        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d61646d696e6973747261746f722d70726f6a656374",
+      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+      status: "0",
+      "storage-model": "1",
+    };
+    assertEquals(app_1_tuple, app_1_expected_tuple);
 
     // should not be able to change app contract id to existing app contract id
     // add a new app and try to change to the first app id
+
     block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "register-app",
-        [
-          types.principal(wallet_1.address),
-          types.buff(formatBuffString(`${wallet_1.address}.my-second-project`)),
-          types.int(1),
-        ],
+      client.registerApp(
+        wallet_1.address,
+        `${wallet_1.address}.my-second-project`,
+        1,
         wallet_1.address
       ),
     ]);
-    assertEquals(block.receipts.length, 1);
-    assertArrayIncludes(
-      block.receipts,
-      [
-        {
-          events: [
-            {
-              contract_event: {
-                contract_identifier:
-                  "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
-                topic: "print",
-                value: "2",
-              },
-              type: "contract_event",
-            },
-          ],
-          result: "(ok 2)",
-        },
-      ],
-      "should allow insert 1 new applications"
-    );
+    const expectedEvent_2 = {
+      contract_event: {
+        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        topic: "print",
+        value: "2",
+      },
+      type: "contract_event",
+    };
+    assertEquals(block.receipts[0].events[0], expectedEvent_2);
+    block.receipts[0].result.expectOk().expectInt(2);
 
     block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "update-app",
-        [
-          types.int(1),
-          types.principal(wallet_1.address),
-          types.buff(
-            formatBuffString(`${wallet_1.address}.my-administrator-project`)
-          ),
-          types.int(1),
-          types.int(0),
-        ],
+      client.updateApp(
+        1,
+        wallet_1.address,
+        `${wallet_1.address}.my-administrator-project`,
+        1,
+        0,
         deployer.address
       ),
     ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(err u101)",
-      "should not be able to change app contract id to an already existing app contract id"
-    );
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 
     // should be able to get app index of updated app
-    block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "get-app-index",
-        [
-          types.buff(
-            formatBuffString(`${wallet_1.address}.my-administrator-project`)
-          ),
-        ],
-        wallet_1.address
-      ),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok 0)",
-      "should be able to get updated app index"
+    const appIndex_1 = client.getAppIndex(
+      `${wallet_1.address}.my-administrator-project`
     );
+    appIndex_1.result.expectOk().expectInt(0);
   },
 });
 
@@ -480,107 +370,59 @@ Clarinet.test({
 
     // should allow insert 1 new application
     let block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "register-app",
-        [
-          types.principal(wallet_1.address),
-          types.buff(formatBuffString(`${wallet_1.address}.my-gaia-project`)),
-          types.int(1),
-        ],
+      client.registerApp(
+        wallet_1.address,
+        `${wallet_1.address}.my-gaia-project`,
+        1,
         wallet_1.address
       ),
     ]);
-    assertEquals(block.receipts.length, 1);
-    assertArrayIncludes(
-      block.receipts,
-      [
-        {
-          events: [
-            {
-              contract_event: {
-                contract_identifier:
-                  "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
-                topic: "print",
-                value: "1",
-              },
-              type: "contract_event",
-            },
-          ],
-          result: "(ok 1)",
-        },
-      ],
-      "should allow insert 1 new applications"
-    );
+    let expectedEvent_1 = {
+      contract_event: {
+        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        topic: "print",
+        value: "1",
+      },
+      type: "contract_event",
+    };
+
+    assertEquals(block.receipts[0].events[0], expectedEvent_1);
+    block.receipts[0].result.expectOk().expectInt(1);
 
     // should not be able to set apps to live if not administrator or not contract owner
-    block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "set-app-status",
-        [types.int(0), types.int(1)],
-        wallet_2.address
-      ),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(err u101)",
-      "should not be able to set apps to live if not administrator or not contract owner"
-    );
+    block = chain.mineBlock([client.setAppStatus(0, 1, wallet_2.address)]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 
     // should be able to set apps to live if contract owner
-    block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "set-app-status",
-        [types.int(0), types.int(1)],
-        wallet_1.address
-      ),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok true)",
-      "should be able to set apps to live if contract owner"
-    );
+    block = chain.mineBlock([client.setAppStatus(0, 1, wallet_1.address)]);
+    block.receipts[0].result.expectOk().expectBool(true);
 
     // should be able to check status of app set to live
-    block = chain.mineBlock([
-      Tx.contractCall("appmap", "get-app", [types.int(0)], deployer.address),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok {app-contract-id: 0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374, owner: ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK, status: 1, storage-model: 1})",
-      "should be able to check app 1 status set to live after owner changes"
-    );
+    let appStatus_1 = client.getApp(0);
+    let appStatus_1_tuple = appStatus_1.result.expectOk().expectTuple();
+    let appStatus_1_expected_tuple = {
+      "app-contract-id":
+        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
+      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+      status: "1",
+      "storage-model": "1",
+    };
+    assertEquals(appStatus_1_tuple, appStatus_1_expected_tuple);
 
     // should be able to change app status if administrator
-    block = chain.mineBlock([
-      Tx.contractCall(
-        "appmap",
-        "set-app-status",
-        [types.int(0), types.int(0)],
-        deployer.address
-      ),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok true)",
-      "should be able to set apps to live if contract owner"
-    );
+    block = chain.mineBlock([client.setAppStatus(0, 0, deployer.address)]);
+    block.receipts[0].result.expectOk().expectBool(true);
 
     // should be able to check status of app set to not live
-    block = chain.mineBlock([
-      Tx.contractCall("appmap", "get-app", [types.int(0)], deployer.address),
-    ]);
-    assertEquals(block.receipts.length, 1);
-    assertStringIncludes(
-      block.receipts[0].result,
-      "(ok {app-contract-id: 0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374, owner: ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK, status: 0, storage-model: 1})",
-      "should be able to check app 1 status set to not live after administrator changes"
-    );
+    appStatus_1 = client.getApp(0);
+    appStatus_1_tuple = appStatus_1.result.expectOk().expectTuple();
+    appStatus_1_expected_tuple = {
+      "app-contract-id":
+        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
+      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+      status: "0",
+      "storage-model": "1",
+    };
+    assertEquals(appStatus_1_tuple, appStatus_1_expected_tuple);
   },
 });

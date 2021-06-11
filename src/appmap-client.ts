@@ -3,7 +3,7 @@ import {
   Chain,
   Account,
   types,
-  ReadOnlyFn
+  ReadOnlyFn,
 } from "https://deno.land/x/clarinet@v0.10.0/index.ts";
 
 export enum ErrCode {
@@ -103,7 +103,7 @@ export class AppmapClient {
     return this.callReadOnlyFn("get-app", [types.int(index)]);
   }
 
-  getAppindex(appContractId: string): ReadOnlyFn {
+  getAppIndex(appContractId: string): ReadOnlyFn {
     return this.callReadOnlyFn("get-app-index", [
       types.buff(formatBuffString(appContractId)),
     ]);
