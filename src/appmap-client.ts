@@ -6,15 +6,13 @@ import {
   ReadOnlyFn,
 } from "https://deno.land/x/clarinet@v0.10.0/index.ts";
 
+import { formatBuffString } from "./util.ts";
+
 export enum ErrCode {
   ERR_NOT_FOUND = 100,
   ERR_ILLEGAL_STORAGE = 102,
   ERR_NOT_ALLOWED = 101,
 }
-
-const formatBuffString = (buffer: string) => {
-  return new TextEncoder().encode(buffer);
-};
 
 export class AppmapClient {
   contractName: string = "appmap";
