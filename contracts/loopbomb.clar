@@ -587,11 +587,13 @@
     (ok (var-get base-token-uri)))
 
 (define-read-only (get-mint-counter)
-  (ok (var-get mint-counter))
-)
+  (ok (var-get mint-counter)))
 
 (define-read-only (get-mint-price)
     (ok (var-get mint-price)))
+
+(define-read-only (get-platform-fee)
+    (ok (var-get platform-fee)))
 
 (define-read-only (get-token-by-index (nftIndex uint))
     (ok (get-all-data nftIndex))

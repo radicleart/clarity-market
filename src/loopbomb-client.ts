@@ -333,6 +333,10 @@ export class LoopbombClient {
     return this.callReadOnlyFn("get-mint-price");
   }
 
+  getPlatformFee(): ReadOnlyFn {
+    return this.callReadOnlyFn("get-platform-fee");
+  }
+
   getTokenByIndex(nftIndex: number): ReadOnlyFn {
     return this.callReadOnlyFn("get-token-by-index", [types.uint(nftIndex)]);
   }
