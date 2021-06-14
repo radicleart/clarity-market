@@ -13,23 +13,28 @@ import {
 
 import { AppmapClient, ErrCode } from "../src/appmap-client.ts";
 
-const formatBuffString = (buffer: string) => {
-  return new TextEncoder().encode(buffer);
-};
-
-const getWalletsAndClient = (chain: Chain, accounts: Map<string, Account>) => {
+const getWalletsAndClient = (
+  chain: Chain,
+  accounts: Map<string, Account>
+): {
+  deployer: Account;
+  wallet1: Account;
+  wallet2: Account;
+  newAdministrator: Account;
+  client: AppmapClient;
+} => {
   const deployer = accounts.get("deployer")!;
-  const wallet_1 = accounts.get("wallet_1")!;
-  const wallet_2 = accounts.get("wallet_2")!;
+  const wallet1 = accounts.get("wallet1")!;
+  const wallet2 = accounts.get("wallet2")!;
   const newAdministrator = accounts.get("wallet_3")!;
   const client = new AppmapClient(chain, deployer);
-  return { deployer, wallet_1, wallet_2, newAdministrator, client };
+  return { deployer, wallet1, wallet2, newAdministrator, client };
 };
 
 Clarinet.test({
   name: "Appmap - test transfer-administrator",
-  async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, wallet_1, wallet_2, newAdministrator, client } =
+  fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, wallet2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 
     // should return admin address
@@ -40,7 +45,7 @@ Clarinet.test({
 
     // should not be able to transfer administrator if sender not current administrator
     let block = chain.mineBlock([
-      client.transferAdministrator(newAdministrator.address, wallet_1.address),
+      client.transferAdministrator(newAdministrator.address, wallet1.address),
     ]);
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 
@@ -60,8 +65,8 @@ Clarinet.test({
 
 Clarinet.test({
   name: "Appmap - test register-app",
-  async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, wallet_1, wallet_2, newAdministrator, client } =
+  fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, wallet2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 
     // should return value of 0 for app counter
@@ -71,8 +76,8 @@ Clarinet.test({
     // should fail insert new application if illegal storage
     let block = chain.mineBlock([
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-project`,
+        wallet1.address,
+        `${wallet1.address}.my-project`,
         50,
         deployer.address
       ),
@@ -82,26 +87,26 @@ Clarinet.test({
       .expectUint(ErrCode.ERR_ILLEGAL_STORAGE);
 
     // should not be able to get a contract that doesn't exist
-    let getAppRes = client.getApp(6);
+    const getAppRes = client.getApp(6);
     getAppRes.result.expectErr().expectUint(ErrCode.ERR_NOT_FOUND);
 
     // should allow insert 2 new applications
     block = chain.mineBlock([
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-gaia-project`,
+        wallet1.address,
+        `${wallet1.address}.my-gaia-project`,
         1,
-        wallet_1.address
+        wallet1.address
       ),
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-filecoin-project`,
+        wallet1.address,
+        `${wallet1.address}.my-filecoin-project`,
         2,
-        wallet_1.address
+        wallet1.address
       ),
     ]);
 
-    const expectedEvent_1 = {
+    const expectedEvent1 = {
       contract_event: {
         contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
         topic: "print",
@@ -110,7 +115,7 @@ Clarinet.test({
       type: "contract_event",
     };
 
-    const expectedEvent_2 = {
+    const expectedEvent2 = {
       contract_event: {
         contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
         topic: "print",
@@ -119,9 +124,9 @@ Clarinet.test({
       type: "contract_event",
     };
 
-    assertEquals(block.receipts[0].events[0], expectedEvent_1);
+    assertEquals(block.receipts[0].events[0], expectedEvent1);
     block.receipts[0].result.expectOk().expectInt(1);
-    assertEquals(block.receipts[1].events[0], expectedEvent_2);
+    assertEquals(block.receipts[1].events[0], expectedEvent2);
     block.receipts[1].result.expectOk().expectInt(2);
 
     // should indicate 2 apps
@@ -129,45 +134,45 @@ Clarinet.test({
     currentAppCounter.result.expectOk().expectInt(2);
 
     // should be able to get apps from map
-    const app_1 = client.getApp(0);
-    const app_2 = client.getApp(1);
-    const app_1_tuple = app_1.result.expectOk().expectTuple();
-    const app_2_tuple = app_2.result.expectOk().expectTuple();
+    const app1 = client.getApp(0);
+    const app2 = client.getApp(1);
+    const appTuple1 = app1.result.expectOk().expectTuple();
+    const appTuple2 = app2.result.expectOk().expectTuple();
 
-    const app_1_expected_tuple = {
+    const appExpectedTuple1 = {
       "app-contract-id":
         "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
       owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
       status: "0",
       "storage-model": "1",
     };
-    assertEquals(app_1_tuple, app_1_expected_tuple);
+    assertEquals(appTuple1, appExpectedTuple1);
 
-    const app_2_expected_tuple = {
+    const appExpectedTuple2 = {
       "app-contract-id":
         "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d66696c65636f696e2d70726f6a656374",
       owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
       status: "0",
       "storage-model": "2",
     };
-    assertEquals(app_2_tuple, app_2_expected_tuple);
+    assertEquals(appTuple2, appExpectedTuple2);
 
     // allow insert another 2 applications
     block = chain.mineBlock([
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-upfs-project`,
+        wallet1.address,
+        `${wallet1.address}.my-upfs-project`,
         5,
         deployer.address
       ),
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-storj-project`,
+        wallet1.address,
+        `${wallet1.address}.my-storj-project`,
         6,
         deployer.address
       ),
     ]);
-    const expectedEvent_3 = {
+    const expectedEvent3 = {
       contract_event: {
         contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
         topic: "print",
@@ -176,7 +181,7 @@ Clarinet.test({
       type: "contract_event",
     };
 
-    const expectedEvent_4 = {
+    const expectedEvent4 = {
       contract_event: {
         contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
         topic: "print",
@@ -185,9 +190,9 @@ Clarinet.test({
       type: "contract_event",
     };
 
-    assertEquals(block.receipts[0].events[0], expectedEvent_3);
+    assertEquals(block.receipts[0].events[0], expectedEvent3);
     block.receipts[0].result.expectOk().expectInt(3);
-    assertEquals(block.receipts[1].events[0], expectedEvent_4);
+    assertEquals(block.receipts[1].events[0], expectedEvent4);
     block.receipts[1].result.expectOk().expectInt(4);
 
     // should indicate 4 apps
@@ -197,8 +202,8 @@ Clarinet.test({
     // can't have two apps with same contract id
     block = chain.mineBlock([
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-upfs-project`,
+        wallet1.address,
+        `${wallet1.address}.my-upfs-project`,
         5,
         deployer.address
       ),
@@ -206,7 +211,7 @@ Clarinet.test({
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 
     // should be able to get contract data
-    let contractData = client.getContractData();
+    const contractData = client.getContractData();
     const contractDataTuple = contractData.result.expectOk().expectTuple();
     const expectedContractDataTuple = {
       administrator: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE",
@@ -218,20 +223,20 @@ Clarinet.test({
 
 Clarinet.test({
   name: "Appmap - test update-app",
-  async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, wallet_1, wallet_2, newAdministrator, client } =
+  fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, wallet2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 
     // should allow insert 1 new application
     let block = chain.mineBlock([
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-gaia-project`,
+        wallet1.address,
+        `${wallet1.address}.my-gaia-project`,
         1,
-        wallet_1.address
+        wallet1.address
       ),
     ]);
-    const expectedEvent_1 = {
+    const expectedEvent1 = {
       contract_event: {
         contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
         topic: "print",
@@ -239,18 +244,18 @@ Clarinet.test({
       },
       type: "contract_event",
     };
-    assertEquals(block.receipts[0].events[0], expectedEvent_1);
+    assertEquals(block.receipts[0].events[0], expectedEvent1);
     block.receipts[0].result.expectOk().expectInt(1);
 
     // should not be able to update app if index doesn't exist
     block = chain.mineBlock([
       client.updateApp(
         1,
-        wallet_1.address,
-        `${wallet_1.address}.my-updated-project`,
+        wallet1.address,
+        `${wallet1.address}.my-updated-project`,
         1,
         1,
-        wallet_1.address
+        wallet1.address
       ),
     ]);
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
@@ -259,11 +264,11 @@ Clarinet.test({
     block = chain.mineBlock([
       client.updateApp(
         0,
-        wallet_1.address,
-        `${wallet_1.address}.my-updated-project`,
+        wallet1.address,
+        `${wallet1.address}.my-updated-project`,
         1,
         1,
-        wallet_2.address
+        wallet2.address
       ),
     ]);
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
@@ -272,34 +277,34 @@ Clarinet.test({
     block = chain.mineBlock([
       client.updateApp(
         0,
-        wallet_1.address,
-        `${wallet_1.address}.my-owner-project`,
+        wallet1.address,
+        `${wallet1.address}.my-owner-project`,
         1,
         0,
-        wallet_1.address
+        wallet1.address
       ),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
     // should be able to get updated app
-    let app_1 = client.getApp(0);
-    let app_1_tuple = app_1.result.expectOk().expectTuple();
+    let app1 = client.getApp(0);
+    let appTuple1 = app1.result.expectOk().expectTuple();
 
-    let app_1_expected_tuple = {
+    let appExpectedTuple1 = {
       "app-contract-id":
         "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d6f776e65722d70726f6a656374",
       owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
       status: "0",
       "storage-model": "1",
     };
-    assertEquals(app_1_tuple, app_1_expected_tuple);
+    assertEquals(appTuple1, appExpectedTuple1);
 
     // should be able to update app if administrator
     block = chain.mineBlock([
       client.updateApp(
         0,
-        wallet_1.address,
-        `${wallet_1.address}.my-administrator-project`,
+        wallet1.address,
+        `${wallet1.address}.my-administrator-project`,
         1,
         0,
         deployer.address
@@ -308,30 +313,30 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true);
 
     // should be able to get updated app after administrator updated
-    app_1 = client.getApp(0);
-    app_1_tuple = app_1.result.expectOk().expectTuple();
+    app1 = client.getApp(0);
+    appTuple1 = app1.result.expectOk().expectTuple();
 
-    app_1_expected_tuple = {
+    appExpectedTuple1 = {
       "app-contract-id":
         "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d61646d696e6973747261746f722d70726f6a656374",
       owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
       status: "0",
       "storage-model": "1",
     };
-    assertEquals(app_1_tuple, app_1_expected_tuple);
+    assertEquals(appTuple1, appExpectedTuple1);
 
     // should not be able to change app contract id to existing app contract id
     // add a new app and try to change to the first app id
 
     block = chain.mineBlock([
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-second-project`,
+        wallet1.address,
+        `${wallet1.address}.my-second-project`,
         1,
-        wallet_1.address
+        wallet1.address
       ),
     ]);
-    const expectedEvent_2 = {
+    const expectedEvent2 = {
       contract_event: {
         contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
         topic: "print",
@@ -339,14 +344,14 @@ Clarinet.test({
       },
       type: "contract_event",
     };
-    assertEquals(block.receipts[0].events[0], expectedEvent_2);
+    assertEquals(block.receipts[0].events[0], expectedEvent2);
     block.receipts[0].result.expectOk().expectInt(2);
 
     block = chain.mineBlock([
       client.updateApp(
         1,
-        wallet_1.address,
-        `${wallet_1.address}.my-administrator-project`,
+        wallet1.address,
+        `${wallet1.address}.my-administrator-project`,
         1,
         0,
         deployer.address
@@ -355,29 +360,29 @@ Clarinet.test({
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 
     // should be able to get app index of updated app
-    const appIndex_1 = client.getAppIndex(
-      `${wallet_1.address}.my-administrator-project`
+    const appIndex1 = client.getAppIndex(
+      `${wallet1.address}.my-administrator-project`
     );
-    appIndex_1.result.expectOk().expectInt(0);
+    appIndex1.result.expectOk().expectInt(0);
   },
 });
 
 Clarinet.test({
   name: "Appmap - test set-app-status",
-  async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, wallet_1, wallet_2, newAdministrator, client } =
+  fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, wallet2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 
     // should allow insert 1 new application
     let block = chain.mineBlock([
       client.registerApp(
-        wallet_1.address,
-        `${wallet_1.address}.my-gaia-project`,
+        wallet1.address,
+        `${wallet1.address}.my-gaia-project`,
         1,
-        wallet_1.address
+        wallet1.address
       ),
     ]);
-    let expectedEvent_1 = {
+    const expectedEvent1 = {
       contract_event: {
         contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
         topic: "print",
@@ -386,43 +391,43 @@ Clarinet.test({
       type: "contract_event",
     };
 
-    assertEquals(block.receipts[0].events[0], expectedEvent_1);
+    assertEquals(block.receipts[0].events[0], expectedEvent1);
     block.receipts[0].result.expectOk().expectInt(1);
 
     // should not be able to set apps to live if not administrator or not contract owner
-    block = chain.mineBlock([client.setAppStatus(0, 1, wallet_2.address)]);
+    block = chain.mineBlock([client.setAppStatus(0, 1, wallet2.address)]);
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 
     // should be able to set apps to live if contract owner
-    block = chain.mineBlock([client.setAppStatus(0, 1, wallet_1.address)]);
+    block = chain.mineBlock([client.setAppStatus(0, 1, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
 
     // should be able to check status of app set to live
-    let appStatus_1 = client.getApp(0);
-    let appStatus_1_tuple = appStatus_1.result.expectOk().expectTuple();
-    let appStatus_1_expected_tuple = {
+    let appStatus1 = client.getApp(0);
+    let appStatusTuple1 = appStatus1.result.expectOk().expectTuple();
+    let appStatusExpectedTuple1 = {
       "app-contract-id":
         "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
       owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
       status: "1",
       "storage-model": "1",
     };
-    assertEquals(appStatus_1_tuple, appStatus_1_expected_tuple);
+    assertEquals(appStatusTuple1, appStatusExpectedTuple1);
 
     // should be able to change app status if administrator
     block = chain.mineBlock([client.setAppStatus(0, 0, deployer.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
 
     // should be able to check status of app set to not live
-    appStatus_1 = client.getApp(0);
-    appStatus_1_tuple = appStatus_1.result.expectOk().expectTuple();
-    appStatus_1_expected_tuple = {
+    appStatus1 = client.getApp(0);
+    appStatusTuple1 = appStatus1.result.expectOk().expectTuple();
+    appStatusExpectedTuple1 = {
       "app-contract-id":
         "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
       owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
       status: "0",
       "storage-model": "1",
     };
-    assertEquals(appStatus_1_tuple, appStatus_1_expected_tuple);
+    assertEquals(appStatusTuple1, appStatusExpectedTuple1);
   },
 });

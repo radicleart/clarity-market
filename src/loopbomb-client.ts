@@ -1,4 +1,3 @@
-import { ReadOnlyFunctionResponse } from "@stacks/transactions";
 import {
   Tx,
   Chain,
@@ -180,6 +179,7 @@ export class LoopbombClient {
     sender: string
   ): Tx {
     return Tx.contractCall(
+      this.contractName,
       "mint-token",
       [
         types.buff(formatBuffString(assetHash)),
@@ -194,7 +194,12 @@ export class LoopbombClient {
   }
 
   mintEdition(nftIndex: number, sender: string): Tx {
-    return Tx.contractCall("mint-edition", [types.uint(nftIndex)], sender);
+    return Tx.contractCall(
+      this.contractName,
+      "mint-edition",
+      [types.uint(nftIndex)],
+      sender
+    );
   }
 
   setEditionCost(
@@ -204,6 +209,7 @@ export class LoopbombClient {
     sender: string
   ): Tx {
     return Tx.contractCall(
+      this.contractName,
       "set-edition-cost",
       [types.uint(nftIndex), types.uint(maxEditions), types.uint(editionCost)],
       sender
@@ -219,6 +225,7 @@ export class LoopbombClient {
     sender: string
   ): Tx {
     return Tx.contractCall(
+      this.contractName,
       "set-sale-data",
       [
         types.uint(nftIndex),
@@ -238,6 +245,7 @@ export class LoopbombClient {
     sender: string
   ): Tx {
     return Tx.contractCall(
+      this.contractName,
       "buy-now",
       [
         types.uint(nftIndex),
@@ -255,6 +263,7 @@ export class LoopbombClient {
     sender: string
   ): Tx {
     return Tx.contractCall(
+      this.contractName,
       "opening-bid",
       [types.uint(nftIndex), types.uint(bidAmount), types.uint(appTimestamp)],
       sender
@@ -268,6 +277,7 @@ export class LoopbombClient {
     sender: string
   ): Tx {
     return Tx.contractCall(
+      this.contractName,
       "place-bid",
       [
         types.uint(nftIndex),
@@ -280,6 +290,7 @@ export class LoopbombClient {
 
   closeBidding(nftIndex: number, closeType: number, sender: string): Tx {
     return Tx.contractCall(
+      this.contractName,
       "close-bidding",
       [types.uint(nftIndex), types.uint(closeType)],
       sender
@@ -306,7 +317,7 @@ export class LoopbombClient {
     return this.callReadOnlyFn("get-administrator");
   }
 
-  isAdministrator(sender: string): ReadOnlyFn {
+  isAdministrator(sender: Account): ReadOnlyFn {
     return this.callReadOnlyFn("is-administrator", [], sender);
   }
 
