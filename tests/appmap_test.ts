@@ -24,8 +24,8 @@ const getWalletsAndClient = (
   client: AppmapClient;
 } => {
   const deployer = accounts.get("deployer")!;
-  const wallet1 = accounts.get("wallet1")!;
-  const wallet2 = accounts.get("wallet2")!;
+  const wallet1 = accounts.get("wallet_1")!;
+  const wallet2 = accounts.get("wallet_2")!;
   const newAdministrator = accounts.get("wallet_3")!;
   const client = new AppmapClient(chain, deployer);
   return { deployer, wallet1, wallet2, newAdministrator, client };
@@ -33,7 +33,7 @@ const getWalletsAndClient = (
 
 Clarinet.test({
   name: "Appmap - test transfer-administrator",
-  fn(chain: Chain, accounts: Map<string, Account>) {
+  async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, wallet2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 
@@ -65,7 +65,7 @@ Clarinet.test({
 
 Clarinet.test({
   name: "Appmap - test register-app",
-  fn(chain: Chain, accounts: Map<string, Account>) {
+  async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, wallet2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 
@@ -223,7 +223,7 @@ Clarinet.test({
 
 Clarinet.test({
   name: "Appmap - test update-app",
-  fn(chain: Chain, accounts: Map<string, Account>) {
+  async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, wallet2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 
@@ -369,7 +369,7 @@ Clarinet.test({
 
 Clarinet.test({
   name: "Appmap - test set-app-status",
-  fn(chain: Chain, accounts: Map<string, Account>) {
+  async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, wallet2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 

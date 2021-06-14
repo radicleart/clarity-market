@@ -33,15 +33,16 @@ const getWalletsAndClient = (
 
 Clarinet.test({
   name: "Loopbomb - test variables of contract",
-  async fn(chain: Chain, accounts: Map<string, Account>) {
+  fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet_1, wallet_2, newAdministrator, client } =
       getWalletsAndClient(chain, accounts);
 
     // should return admin address
-    let currentAdministrator = client.getAdministrator();
-    console.log(currentAdministrator);
+    const currentAdministrator = client.getAdministrator();
     currentAdministrator.result
       .expectOk()
       .expectPrincipal("ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW");
+
+
   },
 });
