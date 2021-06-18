@@ -388,7 +388,7 @@ export class LoopbombClient {
     return this.callReadOnlyFn("get-token-symbol");
   }
 
-  getBalance(): ReadOnlyFn {
-    return this.callReadOnlyFn("get-balance");
+  getBalance(sender: Account): ReadOnlyFn {
+    return this.callReadOnlyFn("get-balance", [], sender);
   }
 }
