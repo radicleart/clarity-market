@@ -26,7 +26,12 @@
     ;; args - nft-index
     ;;        amount
     ;;        timestamp
-    (place-bid (nftIndex uint) (nextBidAmount uint) (appTimestamp uint) (response uint uint))
+    (place-bid (uint uint uint) (response uint uint))
+
+    ;; args - nft-index
+    ;;        amount
+    ;;        timestamp
+    (opening-bid (uint uint uint) (response uint uint))
 
     ;; args - nft-index
     ;;        closeType - refund and close or pay and close
