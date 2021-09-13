@@ -3,8 +3,8 @@
 ;; (impl-trait 'params.platformAddress.nft-approvable-trait.nft-approvable-trait)
 ;; (impl-trait 'params.platformAddress.nft-trait.nft-trait)
 ;; mainnet
-(impl-trait SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ.nft-approvable-trait.nft-approvable-trait)
-(impl-trait SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
+;; (impl-trait SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ.nft-approvable-trait.nft-approvable-trait)
+;; (impl-trait SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'params.contractOwner)
@@ -28,7 +28,7 @@
 (define-map nft-lookup {asset-hash: (buff 32), edition: uint} {nft-index: uint})
 (define-map nft-data {nft-index: uint} {asset-hash: (buff 32), meta-data-url: (buff 200), max-editions: uint, edition: uint, edition-cost: uint, mint-block-height: uint, series-original: uint})
 (define-map nft-sale-data {nft-index: uint} {sale-type: uint, increment-stx: uint, reserve-stx: uint, amount-stx: uint, bidding-end-time: uint, sale-cycle-index: uint})
-(define-map nft-beneficiaries {nft-index: uint} { addresses: (list 10 principal), shares: (list 10 uint) })
+(define-map nft-beneficiaries {nft-index: uint} { addresses: (list 10 principal), shares: (list 10 uint), secondaries: (list 10 uint) })
 (define-map nft-bid-history {nft-index: uint, bid-index: uint} {sale-cycle: uint, bidder: principal, amount: uint, app-timestamp: uint})
 (define-map nft-offer-history {nft-index: uint, offer-index: uint} {sale-cycle: uint, offerer: principal, app-timestamp: uint, amount: uint, accepted: uint})
 
@@ -40,7 +40,6 @@
 (define-map nft-edition-counter {nft-index: uint} {edition-counter: uint})
 (define-map nft-high-bid-counter {nft-index: uint} {high-bid-counter: uint, sale-cycle: uint})
 
-(define-constant percentage-on-secondary u10)
 (define-constant percentage-with-twodp u10000000000)
 
 (define-constant not-allowed (err u10))
@@ -234,7 +233,7 @@
 ;; Note series-original in the case of the original in series is just
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
-(define-public (mint-token (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (addresses (list 10 principal)) (shares (list 10 uint)))
+(define-public (mint-token (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
     (let
         (
             (mintCounter (var-get mint-counter))
@@ -257,7 +256,7 @@
         (map-insert nft-lookup {asset-hash: asset-hash, edition: u1} {nft-index: mintCounter})
 
         ;; The payment is split between the nft-beneficiaries with share > 0 they are set per edition
-        (map-insert nft-beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares})
+        (map-insert nft-beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares, secondaries: secondaries})
 
         ;; finally - mint the NFT and step the counter
         (if (is-eq tx-sender (var-get administrator))
@@ -748,29 +747,21 @@
         (
             (addresses (unwrap! (get addresses (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
             (shares (unwrap! (get shares (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
+            (secondaries (unwrap! (get secondaries (map-get? nft-beneficiaries {nft-index: nftIndex})) failed-to-mint-err))
             (saleCycle (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (split u0)
-            ;; If secondary sale (sale-cycle > 1) - the seller gets half the sale value and each royalty payment is half the original amount
-            (scalor (if (> (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set) u1)
-                percentage-on-secondary  u1))
         )
-        (if (is-eq scalor percentage-on-secondary)
-            ;; If secondary sale - pay the seller then split the royalties
-            (unwrap! (stx-transfer? (/ (* saleAmount (- u100 percentage-on-secondary)) u100) payer (unwrap! (nft-get-owner? my-nft nftIndex) payment-share-error)) transfer-error)
-            ;; Primary sale - split the royalties
-            true
-        )
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u0) payment-address-error) (unwrap! (element-at shares u0) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u1) payment-address-error) (unwrap! (element-at shares u1) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u2) payment-address-error) (unwrap! (element-at shares u2) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u3) payment-address-error) (unwrap! (element-at shares u3) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u4) payment-address-error) (unwrap! (element-at shares u4) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u5) payment-address-error) (unwrap! (element-at shares u5) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u6) payment-address-error) (unwrap! (element-at shares u6) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u7) payment-address-error) (unwrap! (element-at shares u7) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u8) payment-address-error) (unwrap! (element-at shares u8) payment-share-error)) payment-share-error))
-        (+ split (unwrap! (pay-royalty scalor payer saleAmount (unwrap! (element-at addresses u9) payment-address-error) (unwrap! (element-at shares u9) payment-share-error)) payment-share-error))
-        (print {evt: "payment-split", nftIndex: nftIndex, scalor: scalor, payer: payer, saleAmount: saleAmount, seller: (/ (* saleAmount (- u100 percentage-on-secondary)) u100), txSender: tx-sender})
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (nft-get-owner? my-nft nftIndex) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u0) (element-at secondaries u0)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u1) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u1) (element-at secondaries u1)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u2) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u2) (element-at secondaries u2)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u3) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u3) (element-at secondaries u3)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u4) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u4) (element-at secondaries u4)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u5) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u5) (element-at secondaries u5)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u6) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u6) (element-at secondaries u6)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u7) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u7) (element-at secondaries u7)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u8) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u8) (element-at secondaries u8)) payment-share-error)) payment-share-error))
+        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u9) payment-address-error) (unwrap! (if (is-eq saleCycle u1) (element-at shares u9) (element-at secondaries u9)) payment-share-error)) payment-share-error))
+        (print {evt: "payment-split", nftIndex: nftIndex, saleCycle: saleCycle, payer: payer, saleAmount: saleAmount, txSender: tx-sender})
         (ok split)
     )
 )
@@ -778,19 +769,19 @@
 ;; unit of saleAmount is in Satoshi and the share variable is a percentage (ex for 5% it will be equal to 5)
 ;; also the scalor is 1 on first purchase - direct from artist and 2 for secondary sales - so the seller gets half the 
 ;; sale value and each royalty address gets half their original amount.
-(define-private (pay-royalty (scalor uint) (payer principal) (saleAmount uint) (payee principal) (share uint))
+(define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
     (begin
         (if (> share u0)
             (let
                 (
-                    (split (/ (* saleAmount (/ share scalor)) percentage-with-twodp))
+                    (split (/ (* saleAmount share) percentage-with-twodp))
                 )
                 ;; ignore royalty payment if its to the buyer / tx-sender.
                 (if (not (is-eq tx-sender payee))
                     (unwrap! (stx-transfer? split payer payee) transfer-error)
                     (unwrap! (ok true) transfer-error)
                 )
-                (print {evt: "pay-royalty-primary", payee: payee, payer: payer, saleAmount: saleAmount, scalor: scalor, share: share, split: split, txSender: tx-sender})
+                (print {evt: "pay-royalty-primary", payee: payee, payer: payer, saleAmount: saleAmount, share: share, split: split, txSender: tx-sender})
                 (ok split)
             )
             (ok u0)
