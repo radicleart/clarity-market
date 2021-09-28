@@ -116,6 +116,15 @@
     nft-not-owned-err)
 )
 
+;; Transfers tokens to a 'SPecified principal.
+(define-public (burn (nftIndex uint) (owner principal))
+  (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
+    (match (nft-burn? loopbomb nftIndex owner)
+        success (ok true)
+        error (nft-transfer-err error))
+    nft-not-owned-err)
+)
+
 (define-private (nft-transfer-err (code uint))
   (if (is-eq u1 code)
     nft-not-owned-err
