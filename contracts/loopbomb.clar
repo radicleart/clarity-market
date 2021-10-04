@@ -9,12 +9,10 @@
 
 ;; contract variables
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var nftadmin principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
 (define-data-var mint-price uint u1000000)
 (define-data-var base-token-uri (string-ascii 256) "https://loopbomb.io/nfts/")
 (define-data-var mint-counter uint u0)
 (define-data-var platform-fee uint u5)
-(define-data-var transfer-status uint u1)
 
 ;; constants
 (define-constant token-name "loopbomb")
@@ -113,31 +111,11 @@
 
 ;; Transfers tokens to a 'SPecified principal.
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
-    (if (is-eq (var-get transfer-status) u2)
-        (if (is-eq (var-get administrator) tx-sender)
-            (transfer-internal nftIndex owner recipient)
-            not-allowed
-        )
-        (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
-            (transfer-internal nftIndex owner recipient)
-            nft-not-owned-err
-        )
-    )
-)
-
-(define-private (transfer-internal (nftIndex uint) (owner principal) (recipient principal))
+  (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
     (match (nft-transfer? loopbomb nftIndex owner recipient)
         success (ok true)
         error (nft-transfer-err error))
-)
-
-(define-public (set-transfers (tstatus uint) (nft-admin principal))
-    (begin
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
-        (var-set nftadmin nft-admin)
-        (var-set transfer-status tstatus)
-        (ok true)
-    )
+    nft-not-owned-err)
 )
 
 ;; Transfers tokens to a 'SPecified principal.
