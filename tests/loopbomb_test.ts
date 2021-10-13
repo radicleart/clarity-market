@@ -220,10 +220,33 @@ Clarinet.test({
   },
 });
 
-// Clarinet.test({
-//   name: "Loopbomb - test transfer-administrator",
-//   async fn(chain: Chain, accounts: Map<string, Account>) {
-//     const { administrator, deployer, wallet1, wallet2, newAdministrator, client } =
-//       getWalletsAndClient(chain, accounts);
-//   },
-// });
+Clarinet.test({
+  name: "Loopbomb - test mint-token",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      newAdministrator,
+      client,
+    } = getWalletsAndClient(chain, accounts);
+    let block = chain.mineBlock([
+      client.mintToken(
+        "99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c",
+        "https://gaia.blockstack.org/hub/1GiSrLSMTmDsCFMZ2amCvuUqtAU5m3o4p7/99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c.json",
+        1,
+        5,
+        6,
+        7,
+        [],
+        [],
+        [],
+        [],
+        [],
+        wallet1.address
+      ),
+    ]);
+    console.log(block);
+  },
+});

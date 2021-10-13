@@ -93,6 +93,37 @@ export class LoopbombClient {
     );
   }
 
+  setBrokerInfo(
+    tStatus: number,
+    nftAdmin: string,
+    bb1: string,
+    bb2: string,
+    bb3: string,
+    sender: string
+  ): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "set-broker-info",
+      [
+        types.uint(tStatus),
+        types.principal(nftAdmin),
+        types.principal(bb1),
+        types.principal(bb2),
+        types.principal(bb3),
+      ],
+      sender
+    );
+  }
+
+  burn(nftIndex: number, owner: string, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "burn",
+      [types.uint(nftIndex), types.principal(owner)],
+      sender
+    );
+  }
+
   transferAdministrator(newAdministrator: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
@@ -172,13 +203,56 @@ export class LoopbombClient {
     );
   }
 
+  mintTokenTwenty(
+    hashes: string[],
+    metaUrls: string[],
+    maxEditions: number,
+    editionCost: number,
+    clientMintPrice: number,
+    buyNowPrice: number,
+    mintAddresses: string[],
+    mintShares: number[],
+    addresses: string[],
+    shares: number[],
+    secondaries: number[],
+    sender: string
+  ): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "mint-token-twenty",
+      [
+        types.list(hashes.map((hash) => types.buff(formatBuffString(hash)))),
+        types.list(
+          metaUrls.map((metaUrl) => types.buff(formatBuffString(metaUrl)))
+        ),
+        types.uint(maxEditions),
+        types.uint(editionCost),
+        types.uint(clientMintPrice),
+        types.uint(buyNowPrice),
+        types.list(
+          mintAddresses.map((mintAddress) => types.principal(mintAddress))
+        ),
+        types.list(mintShares.map((mintShare) => types.uint(mintShare))),
+        types.list(addresses.map((address) => types.principal(address))),
+        types.list(secondaries.map((secondary) => types.uint(secondary))),
+        types.list(shares.map((share) => types.uint(share))),
+      ],
+      sender
+    );
+  }
+
   mintToken(
     assetHash: string,
     metaDataUrl: string,
     maxEditions: number,
     editionCost: number,
+    clientMintPrice: number,
+    buyNowPrice: number,
+    mintAddresses: string[],
+    mintShares: number[],
     addresses: string[],
     shares: number[],
+    secondaries: number[],
     sender: string
   ): Tx {
     return Tx.contractCall(
@@ -189,7 +263,14 @@ export class LoopbombClient {
         types.buff(formatBuffString(metaDataUrl)),
         types.uint(maxEditions),
         types.uint(editionCost),
+        types.uint(clientMintPrice),
+        types.uint(buyNowPrice),
+        types.list(
+          mintAddresses.map((mintAddress) => types.principal(mintAddress))
+        ),
+        types.list(mintShares.map((mintShare) => types.uint(mintShare))),
         types.list(addresses.map((address) => types.principal(address))),
+        types.list(secondaries.map((secondary) => types.uint(secondary))),
         types.list(shares.map((share) => types.uint(share))),
       ],
       sender
@@ -369,6 +450,10 @@ export class LoopbombClient {
     return this.callReadOnlyFn("get-token-by-hash", [
       types.buff(formatBuffString(assetHash)),
     ]);
+  }
+
+  getAllData(nftIndex: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-all-data", [types.uint(nftIndex)]);
   }
 
   getContractData(): ReadOnlyFn {
