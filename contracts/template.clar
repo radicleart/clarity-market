@@ -48,6 +48,7 @@
 
 (define-constant percentage-with-twodp u10000000000)
 
+(define-constant mint-not-allowed (err u9))
 (define-constant not-allowed (err u10))
 (define-constant not-found (err u11))
 (define-constant amount-not-set (err u12))
@@ -329,58 +330,61 @@
 ;; Note series-original in the case of the original in series is just
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
-(define-public (mint-token (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
-    (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
-        (let
-            (
-                ;; if client bypasses UI clientMintPrice then charge mint-price
-                (myMintPrice (max-of (var-get mint-price) clientMintPrice))
-                (mintCounter (var-get mint-counter))
-                (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
-                (block-time (unwrap! (get-block-info? time u0) amount-not-set))
-            )
-            (asserts! (> maxEditions u0) editions-error)
-            (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
-            (asserts! (is-none ahash) asset-not-registered)
-
-            ;; Note: series original is really for later editions to refer back to this one - this one IS the series original
-            (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, meta-data-url: metaDataUrl, max-editions: maxEditions, edition: u1, edition-cost: editionCost, mint-block-height: block-height, series-original: mintCounter})
-
-            ;; Note editions are 1 based and <= maxEditions - the one minted here is #1
-            (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u2})
-
-            ;; By default we accept offers - sale type can be changed via the UI.
-            (if (> buyNowPrice u0) 
-                (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: buyNowPrice, bidding-end-time: (+ block-time u1814400)})
-                (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
-            )
-
-            (map-insert nft-lookup {asset-hash: asset-hash, edition: u1} {nft-index: mintCounter})
-
-            ;; The payment is split between the nft-beneficiaries with share > 0 they are set per edition
-            (map-insert nft-beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares, secondaries: secondaries})
-
-            ;; finally - mint the NFT and step the counter
-            (if (is-eq tx-sender (var-get administrator))
-                (print "mint-token : tx-sender is contract - skipping mint price")
-                (begin
-                    ;; (unwrap! (stx-transfer? myMintPrice tx-sender (var-get administrator)) failed-to-stx-transfer)
-                    (print (unwrap! (paymint-split mintCounter myMintPrice tx-sender mintAddresses mintShares) payment-error))
-                    (print "mint-token : tx-sender paid mint price")
+(define-public (mint-token (signature (buff 64)) (public-key (buff 33)) (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
+    (print {evt: "mint-token", asset-hash: asset-hash, signature: signature, public-key: public-key})
+    (if (not (secp256k1-verify asset-hash signature public-key)) (err mint-not-allowed)
+        (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
+            (let
+                (
+                    ;; if client bypasses UI clientMintPrice then charge mint-price
+                    (myMintPrice (max-of (var-get mint-price) clientMintPrice))
+                    (mintCounter (var-get mint-counter))
+                    (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
+                    (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
+                (asserts! (> maxEditions u0) editions-error)
+                (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
+                (asserts! (is-none ahash) asset-not-registered)
+
+                ;; Note: series original is really for later editions to refer back to this one - this one IS the series original
+                (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, meta-data-url: metaDataUrl, max-editions: maxEditions, edition: u1, edition-cost: editionCost, mint-block-height: block-height, series-original: mintCounter})
+
+                ;; Note editions are 1 based and <= maxEditions - the one minted here is #1
+                (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u2})
+
+                ;; By default we accept offers - sale type can be changed via the UI.
+                (if (> buyNowPrice u0) 
+                    (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: buyNowPrice, bidding-end-time: (+ block-time u1814400)})
+                    (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
+                )
+
+                (map-insert nft-lookup {asset-hash: asset-hash, edition: u1} {nft-index: mintCounter})
+
+                ;; The payment is split between the nft-beneficiaries with share > 0 they are set per edition
+                (map-insert nft-beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares, secondaries: secondaries})
+
+                ;; finally - mint the NFT and step the counter
+                (if (is-eq tx-sender (var-get administrator))
+                    (print "mint-token : tx-sender is contract - skipping mint price")
+                    (begin
+                        ;; (unwrap! (stx-transfer? myMintPrice tx-sender (var-get administrator)) failed-to-stx-transfer)
+                        (print (unwrap! (paymint-split mintCounter myMintPrice tx-sender mintAddresses mintShares) payment-error))
+                        (print "mint-token : tx-sender paid mint price")
+                    )
+                )
+                (unwrap! (nft-mint? loopbomb mintCounter tx-sender) failed-to-mint-err)
+                (print {evt: "mint-token", nftIndex: mintCounter, owner: tx-sender, amount: myMintPrice})
+                (var-set mint-counter (+ mintCounter u1))
+                (ok mintCounter)
             )
-            (unwrap! (nft-mint? loopbomb mintCounter tx-sender) failed-to-mint-err)
-            (print {evt: "mint-token", nftIndex: mintCounter, owner: tx-sender, amount: myMintPrice})
-            (var-set mint-counter (+ mintCounter u1))
-            (ok mintCounter)
         )
     )
 )
 
 (define-private (max-of (i1 uint) (i2 uint))
-  (if (> i1 i2)
-      i1
-      i2))
+    (if (> i1 i2)
+        i1
+        i2))
 
 (define-public (mint-edition (nftIndex uint))
     (let

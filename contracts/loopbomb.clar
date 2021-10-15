@@ -21,6 +21,7 @@
 ;; constants
 (define-constant token-name "loopbomb")
 (define-constant token-symbol "LOOP")
+(define-constant pubkey "0242dc3e6bb59ed05a5f71c97af420b4cc4c732d022c9e2b265ef3df92947de0b2")
 
 ;; Non Fungible Token, modeled after ERC-721 via nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
@@ -48,6 +49,7 @@
 
 (define-constant percentage-with-twodp u10000000000)
 
+(define-constant mint-not-allowed (err u9))
 (define-constant not-allowed (err u10))
 (define-constant not-found (err u11))
 (define-constant amount-not-set (err u12))
@@ -289,28 +291,28 @@
 )
 
 ;; mint ten tokens
-(define-public (mint-token-twenty (hashes (list 20 (buff 32))) (meta-urls (list 20 (buff 200))) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
+(define-public (mint-token-twenty (signature (buff 64)) (public-key (buff 33)) (hashes (list 20 (buff 32))) (meta-urls (list 20 (buff 200))) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
     (begin
-        (unwrap! (mint-token (unwrap! (element-at hashes u0) not-allowed) (unwrap! (element-at meta-urls u0) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u1) not-allowed) (unwrap! (element-at meta-urls u1) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u2) not-allowed) (unwrap! (element-at meta-urls u2) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u3) not-allowed) (unwrap! (element-at meta-urls u3) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u4) not-allowed) (unwrap! (element-at meta-urls u4) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u5) not-allowed) (unwrap! (element-at meta-urls u5) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u6) not-allowed) (unwrap! (element-at meta-urls u6) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u7) not-allowed) (unwrap! (element-at meta-urls u7) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u8) not-allowed) (unwrap! (element-at meta-urls u8) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u9) not-allowed) (unwrap! (element-at meta-urls u9) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u10) not-allowed) (unwrap! (element-at meta-urls u10) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u11) not-allowed) (unwrap! (element-at meta-urls u11) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u12) not-allowed) (unwrap! (element-at meta-urls u12) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u13) not-allowed) (unwrap! (element-at meta-urls u13) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u14) not-allowed) (unwrap! (element-at meta-urls u14) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u15) not-allowed) (unwrap! (element-at meta-urls u15) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u16) not-allowed) (unwrap! (element-at meta-urls u16) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u17) not-allowed) (unwrap! (element-at meta-urls u17) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u18) not-allowed) (unwrap! (element-at meta-urls u18) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
-        (unwrap! (mint-token (unwrap! (element-at hashes u19) not-allowed) (unwrap! (element-at meta-urls u19) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u0) not-allowed) (unwrap! (element-at meta-urls u0) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u1) not-allowed) (unwrap! (element-at meta-urls u1) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u2) not-allowed) (unwrap! (element-at meta-urls u2) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u3) not-allowed) (unwrap! (element-at meta-urls u3) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u4) not-allowed) (unwrap! (element-at meta-urls u4) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u5) not-allowed) (unwrap! (element-at meta-urls u5) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u6) not-allowed) (unwrap! (element-at meta-urls u6) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u7) not-allowed) (unwrap! (element-at meta-urls u7) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u8) not-allowed) (unwrap! (element-at meta-urls u8) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u9) not-allowed) (unwrap! (element-at meta-urls u9) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u10) not-allowed) (unwrap! (element-at meta-urls u10) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u11) not-allowed) (unwrap! (element-at meta-urls u11) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u12) not-allowed) (unwrap! (element-at meta-urls u12) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u13) not-allowed) (unwrap! (element-at meta-urls u13) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u14) not-allowed) (unwrap! (element-at meta-urls u14) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u15) not-allowed) (unwrap! (element-at meta-urls u15) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u16) not-allowed) (unwrap! (element-at meta-urls u16) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u17) not-allowed) (unwrap! (element-at meta-urls u17) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u18) not-allowed) (unwrap! (element-at meta-urls u18) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
+        (unwrap! (mint-token signature public-key (unwrap! (element-at hashes u19) not-allowed) (unwrap! (element-at meta-urls u19) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice mintAddresses mintShares addresses shares secondaries) not-allowed)
         (print {evt: "mint-token-twenty", txSender: tx-sender})
         (ok true)
     )
@@ -329,58 +331,61 @@
 ;; Note series-original in the case of the original in series is just
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
-(define-public (mint-token (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
-    (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
-        (let
-            (
-                ;; if client bypasses UI clientMintPrice then charge mint-price
-                (myMintPrice (max-of (var-get mint-price) clientMintPrice))
-                (mintCounter (var-get mint-counter))
-                (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
-                (block-time (unwrap! (get-block-info? time u0) amount-not-set))
-            )
-            (asserts! (> maxEditions u0) editions-error)
-            (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
-            (asserts! (is-none ahash) asset-not-registered)
-
-            ;; Note: series original is really for later editions to refer back to this one - this one IS the series original
-            (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, meta-data-url: metaDataUrl, max-editions: maxEditions, edition: u1, edition-cost: editionCost, mint-block-height: block-height, series-original: mintCounter})
-
-            ;; Note editions are 1 based and <= maxEditions - the one minted here is #1
-            (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u2})
-
-            ;; By default we accept offers - sale type can be changed via the UI.
-            (if (> buyNowPrice u0) 
-                (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: buyNowPrice, bidding-end-time: (+ block-time u1814400)})
-                (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
-            )
-
-            (map-insert nft-lookup {asset-hash: asset-hash, edition: u1} {nft-index: mintCounter})
-
-            ;; The payment is split between the nft-beneficiaries with share > 0 they are set per edition
-            (map-insert nft-beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares, secondaries: secondaries})
-
-            ;; finally - mint the NFT and step the counter
-            (if (is-eq tx-sender (var-get administrator))
-                (print "mint-token : tx-sender is contract - skipping mint price")
-                (begin
-                    ;; (unwrap! (stx-transfer? myMintPrice tx-sender (var-get administrator)) failed-to-stx-transfer)
-                    (print (unwrap! (paymint-split mintCounter myMintPrice tx-sender mintAddresses mintShares) payment-error))
-                    (print "mint-token : tx-sender paid mint price")
+(define-public (mint-token (signature (buff 64)) (public-key (buff 33)) (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
+    (if (secp256k1-verify asset-hash signature public-key)
+        (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
+            (let
+                (
+                    ;; if client bypasses UI clientMintPrice then charge mint-price
+                    (myMintPrice (max-of (var-get mint-price) clientMintPrice))
+                    (mintCounter (var-get mint-counter))
+                    (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
+                    (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
+                (print {evt: "mint-token", asset-hash: asset-hash, signature: signature, public-key: public-key})
+                (asserts! (> maxEditions u0) editions-error)
+                (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
+                (asserts! (is-none ahash) asset-not-registered)
+
+                ;; Note: series original is really for later editions to refer back to this one - this one IS the series original
+                (map-insert nft-data {nft-index: mintCounter} {asset-hash: asset-hash, meta-data-url: metaDataUrl, max-editions: maxEditions, edition: u1, edition-cost: editionCost, mint-block-height: block-height, series-original: mintCounter})
+
+                ;; Note editions are 1 based and <= maxEditions - the one minted here is #1
+                (map-insert nft-edition-counter {nft-index: mintCounter} {edition-counter: u2})
+
+                ;; By default we accept offers - sale type can be changed via the UI.
+                (if (> buyNowPrice u0)
+                    (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: buyNowPrice, bidding-end-time: (+ block-time u1814400)})
+                    (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
+                )
+
+                (map-insert nft-lookup {asset-hash: asset-hash, edition: u1} {nft-index: mintCounter})
+
+                ;; The payment is split between the nft-beneficiaries with share > 0 they are set per edition
+                (map-insert nft-beneficiaries {nft-index: mintCounter} {addresses: addresses, shares: shares, secondaries: secondaries})
+
+                ;; finally - mint the NFT and step the counter
+                (if (is-eq tx-sender (var-get administrator))
+                    (print "mint-token : tx-sender is contract - skipping mint price")
+                    (begin
+                        ;; (unwrap! (stx-transfer? myMintPrice tx-sender (var-get administrator)) failed-to-stx-transfer)
+                        (print (unwrap! (paymint-split mintCounter myMintPrice tx-sender mintAddresses mintShares) payment-error))
+                        (print "mint-token : tx-sender paid mint price")
+                    )
+                )
+                (unwrap! (nft-mint? loopbomb mintCounter tx-sender) failed-to-mint-err)
+                (print {evt: "mint-token", nftIndex: mintCounter, owner: tx-sender, amount: myMintPrice})
+                (var-set mint-counter (+ mintCounter u1))
+                (ok mintCounter)
             )
-            (unwrap! (nft-mint? loopbomb mintCounter tx-sender) failed-to-mint-err)
-            (print {evt: "mint-token", nftIndex: mintCounter, owner: tx-sender, amount: myMintPrice})
-            (var-set mint-counter (+ mintCounter u1))
-            (ok mintCounter)
         )
-    )
+    (err u9))
 )
 
 (define-private (max-of (i1 uint) (i2 uint))
-  (if (> i1 i2)
-      i1
-      i2))
+    (if (> i1 i2)
+        i1
+        i2))
 
 (define-public (mint-edition (nftIndex uint))
     (let
