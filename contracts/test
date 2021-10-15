@@ -7,21 +7,21 @@
 ;; (impl-trait SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 
 ;; contract variables
-(define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var mint-price uint u1000000)
-(define-data-var base-token-uri (string-ascii 256) "https://loopbomb.io/nfts/")
+(define-data-var administrator principal 'params.administrator)
+(define-data-var mint-price uint uparams.mintPrice)
+(define-data-var base-token-uri (string-ascii 256) params.callBack)
 (define-data-var mint-counter uint u0)
 (define-data-var platform-fee uint u5)
-(define-data-var project-broker principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var centralised-broker1 principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var centralised-broker2 principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var centralised-broker3 principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
+(define-data-var project-broker principal 'params.administrator)
+(define-data-var centralised-broker1 principal 'params.administrator)
+(define-data-var centralised-broker2 principal 'params.administrator)
+(define-data-var centralised-broker3 principal 'params.administrator)
 (define-data-var transfer-status uint u1)
-(define-data-var signed-message (buff 33) 0x0242dc3e6bb59ed05a5f71c97af420b4cc4c732d022c9e2b265ef3df92947de0b2)
 
 ;; constants
-(define-constant token-name "loopbomb")
-(define-constant token-symbol "LOOP")
+(define-constant token-name "params.tokenName")
+(define-constant token-symbol "params.tokenSymbol")
+(define-constant SIGNER "0242dc3e6bb59ed05a5f71c97af420b4cc4c732d022c9e2b265ef3df92947de0b2")
 
 ;; Non Fungible Token, modeled after ERC-721 via nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
@@ -332,6 +332,7 @@
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
 (define-public (mint-token (signature (buff 65)) (pubkey (buff 33)) (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
+    (if (verify-buff signature pubkey)
         (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
             (let
                 (
@@ -342,7 +343,6 @@
                     (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
                 (print {evt: "mint-token", asset-hash: asset-hash, signature: signature, pubkey: pubkey})
-                (asserts! (verify-buff signature pubkey) u9)
                 (asserts! (> maxEditions u0) editions-error)
                 (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
                 (asserts! (is-none ahash) asset-not-registered)
@@ -379,6 +379,7 @@
                 (ok mintCounter)
             )
         )
+    (err u9))
 )
 
 (define-private (verify-buff (signature (buff 65)) (message (buff 33)))
@@ -387,10 +388,9 @@
       (hash (sha256 message))
       (pubkey (try! (secp256k1-recover? hash signature)))
     )
-    (print {evt: "verify-sig", signature: signature, pubkey: pubkey, message: hash})
-    ;;(asserts! (is-eq pubkey (var-get signed-message)) (err u1))
-    (if (is-eq pubkey (var-get signed-message)) true false)
-    ;;(ok true)
+    (print {evt: "verify-buff", signature: signature, pubkey: pubkey, message: hash})
+    (asserts! (is-eq pubkey signed-message) (err u1))
+    (ok true)
   )
 )
 

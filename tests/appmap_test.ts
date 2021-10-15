@@ -4,13 +4,8 @@ import {
   Chain,
   Account,
   types,
-} from "https://deno.land/x/clarinet@v0.10.0/index.ts";
-import {
-  assertEquals,
-  assertStringIncludes,
-  assertArrayIncludes,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
-
+} from "https://deno.land/x/clarinet@v0.14.0/index.ts";
+import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
 import { AppmapClient, ErrCode } from "../src/appmap-client.ts";
 
 const formatBuffString = (buffer: string) => {
@@ -34,9 +29,7 @@ Clarinet.test({
 
     // should return admin address
     let currentAdministrator = client.getAdministrator();
-    currentAdministrator.result
-      .expectOk()
-      .expectPrincipal("ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE");
+    currentAdministrator.result.expectOk().expectPrincipal(deployer.address);
 
     // should not be able to transfer administrator if sender not current administrator
     let block = chain.mineBlock([
@@ -54,7 +47,7 @@ Clarinet.test({
     currentAdministrator = client.getAdministrator();
     currentAdministrator.result
       .expectOk()
-      .expectPrincipal("ST21HMSJATHZ888PD0S0SSTWP4J61TCRJYEVQ0STB");
+      .expectPrincipal(newAdministrator.address);
   },
 });
 
@@ -103,7 +96,7 @@ Clarinet.test({
 
     const expectedEvent_1 = {
       contract_event: {
-        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        contract_identifier: `${deployer.address}.appmap`,
         topic: "print",
         value: "1",
       },
@@ -112,7 +105,7 @@ Clarinet.test({
 
     const expectedEvent_2 = {
       contract_event: {
-        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        contract_identifier: `${deployer.address}.appmap`,
         topic: "print",
         value: "2",
       },
@@ -136,8 +129,8 @@ Clarinet.test({
 
     const app_1_expected_tuple = {
       "app-contract-id":
-        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
-      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+        "0x535431534a3344544535444e375835345944483544363452334243423641324147325a5138595044352e6d792d676169612d70726f6a656374",
+      owner: wallet_1.address,
       status: "0",
       "storage-model": "1",
     };
@@ -145,8 +138,8 @@ Clarinet.test({
 
     const app_2_expected_tuple = {
       "app-contract-id":
-        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d66696c65636f696e2d70726f6a656374",
-      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+        "0x535431534a3344544535444e375835345944483544363452334243423641324147325a5138595044352e6d792d66696c65636f696e2d70726f6a656374",
+      owner: wallet_1.address,
       status: "0",
       "storage-model": "2",
     };
@@ -169,7 +162,7 @@ Clarinet.test({
     ]);
     const expectedEvent_3 = {
       contract_event: {
-        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        contract_identifier: `${deployer.address}.appmap`,
         topic: "print",
         value: "3",
       },
@@ -178,7 +171,7 @@ Clarinet.test({
 
     const expectedEvent_4 = {
       contract_event: {
-        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        contract_identifier: `${deployer.address}.appmap`,
         topic: "print",
         value: "4",
       },
@@ -209,7 +202,7 @@ Clarinet.test({
     let contractData = client.getContractData();
     const contractDataTuple = contractData.result.expectOk().expectTuple();
     const expectedContractDataTuple = {
-      administrator: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE",
+      administrator: deployer.address,
       appCounter: "4",
     };
     assertEquals(contractDataTuple, expectedContractDataTuple);
@@ -233,7 +226,7 @@ Clarinet.test({
     ]);
     const expectedEvent_1 = {
       contract_event: {
-        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        contract_identifier: `${deployer.address}.appmap`,
         topic: "print",
         value: "1",
       },
@@ -283,12 +276,12 @@ Clarinet.test({
 
     // should be able to get updated app
     let app_1 = client.getApp(0);
-    let app_1_tuple = app_1.result.expectOk().expectTuple();
+    let app_1_tuple: any = app_1.result.expectOk().expectTuple();
 
     let app_1_expected_tuple = {
       "app-contract-id":
-        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d6f776e65722d70726f6a656374",
-      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+        "0x535431534a3344544535444e375835345944483544363452334243423641324147325a5138595044352e6d792d6f776e65722d70726f6a656374",
+      owner: wallet_1.address,
       status: "0",
       "storage-model": "1",
     };
@@ -313,8 +306,8 @@ Clarinet.test({
 
     app_1_expected_tuple = {
       "app-contract-id":
-        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d61646d696e6973747261746f722d70726f6a656374",
-      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+        "0x535431534a3344544535444e375835345944483544363452334243423641324147325a5138595044352e6d792d61646d696e6973747261746f722d70726f6a656374",
+      owner: wallet_1.address,
       status: "0",
       "storage-model": "1",
     };
@@ -333,7 +326,7 @@ Clarinet.test({
     ]);
     const expectedEvent_2 = {
       contract_event: {
-        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        contract_identifier: `${deployer.address}.appmap`,
         topic: "print",
         value: "2",
       },
@@ -379,7 +372,7 @@ Clarinet.test({
     ]);
     let expectedEvent_1 = {
       contract_event: {
-        contract_identifier: "ST1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE.appmap",
+        contract_identifier: `${deployer.address}.appmap`,
         topic: "print",
         value: "1",
       },
@@ -402,8 +395,8 @@ Clarinet.test({
     let appStatus_1_tuple = appStatus_1.result.expectOk().expectTuple();
     let appStatus_1_expected_tuple = {
       "app-contract-id":
-        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
-      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+        "0x535431534a3344544535444e375835345944483544363452334243423641324147325a5138595044352e6d792d676169612d70726f6a656374",
+      owner: wallet_1.address,
       status: "1",
       "storage-model": "1",
     };
@@ -418,8 +411,8 @@ Clarinet.test({
     appStatus_1_tuple = appStatus_1.result.expectOk().expectTuple();
     appStatus_1_expected_tuple = {
       "app-contract-id":
-        "0x5354314a34473652523634334243473847385352364d3244395a394b5854324e4a44524b334642544b2e6d792d676169612d70726f6a656374",
-      owner: "ST1J4G6RR643BCG8G8SR6M2D9Z9KXT2NJDRK3FBTK",
+        "0x535431534a3344544535444e375835345944483544363452334243423641324147325a5138595044352e6d792d676169612d70726f6a656374",
+      owner: wallet_1.address,
       status: "0",
       "storage-model": "1",
     };

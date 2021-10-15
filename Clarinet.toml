@@ -1,6 +1,11 @@
 [project]
 name = "clarinet-clarity-market"
 requirements = []
+costs_version = 1
 [contracts.appmap]
 path = "contracts/appmap.clar"
+depends_on = []
+
+[contracts.loopbomb]
+path = "contracts/loopbomb.clar"
 depends_on = []
