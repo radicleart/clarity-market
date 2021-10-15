@@ -5,7 +5,6 @@ import {
   types,
   ReadOnlyFn,
 } from "https://deno.land/x/clarinet@v0.10.0/index.ts";
-import { formatBuffString } from "./utils.ts";
 
 export enum ErrCode {
   ERR_NOT_ALLOWED = 10,
@@ -204,8 +203,8 @@ export class LoopbombClient {
   }
 
   mintTokenTwenty(
-    hashes: string[],
-    metaUrls: string[],
+    hashes: ArrayBuffer[],
+    metaUrls: ArrayBuffer[],
     maxEditions: number,
     editionCost: number,
     clientMintPrice: number,
@@ -221,10 +220,8 @@ export class LoopbombClient {
       this.contractName,
       "mint-token-twenty",
       [
-        types.list(hashes.map((hash) => types.buff(formatBuffString(hash)))),
-        types.list(
-          metaUrls.map((metaUrl) => types.buff(formatBuffString(metaUrl)))
-        ),
+        types.list(hashes.map((hash) => types.buff(hash))),
+        types.list(metaUrls.map((metaUrl) => types.buff(metaUrl))),
         types.uint(maxEditions),
         types.uint(editionCost),
         types.uint(clientMintPrice),
@@ -242,13 +239,13 @@ export class LoopbombClient {
   }
 
   mintToken(
-    assetHash: string,
-    metaDataUrl: string,
+    assetHash: ArrayBuffer,
+    metaDataUrl: ArrayBuffer,
     maxEditions: number,
     editionCost: number,
     clientMintPrice: number,
     buyNowPrice: number,
-    mintAddresses: string[],
+    mintAddresses: string[], // used to split minting fees
     mintShares: number[],
     addresses: string[],
     shares: number[],
@@ -259,8 +256,8 @@ export class LoopbombClient {
       this.contractName,
       "mint-token",
       [
-        types.buff(formatBuffString(assetHash)),
-        types.buff(formatBuffString(metaDataUrl)),
+        types.buff(assetHash),
+        types.buff(metaDataUrl),
         types.uint(maxEditions),
         types.uint(editionCost),
         types.uint(clientMintPrice),
@@ -270,8 +267,8 @@ export class LoopbombClient {
         ),
         types.list(mintShares.map((mintShare) => types.uint(mintShare))),
         types.list(addresses.map((address) => types.principal(address))),
-        types.list(secondaries.map((secondary) => types.uint(secondary))),
         types.list(shares.map((share) => types.uint(share))),
+        types.list(secondaries.map((secondary) => types.uint(secondary))),
       ],
       sender
     );
@@ -439,17 +436,15 @@ export class LoopbombClient {
     ]);
   }
 
-  getEditionByHash(assetHash: string, edition: number): ReadOnlyFn {
+  getEditionByHash(assetHash: ArrayBuffer, edition: number): ReadOnlyFn {
     return this.callReadOnlyFn("get-edition-by-hash", [
-      types.buff(formatBuffString(assetHash)),
+      types.buff(assetHash),
       types.uint(edition),
     ]);
   }
 
-  getTokenByHash(assetHash: string): ReadOnlyFn {
-    return this.callReadOnlyFn("get-token-by-hash", [
-      types.buff(formatBuffString(assetHash)),
-    ]);
+  getTokenByHash(assetHash: ArrayBuffer): ReadOnlyFn {
+    return this.callReadOnlyFn("get-token-by-hash", [types.buff(assetHash)]);
   }
 
   getAllData(nftIndex: number): ReadOnlyFn {
