@@ -17,7 +17,7 @@
 (define-data-var centralised-broker2 principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
 (define-data-var centralised-broker3 principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
 (define-data-var transfer-status uint u1)
-(define-data-var signed-message (buff 33) 0x0242dc3e6bb59ed05a5f71c97af420b4cc4c732d022c9e2b265ef3df92947de0b2)
+(define-data-var signed-message (buff 33) 0x036ecd3dc600fd37287f5aef4750d72c0731ee9607a959f64a1ab7d5de6dad26d0)
 
 ;; constants
 (define-constant token-name "loopbomb")
@@ -49,7 +49,6 @@
 
 (define-constant percentage-with-twodp u10000000000)
 
-(define-constant mint-not-allowed (err u9))
 (define-constant not-allowed (err u10))
 (define-constant not-found (err u11))
 (define-constant amount-not-set (err u12))
@@ -246,6 +245,14 @@
     )
 )
 
+(define-public (update-signed-message (new-signed-message (buff 33)))
+    (begin
+        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (var-set signed-message new-signed-message)
+        (ok true)
+    )
+)
+
 ;; The administrator can transfer the balance in the contract to another address
 (define-public (transfer-balance (recipient principal))
     (let
@@ -332,6 +339,9 @@
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
 (define-public (mint-token (signature (buff 65)) (pubkey (buff 33)) (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
+    ;;(if (is-ok (recover-pubkey signature message asset-hash))
+    ;;(if (is-ok (recover-pubkey signature message asset-hash))
+    (if (secp256k1-verify (sha256 asset-hash) signature pubkey)
         (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
             (let
                 (
@@ -341,8 +351,6 @@
                     (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
                     (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
-                (print {evt: "mint-token", asset-hash: asset-hash, signature: signature, pubkey: pubkey})
-                (asserts! (verify-buff signature pubkey) u9)
                 (asserts! (> maxEditions u0) editions-error)
                 (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
                 (asserts! (is-none ahash) asset-not-registered)
@@ -379,6 +387,33 @@
                 (ok mintCounter)
             )
         )
+    (err u9))
+)
+
+(define-private (recover-pubkey (signature (buff 65)) (message (buff 32)) (asset-hash (buff 32)))
+  (let
+    (
+      (hash (sha256 message))
+      (decoded (try! (secp256k1-recover? hash signature)))
+    )
+    (print {evt: "verify-sig1", decoded: decoded, message: message, hash: hash, signature: signature})
+    (asserts! (is-eq decoded asset-hash) (err u5))
+    (print {evt: "verify-sig2", decoded: decoded, asset-hash: asset-hash})
+    (if (is-eq decoded asset-hash) (ok true) (err u1))
+  )
+)
+
+(define-private (verify-sig (signature (buff 65)) (message (buff 32)) (asset-hash (buff 32)))
+  (let
+    (
+      (hash (sha256 message))
+      (decoded (try! (secp256k1-recover? hash signature)))
+    )
+    (print {evt: "verify-sig1", decoded: decoded, message: message, hash: hash, signature: signature})
+    (asserts! (is-eq decoded asset-hash) (err u5))
+    (print {evt: "verify-sig2", decoded: decoded, asset-hash: asset-hash})
+    (if (is-eq decoded asset-hash) (ok true) (err u1))
+  )
 )
 
 (define-private (verify-buff (signature (buff 65)) (message (buff 33)))
@@ -387,13 +422,12 @@
       (hash (sha256 message))
       (pubkey (try! (secp256k1-recover? hash signature)))
     )
-    (print {evt: "verify-sig", signature: signature, pubkey: pubkey, message: hash})
-    ;;(asserts! (is-eq pubkey (var-get signed-message)) (err u1))
-    (if (is-eq pubkey (var-get signed-message)) true false)
-    ;;(ok true)
+    ;;(print {evt: "verify-sig1", pubkey: pubkey, message: message, hash: hash, signature: signature})
+    (asserts! (is-eq pubkey (var-get signed-message)) (err u5))
+    ;;(print {evt: "verify-sig2", pubkey: pubkey, signed-message: (var-get signed-message)})
+    (if (is-eq pubkey (var-get signed-message)) (ok true) (err u1))
   )
 )
-
 
 (define-private (max-of (i1 uint) (i2 uint))
     (if (> i1 i2)
@@ -448,7 +482,7 @@
 )
 
 ;; allow the owner of the series original to set the cost of minting editions
-;; the cost for each edition is taken from the series original and so we need to 
+;; the cost for each edition is taken from the series original and so we need to
 ;; operate on the the original here - ie nftIndex is the index of thee original
 ;; and NOT the edition andd only the creator of the series original can change this.
 (define-public (set-edition-cost (nftIndex uint) (maxEditions uint) (editionCost uint))
@@ -511,7 +545,7 @@
         (asserts! (is-some ahash) asset-not-registered)
         (asserts! (is-eq saleType u1) not-approved-to-sell)
         (asserts! (> amount u0) amount-not-set)
-        
+
         ;; Make the royalty payments - then zero out the sale data and register the transfer
         ;; (print "buy-now : Make the royalty payments")
         (print (unwrap! (payment-split nftIndex amount tx-sender seriesOriginal) payment-error))
@@ -539,7 +573,7 @@
         ;; Check the user bid amount is the opening price OR the current bid plus increment
         (asserts! (is-eq bidAmount amount) bidding-amount-error)
         (asserts! (> biddingEndTime appTimestamp) bidding-endtime-error)
-        
+
         (print "place-bid : sending this much to; ")
         (print bidAmount)
         (print (as-contract tx-sender))
@@ -674,7 +708,7 @@
         (asserts! (or (is-eq closeType u1) (is-eq closeType u2)) failed-to-close-1)
         ;; only the owner or administrator can call close
         (asserts! (or (is-owner nftIndex tx-sender) (unwrap! (is-administrator) not-allowed)) not-allowed)
-        ;; only the administrator can call close BEFORE the end time - note we use the less accurate 
+        ;; only the administrator can call close BEFORE the end time - note we use the less accurate
         ;; but fool proof block time here to prevent owner/client code jerry mandering the close function
         (asserts! (or (> block-time bidding-end-time) (unwrap! (is-administrator) failed-to-close-3)) failed-to-close-3)
 
@@ -912,7 +946,7 @@
 )
 
 ;; unit of saleAmount is in Satoshi and the share variable is a percentage (ex for 5% it will be equal to 5)
-;; also the scalor is 1 on first purchase - direct from artist and 2 for secondary sales - so the seller gets half the 
+;; also the scalor is 1 on first purchase - direct from artist and 2 for secondary sales - so the seller gets half the
 ;; sale value and each royalty address gets half their original amount.
 (define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
     (begin

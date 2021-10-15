@@ -41,6 +41,18 @@ describe("Loopbomb contract test suite", () => {
 
   describe("Verifing the variable of the contract", () => {
 
+    it("Verify signature", async () => {
+      const assetHash = Buffer.from("0x46295599467141f4f02cecc97cfd576067407a4f904f798674780601a1319c6c")
+      const pubky = Buffer.from("0x0242dc3e6bb59ed05a5f71c97af420b4cc4c732d022c9e2b265ef3df92947de0b2")
+      const sig = Buffer.from("0xf198cd50a495324d5174d37af22afc826cf6b06b92cddf75140c3bd9656560eeb96cfc73e82c2da49a44d4905dd7829b25791efc1a59642202e11a2404ceb5b801")
+      const args = [bufferCV(assetHash),
+        bufferCV(pubky),
+        bufferCV(sig)
+      ]
+      let txresult = await execMethod(loopbombClient, project1Key, "verify-sig", [args], false)
+      assert.isNotOk(txresult.success)
+    });
+
     it("Should return the administrator address", async () => {
       const result = await readFromContract(loopbombClient, "get-administrator", [], false)
       assert.isOk(result.rawResult == "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW")

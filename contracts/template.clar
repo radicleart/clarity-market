@@ -17,11 +17,11 @@
 (define-data-var centralised-broker2 principal 'params.administrator)
 (define-data-var centralised-broker3 principal 'params.administrator)
 (define-data-var transfer-status uint u1)
+(define-data-var signed-message (buff 33) 0x036ecd3dc600fd37287f5aef4750d72c0731ee9607a959f64a1ab7d5de6dad26d0)
 
 ;; constants
 (define-constant token-name "params.tokenName")
 (define-constant token-symbol "params.tokenSymbol")
-(define-constant signed-message "0242dc3e6bb59ed05a5f71c97af420b4cc4c732d022c9e2b265ef3df92947de0b2")
 
 ;; Non Fungible Token, modeled after ERC-721 via nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
@@ -246,6 +246,14 @@
     )
 )
 
+(define-public (update-signed-message (new-signed-message (buff 33)))
+    (begin
+        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (var-set signed-message new-signed-message)
+        (ok true)
+    )
+)
+
 ;; The administrator can transfer the balance in the contract to another address
 (define-public (transfer-balance (recipient principal))
     (let
@@ -332,7 +340,7 @@
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
 (define-public (mint-token (signature (buff 65)) (pubkey (buff 33)) (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
-    (if (verify-buff signature pubkey)
+    (if (is-ok (verify-buff signature pubkey))
         (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
             (let
                 (
@@ -342,7 +350,6 @@
                     (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
                     (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
-                (print {evt: "mint-token", asset-hash: asset-hash, signature: signature, pubkey: pubkey})
                 (asserts! (> maxEditions u0) editions-error)
                 (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
                 (asserts! (is-none ahash) asset-not-registered)
@@ -379,7 +386,7 @@
                 (ok mintCounter)
             )
         )
-    (err u9))
+    (mint-not-allowed))
 )
 
 (define-private (verify-buff (signature (buff 65)) (message (buff 33)))
@@ -388,12 +395,12 @@
       (hash (sha256 message))
       (pubkey (try! (secp256k1-recover? hash signature)))
     )
-    (print {evt: "verify-buff", signature: signature, pubkey: pubkey, message: hash})
-    (asserts! (is-eq pubkey signed-message) (err u1))
-    (ok true)
+    ;;(print {evt: "verify-sig1", pubkey: pubkey, message: message, hash: hash, signature: signature})
+    (asserts! (is-eq pubkey (var-get signed-message)) (err u5))
+    ;;(print {evt: "verify-sig2", pubkey: pubkey, signed-message: (var-get signed-message)})
+    (if (is-eq pubkey (var-get signed-message)) (ok true) (err u1))
   )
 )
-
 
 (define-private (max-of (i1 uint) (i2 uint))
     (if (> i1 i2)
