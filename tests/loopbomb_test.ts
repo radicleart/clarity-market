@@ -7,6 +7,7 @@ import {
 } from "https://deno.land/x/clarinet@v0.14.0/index.ts";
 
 import { LoopbombClient, ErrCode } from "../src/loopbomb-client.ts";
+import { formatBuffString } from "../src/utils.ts";
 
 const getWalletsAndClient = (
   chain: Chain,
@@ -16,6 +17,9 @@ const getWalletsAndClient = (
   deployer: Account;
   wallet1: Account;
   wallet2: Account;
+  wallet3: Account;
+  wallet4: Account;
+  wallet5: Account;
   newAdministrator: Account;
   client: LoopbombClient;
 } => {
@@ -29,13 +33,19 @@ const getWalletsAndClient = (
   const deployer = accounts.get("deployer")!;
   const wallet1 = accounts.get("wallet_1")!;
   const wallet2 = accounts.get("wallet_2")!;
-  const newAdministrator = accounts.get("wallet_3")!;
+  const wallet3 = accounts.get("wallet_3")!;
+  const wallet4 = accounts.get("wallet_4")!;
+  const wallet5 = accounts.get("wallet_5")!;
+  const newAdministrator = accounts.get("wallet_6")!;
   const client = new LoopbombClient(chain, deployer);
   return {
     administrator,
     deployer,
     wallet1,
     wallet2,
+    wallet3,
+    wallet4,
+    wallet5,
     newAdministrator,
     client,
   };
@@ -228,25 +238,33 @@ Clarinet.test({
       deployer,
       wallet1,
       wallet2,
+      wallet3,
+      wallet4,
+      wallet5,
       newAdministrator,
       client,
     } = getWalletsAndClient(chain, accounts);
+
+    // "99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c",
+    // "https://gaia.blockstack.org/hub/1GiSrLSMTmDsCFMZ2amCvuUqtAU5m3o4p7/99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c.json",
     let block = chain.mineBlock([
       client.mintToken(
-        "99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c",
-        "https://gaia.blockstack.org/hub/1GiSrLSMTmDsCFMZ2amCvuUqtAU5m3o4p7/99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c.json",
+        formatBuffString("hello world"), // can't use actual asset hash here??
+        formatBuffString(
+          "https://gaia.blockstack.org/hub/1GiSrLSMTmDsCFMZ2amCvuUqtAU5m3o4p7/99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c.json"
+        ),
         1,
-        5,
-        6,
-        7,
-        [],
-        [],
-        [],
-        [],
-        [],
+        1000000,
+        1000000,
+        1000000,
+        [wallet2.address, wallet3.address, wallet4.address, wallet5.address],
+        [250000, 250000, 250000, 250000],
+        [administrator.address],
+        [0],
+        [0],
         wallet1.address
       ),
     ]);
-    console.log(block);
+    console.log(block.receipts[0].events);
   },
 });
