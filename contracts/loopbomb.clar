@@ -28,6 +28,7 @@
 ;; constants
 (define-constant token-name "loopbomb")
 (define-constant token-symbol "LOOP")
+(define-constant collection-max-supply u10000)
 
 ;; Non Fungible Token, modeled after ERC-721 via nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
@@ -83,6 +84,7 @@
 (define-constant bidding-amount-error (err u39))
 (define-constant bidding-endtime-error (err u40))
 (define-constant bad-broker-err (err u41)) ;; unauthorized
+(define-constant collection-limit-reached (err u42))
 
 (define-constant nft-not-owned-err (err u401)) ;; unauthorized
 (define-constant sender-equals-recipient-err (err u405)) ;; method not allowed
@@ -379,6 +381,34 @@
     )
 )
 
+;; mint twenty tokens
+(define-public (collection-mint-token-twenty (signature (buff 65)) (message (buff 32)) (hashes (list 20 (buff 32))) (meta-urls (list 20 (buff 200))) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint))
+    (begin
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u0) not-allowed) (unwrap! (element-at meta-urls u0) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u1) not-allowed) (unwrap! (element-at meta-urls u1) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u2) not-allowed) (unwrap! (element-at meta-urls u2) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u3) not-allowed) (unwrap! (element-at meta-urls u3) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u4) not-allowed) (unwrap! (element-at meta-urls u4) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u5) not-allowed) (unwrap! (element-at meta-urls u5) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u6) not-allowed) (unwrap! (element-at meta-urls u6) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u7) not-allowed) (unwrap! (element-at meta-urls u7) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u8) not-allowed) (unwrap! (element-at meta-urls u8) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u9) not-allowed) (unwrap! (element-at meta-urls u9) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u10) not-allowed) (unwrap! (element-at meta-urls u10) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u11) not-allowed) (unwrap! (element-at meta-urls u11) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u12) not-allowed) (unwrap! (element-at meta-urls u12) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u13) not-allowed) (unwrap! (element-at meta-urls u13) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u14) not-allowed) (unwrap! (element-at meta-urls u14) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u15) not-allowed) (unwrap! (element-at meta-urls u15) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u16) not-allowed) (unwrap! (element-at meta-urls u16) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u17) not-allowed) (unwrap! (element-at meta-urls u17) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u18) not-allowed) (unwrap! (element-at meta-urls u18) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (unwrap! (mint-token signature message (unwrap! (element-at hashes u19) not-allowed) (unwrap! (element-at meta-urls u19) not-allowed) maxEditions editionCost clientMintPrice buyNowPrice) not-allowed)
+        (print {evt: "mint-token-twenty", txSender: tx-sender})
+        (ok true)
+    )
+)
+
 ;; mint a new token
 ;; asset-hash: sha256 hash of asset file
 ;; max-editions: maximum number of editions allowed for this asset
@@ -404,6 +434,7 @@
                     (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
                     (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
+                (asserts! (< mintCounter collection-max-supply) collection-limit-reached)
                 (asserts! (> maxEditions u0) editions-error)
                 (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
                 (asserts! (is-none ahash) asset-not-registered)
@@ -455,6 +486,7 @@
                     (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
                     (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
+                (asserts! (< mintCounter collection-max-supply) collection-limit-reached)
                 (asserts! (> maxEditions u0) editions-error)
                 (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
                 (asserts! (is-none ahash) asset-not-registered)
