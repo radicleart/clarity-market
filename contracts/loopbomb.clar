@@ -447,7 +447,6 @@
                     (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
                     (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
-                (asserts! (< mintCounter collection-max-supply) collection-limit-reached)
                 (asserts! (> maxEditions u0) editions-error)
                 (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
                 (asserts! (is-none ahash) asset-not-registered)
