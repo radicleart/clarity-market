@@ -5,7 +5,6 @@ import {
   Account,
   types,
 } from "https://deno.land/x/clarinet@v0.14.0/index.ts";
-
 import { LoopbombClient, ErrCode } from "../src/loopbomb-client.ts";
 import { formatBuffString } from "../src/utils.ts";
 
@@ -247,9 +246,20 @@ Clarinet.test({
 
     // "99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c",
     // "https://gaia.blockstack.org/hub/1GiSrLSMTmDsCFMZ2amCvuUqtAU5m3o4p7/99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c.json",
+    // const sigBuffer = Buffer.from(data.sig, "hex");
+    // const sigBuffer = bufferCV(Buffer.from(data.sig, 'hex'))
+
     let block = chain.mineBlock([
       client.mintToken(
-        formatBuffString("hello world"), // can't use actual asset hash here??
+        formatBuffString(
+          "aef4558084f7166870b6354212299aeddb29fa21445d2af53da96c34566bb6484b4de74ddf589f73dc788d9ff74bd42dfcd1bceeaec2a2199d97edf2924e8e5500"
+        ),
+        formatBuffString(
+          "46295599467141f4f02cecc97cfd576067407a4f904f798674780601a1319c6c"
+        ),
+        formatBuffString(
+          "99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c"
+        ), // can't use actual asset hash here??
         formatBuffString(
           "https://gaia.blockstack.org/hub/1GiSrLSMTmDsCFMZ2amCvuUqtAU5m3o4p7/99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c.json"
         ),

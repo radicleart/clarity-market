@@ -239,6 +239,8 @@ export class LoopbombClient {
   }
 
   mintToken(
+    signature: ArrayBuffer,
+    messageHash: ArrayBuffer,
     assetHash: ArrayBuffer,
     metaDataUrl: ArrayBuffer,
     maxEditions: number,
@@ -256,6 +258,8 @@ export class LoopbombClient {
       this.contractName,
       "mint-token",
       [
+        types.buff(signature),
+        types.buff(messageHash),
         types.buff(assetHash),
         types.buff(metaDataUrl),
         types.uint(maxEditions),
