@@ -74,6 +74,110 @@ export class LoopbombClient {
     );
   }
 
+  setIsCollection(newIsCollection: boolean, sender: string) {
+    return Tx.contractCall(
+      this.contractName,
+      "set-is-collection",
+      [types.bool(newIsCollection)],
+      sender
+    );
+  }
+
+  setCollectionRoyalties(
+    newMintAddresses: string[],
+    newMintShares: number[],
+    newAddresses: string[],
+    newShares: number[],
+    newSecondaries: number[],
+    sender: string
+  ) {
+    return Tx.contractCall(
+      this.contractName,
+      "set-collection-royalties",
+      [
+        types.list(
+          newMintAddresses.map((newMintAddress) =>
+            types.principal(newMintAddress)
+          )
+        ),
+        types.list(
+          newMintShares.map((newMintShare) => types.uint(newMintShare))
+        ),
+        types.list(
+          newAddresses.map((newAddress) => types.principal(newAddress))
+        ),
+        types.list(newShares.map((newShare) => types.uint(newShare))),
+        types.list(
+          newSecondaries.map((newSecondary) => types.uint(newSecondary))
+        ),
+      ],
+      sender
+    );
+  }
+
+  setCollectionMintAddresses(newMintAddresses: string[], sender: string) {
+    return Tx.contractCall(
+      this.contractName,
+      "set-collection-mint-addresses",
+      [
+        types.list(
+          newMintAddresses.map((newMintAddress) =>
+            types.principal(newMintAddress)
+          )
+        ),
+      ],
+      sender
+    );
+  }
+
+  setCollectionMintShares(newMintShares: number[], sender: string) {
+    return Tx.contractCall(
+      this.contractName,
+      "set-collection-mint-shares",
+      [
+        types.list(
+          newMintShares.map((newMintShare) => types.uint(newMintShare))
+        ),
+      ],
+      sender
+    );
+  }
+
+  setCollectionAddresses(newAddresses: string[], sender: string) {
+    return Tx.contractCall(
+      this.contractName,
+      "set-collection-addresses",
+      [
+        types.list(
+          newAddresses.map((newAddress) => types.principal(newAddress))
+        ),
+      ],
+      sender
+    );
+  }
+
+  setCollectionShares(newShares: number[], sender: string) {
+    return Tx.contractCall(
+      this.contractName,
+      "set-collection-royalties",
+      [types.list(newShares.map((newShare) => types.uint(newShare)))],
+      sender
+    );
+  }
+
+  setCollectionSecondaries(newSecondaries: number[], sender: string) {
+    return Tx.contractCall(
+      this.contractName,
+      "set-collection-secondaries",
+      [
+        types.list(
+          newSecondaries.map((newSecondary) => types.uint(newSecondary))
+        ),
+      ],
+      sender
+    );
+  }
+
   transfer(
     nftIndex: number,
     owner: string,
@@ -260,7 +364,7 @@ export class LoopbombClient {
         types.uint(maxEditions),
         types.uint(editionCost),
         types.uint(clientMintPrice),
-        types.uint(buyNowPrice)
+        types.uint(buyNowPrice),
       ],
       sender
     );
@@ -412,6 +516,10 @@ export class LoopbombClient {
 
   getBeneficiaries(nftIndex: number): ReadOnlyFn {
     return this.callReadOnlyFn("get-beneficiaries", [types.uint(nftIndex)]);
+  }
+
+  getCollectionBeneficiaries(): ReadOnlyFn {
+    return this.callReadOnlyFn("get-collection-beneficiaries", []);
   }
 
   getOfferAtIndex(nftIndex: number, offerIndex: number): ReadOnlyFn {

@@ -7,7 +7,10 @@ import {
 } from "https://deno.land/x/clarinet@v0.14.0/index.ts";
 import { LoopbombClient, ErrCode } from "../src/loopbomb-client.ts";
 import { formatBuffString, hexStringToArrayBuffer } from "../src/utils.ts";
-import { assertEquals, assert } from 'https://deno.land/std@0.90.0/testing/asserts.ts';
+import {
+  assertEquals,
+  assert,
+} from "https://deno.land/std@0.90.0/testing/asserts.ts";
 
 const getWalletsAndClient = (
   chain: Chain,
@@ -244,96 +247,124 @@ Clarinet.test({
       client,
     } = getWalletsAndClient(chain, accounts);
 
-      const sig = '4e53f47a3583c00bc49b54bdaff0ca544c55d3a1872c87abe606e20264518744b9a0710ec247b208672850bf1c2f99b1712290cd414ba7737460394564b56cdd01'
-      const msg = '53f5924a377df35f12ad40630ca720496c4f9061c31469fef5789e17b09dfcd4'
-      const hsh = '4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6'
-      const url = '68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e'
+    const sig =
+      "4e53f47a3583c00bc49b54bdaff0ca544c55d3a1872c87abe606e20264518744b9a0710ec247b208672850bf1c2f99b1712290cd414ba7737460394564b56cdd01";
+    const msg =
+      "53f5924a377df35f12ad40630ca720496c4f9061c31469fef5789e17b09dfcd4";
+    const hsh =
+      "4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6";
+    const url =
+      "68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e";
 
-      let block = chain.mineBlock([
-        Tx.contractCall('loopbomb', 'set-collection-royalties', 
-        [
-          types.list([
-            types.principal(wallet2.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address)
-          ]),
-          types.list([
-            types.uint(9000000000),
-            types.uint(1000000000),
-            types.uint(0),
-            types.uint(0)
-          ]),
-          types.list([
-            types.principal(wallet2.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address),
-            types.principal(wallet3.address)
-          ]),
-          types.list([
-            types.uint(9000000000),
-            types.uint(1000000000),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0)
-          ]),
-          types.list([
-            types.uint(9000000000),
-            types.uint(1000000000),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0),
-            types.uint(0)
-          ])
-        ], 
-        administrator.address),
+    const newMintAddresses = [
+      wallet2.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+    ];
+    const newMintShares = [9000000000, 1000000000, 0, 0];
+    const newAddresses = [
+      wallet2.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+    ];
+    const newShares = [9000000000, 1000000000, 0, 0];
+    const newSecondaries = [9000000000, 1000000000, 0, 0];
+    let block = chain.mineBlock([
+      client.setCollectionRoyalties(
+        newMintAddresses,
+        newMintShares,
+        newAddresses,
+        newShares,
+        newSecondaries,
+        administrator.address
+      ),
+      client.collectionMintToken(
+        hexStringToArrayBuffer(sig),
+        hexStringToArrayBuffer(msg),
+        hexStringToArrayBuffer(hsh),
+        hexStringToArrayBuffer(url),
+        1,
+        0,
+        100000000,
+        0,
+        wallet1.address
+      ),
+    ]);
 
-        Tx.contractCall('loopbomb', 'get-collection-beneficiaries', [], administrator.address),
+    assertEquals(block.receipts.length, 2);
+    assertEquals(block.height, 2);
+    block.receipts[0].result.expectOk().expectBool(true); // assert that the result of the tx was ok and the input number
 
-        Tx.contractCall('loopbomb', 'collection-mint-token', 
-            [
-              types.buff(hexStringToArrayBuffer(sig)),
-              types.buff(hexStringToArrayBuffer(msg)),
-              types.buff(hexStringToArrayBuffer(hsh)),
-              types.buff(hexStringToArrayBuffer(url)),
-              types.uint(1),
-              types.uint(0),
-              types.uint(100000000),
-              types.uint(0)
-            ], 
-            wallet1.address),
-      ]);
+    const collectionBeneficiaries = client.getCollectionBeneficiaries();
+    const actualTuple: any = collectionBeneficiaries.result
+      .expectOk()
+      .expectTuple();
+    actualTuple["collection-addresses"] =
+      actualTuple["collection-addresses"].expectList();
+    actualTuple["collection-mint-addresses"] =
+      actualTuple["collection-mint-addresses"].expectList();
+    actualTuple["collection-mint-shares"] = actualTuple[
+      "collection-mint-shares"
+    ]
+      .expectList()
+      .map((i: String) => Number(i.substr(1)));
+    actualTuple["collection-secondaries"] = actualTuple[
+      "collection-secondaries"
+    ]
+      .expectList()
+      .map((i: String) => Number(i.substr(1)));
+    actualTuple["collection-shares"] = actualTuple["collection-shares"]
+      .expectList()
+      .map((i: String) => Number(i.substr(1)));
+    const expectedTuple = {
+      "collection-addresses": newAddresses,
+      "collection-mint-addresses": newMintAddresses,
+      "collection-mint-shares": newMintShares,
+      "collection-secondaries": newSecondaries,
+      "collection-shares": newShares,
+    };
+    assertEquals(actualTuple, expectedTuple);
 
-      console.log('block', block);
+    block.receipts[1].result.expectOk().expectUint(0);
+    const stxTransfer1 = {
+      type: "stx_transfer_event",
+      stx_transfer_event: {
+        sender: wallet1.address,
+        recipient: wallet2.address,
+        amount: "90000000",
+      },
+    };
+    // todo: update index of events after removing print statements
+    assertEquals(stxTransfer1, block.receipts[1].events[2]);
 
-      assertEquals(block.receipts.length, 3);
-      assertEquals(block.height, 2);
-      assertEquals(block.receipts[0].result, "(ok true)"); // assert that the result of the tx was ok and the input number
-      assert(block.receipts[1].result.indexOf("(ok ") > -1); // assert that the result of the tx was ok and the input number
-      assertEquals(block.receipts[2].result, "(ok u0)"); // assert that the result of the tx was ok and the input number
+    const stxTransfer2 = {
+      type: "stx_transfer_event",
+      stx_transfer_event: {
+        sender: wallet1.address,
+        recipient: wallet3.address,
+        amount: "10000000",
+      },
+    };
+    // todo: update index of events after removing print statements
+    assertEquals(stxTransfer2, block.receipts[1].events[4]);
 
-      console.log('------------------------------------');
-      console.log(block.receipts[0].result);
-      console.log(block.receipts[1].result);
-      console.log(block.receipts[2].result);
-      console.log('------------------------------------');
-      
-      console.log(block.receipts[2].events);
+    const mintNft = {
+      type: "nft_mint_event",
+      nft_mint_event: {
+        asset_identifier: `${deployer.address}.loopbomb::loopbomb`,
+        recipient: wallet1.address,
+        value: "u0",
+      },
+    };
+    assertEquals(mintNft, block.receipts[1].events[9]);
   },
 });
 
@@ -351,25 +382,31 @@ Clarinet.test({
       client,
     } = getWalletsAndClient(chain, accounts);
 
-      const sig = '5e53f47a3583c00bc49b54bdaff0ca544c55d3a1872c87abe606e20264518744b9a0710ec247b208672850bf1c2f99b1712290cd414ba7737460394564b56cdd01'
-      const msg = '53f5924a377df35f12ad40630ca720496c4f9061c31469fef5789e17b09dfcd4'
-      const hsh = '4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6'
-      const url = '68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e'
+    const sig =
+      "5e53f47a3583c00bc49b54bdaff0ca544c55d3a1872c87abe606e20264518744b9a0710ec247b208672850bf1c2f99b1712290cd414ba7737460394564b56cdd01";
+    const msg =
+      "53f5924a377df35f12ad40630ca720496c4f9061c31469fef5789e17b09dfcd4";
+    const hsh =
+      "4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6";
+    const url =
+      "68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e";
 
-      let block = chain.mineBlock([
-        Tx.contractCall('loopbomb', 'set-collection-royalties', 
+    let block = chain.mineBlock([
+      Tx.contractCall(
+        "loopbomb",
+        "set-collection-royalties",
         [
           types.list([
             types.principal(wallet2.address),
             types.principal(wallet3.address),
             types.principal(wallet3.address),
-            types.principal(wallet3.address)
+            types.principal(wallet3.address),
           ]),
           types.list([
             types.uint(9000000000),
             types.uint(1000000000),
             types.uint(0),
-            types.uint(0)
+            types.uint(0),
           ]),
           types.list([
             types.principal(wallet2.address),
@@ -381,7 +418,7 @@ Clarinet.test({
             types.principal(wallet3.address),
             types.principal(wallet3.address),
             types.principal(wallet3.address),
-            types.principal(wallet3.address)
+            types.principal(wallet3.address),
           ]),
           types.list([
             types.uint(9000000000),
@@ -393,7 +430,7 @@ Clarinet.test({
             types.uint(0),
             types.uint(0),
             types.uint(0),
-            types.uint(0)
+            types.uint(0),
           ]),
           types.list([
             types.uint(9000000000),
@@ -405,49 +442,58 @@ Clarinet.test({
             types.uint(0),
             types.uint(0),
             types.uint(0),
-            types.uint(0)
-          ])
-        ], 
-        administrator.address),
+            types.uint(0),
+          ]),
+        ],
+        administrator.address
+      ),
 
-        Tx.contractCall('loopbomb', 'get-collection-beneficiaries', [], administrator.address),
+      Tx.contractCall(
+        "loopbomb",
+        "get-collection-beneficiaries",
+        [],
+        administrator.address
+      ),
 
-        Tx.contractCall('loopbomb', 'collection-mint-token', 
-            [
-              types.buff(hexStringToArrayBuffer(sig)),
-              types.buff(hexStringToArrayBuffer(msg)),
-              types.buff(hexStringToArrayBuffer(hsh)),
-              types.buff(hexStringToArrayBuffer(url)),
-              types.uint(1),
-              types.uint(0),
-              types.uint(100000000),
-              types.uint(0)
-            ], 
-            wallet1.address),
-      ]);
+      Tx.contractCall(
+        "loopbomb",
+        "collection-mint-token",
+        [
+          types.buff(hexStringToArrayBuffer(sig)),
+          types.buff(hexStringToArrayBuffer(msg)),
+          types.buff(hexStringToArrayBuffer(hsh)),
+          types.buff(hexStringToArrayBuffer(url)),
+          types.uint(1),
+          types.uint(0),
+          types.uint(100000000),
+          types.uint(0),
+        ],
+        wallet1.address
+      ),
+    ]);
 
-      console.log('block', block);
+    // console.log("block", block);
 
-      assertEquals(block.receipts.length, 3);
-      assertEquals(block.height, 2);
-      assertEquals(block.receipts[0].result, "(ok true)"); // assert that the result of the tx was ok and the input number
-      assert(block.receipts[1].result.indexOf("(ok ") > -1); // assert that the result of the tx was ok and the input number
-      assertEquals(block.receipts[2].result, "(err u9)"); // assert that the result of the tx was ok and the input number
+    assertEquals(block.receipts.length, 3);
+    assertEquals(block.height, 2);
+    assertEquals(block.receipts[0].result, "(ok true)"); // assert that the result of the tx was ok and the input number
+    assert(block.receipts[1].result.indexOf("(ok ") > -1); // assert that the result of the tx was ok and the input number
+    assertEquals(block.receipts[2].result, "(err u9)"); // assert that the result of the tx was ok and the input number
 
-      console.log('------------------------------------');
-      console.log(block.receipts[0].result);
-      console.log(block.receipts[1].result);
-      console.log(block.receipts[2].result);
-      console.log('------------------------------------');
-      
-      console.log(block.receipts[2].events);
-  }
+    // console.log("------------------------------------");
+    // console.log(block.receipts[0].result);
+    // console.log(block.receipts[1].result);
+    // console.log(block.receipts[2].result);
+    // console.log("------------------------------------");
+
+    // console.log(block.receipts[2].events);
+  },
 });
 
-    // "99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c",
-    // "https://gaia.blockstack.org/hub/1GiSrLSMTmDsCFMZ2amCvuUqtAU5m3o4p7/99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c.json",
-    // const sigBuffer = Buffer.from(data.sig, "hex");
-    // const sigBuffer = bufferCV(Buffer.from(data.sig, 'hex'))
+// "99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c",
+// "https://gaia.blockstack.org/hub/1GiSrLSMTmDsCFMZ2amCvuUqtAU5m3o4p7/99be924b02bcdfdbbe2c0e833295e903ef39a6702afc5591c0b252623301065c.json",
+// const sigBuffer = Buffer.from(data.sig, "hex");
+// const sigBuffer = bufferCV(Buffer.from(data.sig, 'hex'))
 /**
 Clarinet.test({
   name: "Loopbomb - test collection-mint-token",
@@ -489,5 +535,5 @@ Clarinet.test({
   },
 });
 **/
-    // console.log(block.receipts[0].events);
-    // assertEquals(block.receipts.length, 1); // assert that the block received a single tx
+// console.log(block.receipts[0].events);
+// assertEquals(block.receipts.length, 1); // assert that the block received a single tx
