@@ -75,6 +75,7 @@
 (define-constant cant-pay-mint-price (err u25))
 (define-constant editions-error (err u26))
 (define-constant payment-error (err u28))
+(define-constant payment-error-collection (err u29))
 (define-constant payment-address-error (err u33))
 (define-constant payment-share-error (err u34))
 (define-constant bidding-error (err u35))
@@ -522,7 +523,7 @@
                     (print "mint-token : tx-sender is contract - skipping mint price")
                     (begin
                         ;; (unwrap! (stx-transfer? myMintPrice tx-sender (var-get administrator)) failed-to-stx-transfer)
-                        (print (unwrap! (collection-paymint-split mintCounter myMintPrice tx-sender) payment-error))
+                        (print (unwrap! (collection-paymint-split mintCounter myMintPrice tx-sender) payment-error-collection))
                         (print "mint-token : tx-sender paid mint price")
                     )
                 )
