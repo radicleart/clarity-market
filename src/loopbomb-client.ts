@@ -238,7 +238,7 @@ export class LoopbombClient {
     );
   }
 
-  mintToken(
+  collectionMintToken(
     signature: ArrayBuffer,
     messageHash: ArrayBuffer,
     assetHash: ArrayBuffer,
@@ -247,16 +247,11 @@ export class LoopbombClient {
     editionCost: number,
     clientMintPrice: number,
     buyNowPrice: number,
-    mintAddresses: string[], // used to split minting fees
-    mintShares: number[],
-    addresses: string[],
-    shares: number[],
-    secondaries: number[],
     sender: string
   ): Tx {
     return Tx.contractCall(
       this.contractName,
-      "mint-token",
+      "collection-mint-token",
       [
         types.buff(signature),
         types.buff(messageHash),
@@ -265,14 +260,7 @@ export class LoopbombClient {
         types.uint(maxEditions),
         types.uint(editionCost),
         types.uint(clientMintPrice),
-        types.uint(buyNowPrice),
-        types.list(
-          mintAddresses.map((mintAddress) => types.principal(mintAddress))
-        ),
-        types.list(mintShares.map((mintShare) => types.uint(mintShare))),
-        types.list(addresses.map((address) => types.principal(address))),
-        types.list(shares.map((share) => types.uint(share))),
-        types.list(secondaries.map((secondary) => types.uint(secondary))),
+        types.uint(buyNowPrice)
       ],
       sender
     );
