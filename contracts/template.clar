@@ -28,7 +28,7 @@
 ;; constants
 (define-constant token-name "params.tokenName")
 (define-constant token-symbol "params.tokenSymbol")
-(define-constant collection-max-supply u10000)
+(define-constant collection-max-supply uparams.collectionLimit)
 
 ;; Non Fungible Token, modeled after ERC-721 via nft-trait
 ;; Note this is a basic implementation - no support yet for setting approvals for assets
@@ -499,6 +499,7 @@
                     (ahash (get asset-hash (map-get? nft-data {nft-index: (var-get mint-counter)})))
                     (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
+                (print {evt: "mint-token", sender: tx-sender, meta-data-url: metaDataUrl})
                 (asserts! (< mintCounter collection-max-supply) collection-limit-reached)
                 (asserts! (> maxEditions u0) editions-error)
                 (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
