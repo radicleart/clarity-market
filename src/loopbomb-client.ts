@@ -370,6 +370,34 @@ export class LoopbombClient {
     );
   }
 
+  collectionMintTokenTwenty(
+    signature: ArrayBuffer,
+    messageHash: ArrayBuffer,
+    hashes: ArrayBuffer[],
+    metaUrls: ArrayBuffer[],
+    maxEditions: number,
+    editionCost: number,
+    clientMintPrice: number,
+    buyNowPrice: number,
+    sender: string
+  ): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "collection-mint-token-twenty",
+      [
+        types.buff(signature),
+        types.buff(messageHash),
+        types.list(hashes.map((hash) => types.buff(hash))),
+        types.list(metaUrls.map((metaUrl) => types.buff(metaUrl))),
+        types.uint(maxEditions),
+        types.uint(editionCost),
+        types.uint(clientMintPrice),
+        types.uint(buyNowPrice),
+      ],
+      sender
+    );
+  }
+
   mintEdition(nftIndex: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
