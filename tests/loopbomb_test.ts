@@ -545,7 +545,7 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
-    const expectedNftTransferEvent = {
+    let expectedNftTransferEvent = {
       type: "nft_transfer_event",
       nft_transfer_event: {
         asset_identifier: `${deployer.address}.loopbomb::loopbomb`,
@@ -585,10 +585,24 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
+    // check that wallet 3 was given approval
+    client.getApproval(0).result.expectOk().expectPrincipal(wallet3.address);
+
     // wallet 3 should be able to transfer even though wallet 2 owns the nft
     block = chain.mineBlock([
-      client.transfer(0, wallet3.address, wallet4.address, wallet2.address),
+      client.transfer(0, wallet2.address, wallet4.address, wallet3.address),
     ]);
-    console.log("huh", block);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    expectedNftTransferEvent = {
+      type: "nft_transfer_event",
+      nft_transfer_event: {
+        asset_identifier: `${deployer.address}.loopbomb::loopbomb`,
+        sender: wallet2.address,
+        recipient: wallet4.address,
+        value: types.uint(0),
+      },
+    };
+    assertEquals(expectedNftTransferEvent, block.receipts[0].events[0]);
   },
 });
