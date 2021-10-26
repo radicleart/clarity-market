@@ -185,6 +185,10 @@
 )
 
 ;; Transfers tokens to a 'SPecified principal.
+;; a. ability to lock down so only the project-broker address can transfer
+;; b. default: the owner and an approved address set by the owner can transfer
+;; c. combination of the above.
+;; In addition the centralised-broker addresses form a ban list - if set the transfer will fail for these addresses
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
     (if (is-eq (var-get transfer-status) u2)
         (if (is-eq (var-get project-broker) tx-sender)
