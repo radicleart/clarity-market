@@ -623,7 +623,7 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true);
 
     // check that wallet 3 was given approval
-    client.getApproval(0).result.expectOk().expectPrincipal(wallet3.address);
+    client.getApproval(0).result.expectOk().expectSome().expectPrincipal(wallet3.address);
 
     // wallet 3 should be able to transfer even though wallet 2 owns the nft
     block = chain.mineBlock([
@@ -783,7 +783,7 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true);
 
     // check that wallet 3 was given approval
-    client.getApproval(0).result.expectOk().expectPrincipal(wallet3.address);
+    client.getApproval(0).result.expectOk().expectSome().expectPrincipal(wallet3.address);
 
     // wallet 3 should not be able to transfer even though wallet 2 owns the nft because transfer-status 2
     block = chain.mineBlock([
