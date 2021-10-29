@@ -456,7 +456,44 @@ Clarinet.test({
     assertEquals(block.receipts.length, 2);
     assertEquals(block.height, 2);
     block.receipts[0].result.expectOk().expectBool(true); // assert that the result of the tx was ok and the input number
-    block.receipts[1].result.expectOk().expectBool(true); // assert that the result of the tx was ok and the input number
+    block.receipts[1].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
+
+    block = chain.mineBlock([
+      client.collectionMintTokenTwenty(
+        hexStringToArrayBuffer(sig),
+        hexStringToArrayBuffer(msg),
+        [
+          "ac263aa5f97ae494cc4bbb23384fc6a90e747c21b349783857e78d38707e72dd",
+          "34fcbdaa10adf2dd6d5d9d856d1f49257888ec0dc62886a861e2f8b7fe42d336",
+          "accae83beead7e5aea3b024b6db9001138f1bd0a93ce5448867581f2850dbb17",
+          "0d279c8396c290cfb4e2bbbc15a82dc60a012fd23af277121d189faaf27a23f4",
+          "d68c94d7740019210cfbb491eceb56f9fe41ea62ef800dd7317c03b0903756ea",
+          "d4cbdcada735d2e75a70596fe43cbf615d4020893c9df0d319d35ccb01addc6c",
+          "b636317711ff785851bdef48e916915dc0d19a1ee0ab1ff5b823a1d915f065d6",
+          "0e40ebee36388873b3451dcf9ba96b07bb509ee3e6fb8e8494cd828f1a961284",
+          "4d0a01d3cdaf3907c870a16fbfe445394c0651fb004e94c2a4d563cc85e7af19",
+          "095186ee32341814927e4b608a7c0baa4d8eca9197af09e0877dc8890917c03d",
+          "6cd523258e66530c86ca9fb53988f31486f86284ff5fb1e50d6d5a62deab3dda",
+          "fe9f8f7db05e1a467dd526f6dce4e6bc30ebcd95880358c18d8a710cfac01dae",
+          "09f50c30f2f50bcb1ad715a16cc02b80688fec8c76c4525a9a62523ac12878c3",
+          "9b2a434780ba4a74f645b60d468293663500f132a8717bdadb0c48750dfbb0d4",
+          "f8d62a2bff7b0a03a0cb5604427e883d92925479452d953e024e73ce2b2c8077",
+          "4304564f1af6792cacd3563f087a348eb368245d57f3df3b872868a2e4cd0947",
+          "aca309133328e27db4c501d467d50d8ee9626f74e208c95c2e2260dabea7e202",
+          "984133508fc2385f40a68da4a2b4b5b28c138483fc500caa43b32665114c019b",
+          "38135b5a33f71e17dfbd57db7efd7fd480f6e653f92c56301e043a6f19eb2599",
+          "c8a29c29e7aece9517e7ed2fb040db0cc8af56b3eeab6a2a7af4b9cb04ecffa9",
+        ].map((hash) => hexStringToArrayBuffer(hash)),
+        Array.from({ length: 20 }).map((_) => hexStringToArrayBuffer(url)),
+        1,
+        0,
+        100000000,
+        0,
+        wallet1.address
+      ),
+    ]);
+
+    block.receipts[0].result.expectOk().expectBool(true); // assert that the result of the tx was ok and the input number
   },
 });
 
@@ -604,5 +641,179 @@ Clarinet.test({
       },
     };
     assertEquals(expectedNftTransferEvent, block.receipts[0].events[0]);
+  },
+});
+
+Clarinet.test({
+  name: "Loopbomb - test transfer status 2 and 3",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      wallet3,
+      wallet4,
+      newAdministrator,
+      client,
+    } = getWalletsAndClient(chain, accounts);
+
+    const sig =
+      "4e53f47a3583c00bc49b54bdaff0ca544c55d3a1872c87abe606e20264518744b9a0710ec247b208672850bf1c2f99b1712290cd414ba7737460394564b56cdd01";
+    const msg =
+      "53f5924a377df35f12ad40630ca720496c4f9061c31469fef5789e17b09dfcd4";
+    const hsh =
+      "4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6";
+    const url =
+      "68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e";
+
+    const newMintAddresses = [
+      wallet2.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+    ];
+    const newMintShares = [9000000000, 1000000000, 0, 0];
+    const newAddresses = [
+      wallet2.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+      wallet3.address,
+    ];
+    const newShares = [9000000000, 1000000000, 0, 0];
+    const newSecondaries = [9000000000, 1000000000, 0, 0];
+    let block = chain.mineBlock([
+      client.setCollectionRoyalties(
+        newMintAddresses,
+        newMintShares,
+        newAddresses,
+        newShares,
+        newSecondaries,
+        administrator.address
+      ),
+      client.collectionMintToken(
+        hexStringToArrayBuffer(sig),
+        hexStringToArrayBuffer(msg),
+        hexStringToArrayBuffer(hsh),
+        hexStringToArrayBuffer(url),
+        1,
+        0,
+        100000000,
+        0,
+        wallet1.address
+      ),
+    ]);
+
+    assertEquals(block.receipts.length, 2);
+    assertEquals(block.height, 2);
+    block.receipts[0].result.expectOk().expectBool(true); // assert that the result of the tx was ok and the input number
+    block.receipts[1].result.expectOk().expectUint(0); // assert that the result of the tx was ok and the input number
+
+    // fail to change transfer status because not administrator
+    block = chain.mineBlock([
+      client.setBrokerInfo(
+        2,
+        deployer.address,
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        deployer.address
+      ),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
+
+    // change transfer status because administrator
+    block = chain.mineBlock([
+      client.setBrokerInfo(
+        2,
+        newAdministrator.address,
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // wallet 1 owns nft, but shouldn't be able to transfer because only new administrator can
+    block = chain.mineBlock([
+      client.transfer(0, wallet1.address, wallet2.address, wallet1.address),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
+
+    // wallet 1 owns nft, new administrator should be able to transfer
+    block = chain.mineBlock([
+      client.transfer(
+        0,
+        wallet1.address,
+        wallet2.address,
+        newAdministrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    let expectedNftTransferEvent = {
+      type: "nft_transfer_event",
+      nft_transfer_event: {
+        asset_identifier: `${deployer.address}.loopbomb::loopbomb`,
+        sender: wallet1.address,
+        recipient: wallet2.address,
+        value: types.uint(0),
+      },
+    };
+    assertEquals(expectedNftTransferEvent, block.receipts[0].events[0]);
+
+    // check that wallet 2 has the nft now
+    client
+      .getOwner(0)
+      .result.expectOk()
+      .expectSome()
+      .expectPrincipal(wallet2.address);
+
+    // wallet 2 sets approval for wallet 3
+    block = chain.mineBlock([
+      client.setApprovalFor(0, wallet3.address, wallet2.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // check that wallet 3 was given approval
+    client.getApproval(0).result.expectOk().expectPrincipal(wallet3.address);
+
+    // wallet 3 should not be able to transfer even though wallet 2 owns the nft because transfer-status 2
+    block = chain.mineBlock([
+      client.transfer(0, wallet2.address, wallet4.address, wallet3.address),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
+
+    // change transfer status because administrator
+    block = chain.mineBlock([
+      client.setBrokerInfo(
+        3,
+        newAdministrator.address,
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // wallet 3 should be able to transfer even though wallet 2 owns the nft because transfer-status 3
+    block = chain.mineBlock([
+      client.transfer(0, wallet2.address, wallet4.address, wallet3.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // wallet 4 owns nft, should be able to transfer (default option)
+    block = chain.mineBlock([
+      client.transfer(0, wallet4.address, wallet1.address, wallet4.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
   },
 });
