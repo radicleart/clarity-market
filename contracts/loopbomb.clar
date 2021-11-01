@@ -1,4 +1,7 @@
 ;; Interface definitions
+(impl-trait .nft-trait.nft-trait)
+(impl-trait .nft-approvable-trait.nft-approvable-trait)
+
 ;; test/mocknet
 ;; (impl-trait 'params.platformAddress.nft-approvable-trait.nft-approvable-trait)
 ;; (impl-trait 'params.platformAddress.nft-trait.nft-trait)
