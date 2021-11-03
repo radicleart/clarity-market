@@ -365,7 +365,7 @@ Clarinet.test({
       },
     };
     // todo: update index of events after removing print statements
-    assertEquals(mintNft, block.receipts[1].events[9]);
+    assertEquals(mintNft, block.receipts[1].events[7]);
 
     // test bad signature
     const badSig =
@@ -419,12 +419,6 @@ Clarinet.test({
     const newMintShares = [9000000000, 1000000000, 0, 0];
     const newAddresses = [
       wallet2.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
       wallet3.address,
       wallet3.address,
       wallet3.address,
@@ -498,7 +492,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Loopbomb - test transfer status 1",
+  name: "Loopbomb - test transfer",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const {
       administrator,
@@ -529,12 +523,6 @@ Clarinet.test({
     const newMintShares = [9000000000, 1000000000, 0, 0];
     const newAddresses = [
       wallet2.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
       wallet3.address,
       wallet3.address,
       wallet3.address,
@@ -623,7 +611,11 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true);
 
     // check that wallet 3 was given approval
-    client.getApproval(0).result.expectOk().expectSome().expectPrincipal(wallet3.address);
+    client
+      .getApproval(0)
+      .result.expectOk()
+      .expectSome()
+      .expectPrincipal(wallet3.address);
 
     // wallet 3 should be able to transfer even though wallet 2 owns the nft
     block = chain.mineBlock([
@@ -645,7 +637,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Loopbomb - test transfer status 2 and 3",
+  name: "Loopbomb - test buy now",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const {
       administrator,
@@ -654,6 +646,7 @@ Clarinet.test({
       wallet2,
       wallet3,
       wallet4,
+      wallet5,
       newAdministrator,
       client,
     } = getWalletsAndClient(chain, accounts);
@@ -670,24 +663,28 @@ Clarinet.test({
     const newMintAddresses = [
       wallet2.address,
       wallet3.address,
-      wallet3.address,
-      wallet3.address,
+      wallet4.address,
+      wallet5.address,
     ];
-    const newMintShares = [9000000000, 1000000000, 0, 0];
+    const newMintShares = [5000000000, 4000000000, 2000000000, 1000000000];
     const newAddresses = [
       wallet2.address,
       wallet3.address,
+      wallet4.address,
+      wallet5.address,
+      wallet2.address,
       wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
-      wallet3.address,
+      wallet4.address,
+      wallet5.address,
+      wallet2.address,
       wallet3.address,
     ];
-    const newShares = [9000000000, 1000000000, 0, 0];
-    const newSecondaries = [9000000000, 1000000000, 0, 0];
+    const newShares = [
+      5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
+    ];
+    const newSecondaries = [
+      5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
+    ];
     let block = chain.mineBlock([
       client.setCollectionRoyalties(
         newMintAddresses,
@@ -704,8 +701,8 @@ Clarinet.test({
         hexStringToArrayBuffer(url),
         1,
         0,
-        100000000,
-        0,
+        1000000000,
+        2000000000,
         wallet1.address
       ),
     ]);
@@ -715,105 +712,15 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true); // assert that the result of the tx was ok and the input number
     block.receipts[1].result.expectOk().expectUint(0); // assert that the result of the tx was ok and the input number
 
-    // fail to change transfer status because not administrator
     block = chain.mineBlock([
-      client.setBrokerInfo(
-        2,
-        deployer.address,
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        deployer.address
-      ),
-    ]);
-    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
-
-    // change transfer status because administrator
-    block = chain.mineBlock([
-      client.setBrokerInfo(
-        2,
-        newAdministrator.address,
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        administrator.address
-      ),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    // wallet 1 owns nft, but shouldn't be able to transfer because only new administrator can
-    block = chain.mineBlock([
-      client.transfer(0, wallet1.address, wallet2.address, wallet1.address),
-    ]);
-    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
-
-    // wallet 1 owns nft, new administrator should be able to transfer
-    block = chain.mineBlock([
-      client.transfer(
+      client.buyNow(
         0,
         wallet1.address,
-        wallet2.address,
+        newAdministrator.address,
         newAdministrator.address
       ),
     ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    let expectedNftTransferEvent = {
-      type: "nft_transfer_event",
-      nft_transfer_event: {
-        asset_identifier: `${deployer.address}.loopbomb::loopbomb`,
-        sender: wallet1.address,
-        recipient: wallet2.address,
-        value: types.uint(0),
-      },
-    };
-    assertEquals(expectedNftTransferEvent, block.receipts[0].events[0]);
-
-    // check that wallet 2 has the nft now
-    client
-      .getOwner(0)
-      .result.expectOk()
-      .expectSome()
-      .expectPrincipal(wallet2.address);
-
-    // wallet 2 sets approval for wallet 3
-    block = chain.mineBlock([
-      client.setApprovalFor(0, wallet3.address, wallet2.address),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    // check that wallet 3 was given approval
-    client.getApproval(0).result.expectOk().expectSome().expectPrincipal(wallet3.address);
-
-    // wallet 3 should not be able to transfer even though wallet 2 owns the nft because transfer-status 2
-    block = chain.mineBlock([
-      client.transfer(0, wallet2.address, wallet4.address, wallet3.address),
-    ]);
-    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
-
-    // change transfer status because administrator
-    block = chain.mineBlock([
-      client.setBrokerInfo(
-        3,
-        newAdministrator.address,
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
-        administrator.address
-      ),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    // wallet 3 should be able to transfer even though wallet 2 owns the nft because transfer-status 3
-    block = chain.mineBlock([
-      client.transfer(0, wallet2.address, wallet4.address, wallet3.address),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    // wallet 4 owns nft, should be able to transfer (default option)
-    block = chain.mineBlock([
-      client.transfer(0, wallet4.address, wallet1.address, wallet4.address),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
+    // todo: test events inside
+    assertEquals(block.receipts[0].events.length, 11);
   },
 });
