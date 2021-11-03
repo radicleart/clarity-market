@@ -15,11 +15,6 @@
 (define-data-var base-token-uri (string-ascii 256) "https://loopbomb.io/nfts/")
 (define-data-var mint-counter uint u0)
 (define-data-var platform-fee uint u5)
-(define-data-var project-broker principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var centralised-broker1 principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var centralised-broker2 principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var centralised-broker3 principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
-(define-data-var transfer-status uint u1)
 (define-data-var signer (buff 33) 0x02815c03f6d7181332afb1b0114f5a1c97286b6092957910ae3fab4006598aee1b)
 (define-data-var is-collection bool true)
 (define-data-var collection-mint-addresses (list 4 principal) (list))
@@ -87,8 +82,7 @@
 (define-constant bidding-opening-error (err u38))
 (define-constant bidding-amount-error (err u39))
 (define-constant bidding-endtime-error (err u40))
-(define-constant bad-broker-err (err u41)) ;; unauthorized
-(define-constant collection-limit-reached (err u42))
+(define-constant collection-limit-reached (err u41))
 
 (define-constant nft-not-owned-err (err u401)) ;; unauthorized
 (define-constant sender-equals-recipient-err (err u405)) ;; method not allowed
@@ -188,68 +182,12 @@
 )
 
 ;; Transfers tokens to a 'SPecified principal.
-;; a. ability to lock down so only the project-broker address can transfer
-;; b. default: the owner and an approved address set by the owner can transfer
-;; c. combination of the above.
-;; In addition the centralised-broker addresses form a ban list - if set the transfer will fail for these addresses
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
-    (if (is-eq (var-get transfer-status) u2)
-        (if (is-eq (var-get project-broker) tx-sender)
-            (transfer-internal nftIndex owner recipient)
-            not-allowed
-        )
-        (if (is-eq (var-get transfer-status) u1)
-            (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
-                (if (not (is-centralised-broker))
-                    (transfer-internal nftIndex owner recipient)
-                    bad-broker-err
-                )
-                nft-not-owned-err
-            )
-            ;; check for centralised broker addresses
-            (if (is-eq (var-get transfer-status) u3)
-                (if (or (is-eq (var-get project-broker) tx-sender) (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender)))
-                    (if (not (is-centralised-broker))
-                        (transfer-internal nftIndex owner recipient)
-                        bad-broker-err
-                    )
-                    nft-not-owned-err
-                )
-                nft-not-owned-err
-            )
-        )
-    )
-)
-
-(define-private (is-centralised-broker)
-    (if (is-eq tx-sender (var-get centralised-broker1))
-        true
-        (if (is-eq tx-sender (var-get centralised-broker2))
-            true
-            (if (is-eq tx-sender (var-get centralised-broker3))
-                true
-                false
-            )
-        )
-    )
-)
-
-(define-private (transfer-internal (nftIndex uint) (owner principal) (recipient principal))
-     (match (nft-transfer? loopbomb nftIndex owner recipient)
-         success (ok true)
-         error (nft-transfer-err error))
-)
-
-(define-public (set-broker-info (tstatus uint) (nft-admin principal) (bb1 principal) (bb2 principal) (bb3 principal))
-    (begin
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
-        (var-set project-broker nft-admin)
-        (var-set centralised-broker1 bb1)
-        (var-set centralised-broker2 bb2)
-        (var-set centralised-broker3 bb3)
-        (var-set transfer-status tstatus)
-        (ok true)
-    )
+  (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
+    (match (nft-transfer? loopbomb nftIndex owner recipient)
+        success (ok true)
+        error (nft-transfer-err error))
+    nft-not-owned-err)
 )
 
 ;; Burns tokens
