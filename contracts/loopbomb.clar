@@ -416,12 +416,8 @@
 
                 ;; finally - mint the NFT and step the counter
                 (if (is-eq tx-sender (var-get administrator))
-                    (print "mint-token : tx-sender is contract - skipping mint price")
-                    (begin
-                        ;; (unwrap! (stx-transfer? myMintPrice tx-sender (var-get administrator)) failed-to-stx-transfer)
-                        (print (unwrap! (paymint-split mintCounter myMintPrice tx-sender mintAddresses mintShares) payment-error))
-                        (print "mint-token : tx-sender paid mint price")
-                    )
+                    u0
+                    (unwrap! (collection-paymint-split mintCounter myMintPrice tx-sender) payment-error-collection)
                 )
                 (unwrap! (nft-mint? loopbomb mintCounter tx-sender) failed-to-mint-err)
                 (print {evt: "mint-token", nftIndex: mintCounter, owner: tx-sender, amount: myMintPrice})
@@ -466,12 +462,8 @@
 
                 ;; finally - mint the NFT and step the counter
                 (if (is-eq tx-sender (var-get administrator))
-                    (print "mint-token : tx-sender is contract - skipping mint price")
-                    (begin
-                        ;; (unwrap! (stx-transfer? myMintPrice tx-sender (var-get administrator)) failed-to-stx-transfer)
-                        (print (unwrap! (collection-paymint-split mintCounter myMintPrice tx-sender) payment-error-collection))
-                        (print "mint-token : tx-sender paid mint price")
-                    )
+                    u0
+                    (unwrap! (collection-paymint-split mintCounter myMintPrice tx-sender) payment-error-collection)
                 )
                 (unwrap! (nft-mint? loopbomb mintCounter tx-sender) failed-to-mint-err)
                 (print {evt: "mint-token", nftIndex: mintCounter, owner: tx-sender, amount: myMintPrice})
@@ -535,10 +527,9 @@
         (unwrap! (nft-mint? loopbomb mintCounter tx-sender) failed-to-mint-err)
         ;; saleType = 1 (buy now) - split out the payments according to royalties - or roll everything back.
         (if (> editionCost u0)
-            (begin (unwrap! (payment-split nftIndex editionCost tx-sender nftIndex) failed-to-mint-err) (print "mint-edition : payment split made"))
-                (print "mint-edition : payment not required")
+            (unwrap! (payment-split nftIndex editionCost tx-sender nftIndex) failed-to-mint-err) 
+            u0
         )
-        ;; (print "mint-edition : payment managed")
 
         ;; initialise the sale data - not for sale until the owner sets it.
         (map-insert nft-sale-data { nft-index: mintCounter } { sale-cycle-index: u1, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: (+ block-time u1814400)})
@@ -619,10 +610,8 @@
         (asserts! (> amount u0) amount-not-set)
 
         ;; Make the royalty payments - then zero out the sale data and register the transfer
-        ;; (print "buy-now : Make the royalty payments")
-        (print (unwrap! (payment-split nftIndex amount tx-sender seriesOriginal) payment-error))
+        (unwrap! (payment-split nftIndex amount tx-sender seriesOriginal) payment-error)
         (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
-        ;; (print "buy-now : Added internal transfer - transfering nft...")
         ;; finally transfer ownership to the buyer (note: via the buyers transaction!)
         (print {evt: "buy-now", nftIndex: nftIndex, owner: owner, recipient: recipient, amount: amount})
         (nft-transfer? loopbomb nftIndex owner recipient)
@@ -646,11 +635,6 @@
         (asserts! (is-eq bidAmount amount) bidding-amount-error)
         (asserts! (> biddingEndTime appTimestamp) bidding-endtime-error)
 
-        (print "place-bid : sending this much to; ")
-        (print bidAmount)
-        (print (as-contract tx-sender))
-        (print "place-bid : when")
-        (print appTimestamp)
         (unwrap! (stx-transfer? bidAmount tx-sender (as-contract tx-sender)) failed-to-stx-transfer)
         (map-insert nft-bid-history {nft-index: nftIndex, bid-index: bidCounter} {bidder: tx-sender, amount: bidAmount, app-timestamp: appTimestamp, sale-cycle: saleCycle})
         (map-set nft-high-bid-counter {nft-index: nftIndex} {high-bid-counter: (+ bidCounter u1), sale-cycle: saleCycle})
@@ -700,8 +684,6 @@
         )
 
         ;; Check the user bid amount is the opening price OR the current bid plus increment
-        (print "place-bid : assert there is an opening bid - otherwise client calls opening-bid")
-        (print currentAmount)
         (asserts! (> currentAmount u0) user-amount-different)
         (asserts! (is-eq nextBidAmount (+ currentAmount increment)) user-amount-different)
 
@@ -725,11 +707,9 @@
                     (unwrap! (ok true) failed-to-stx-transfer)
                     (begin
                         ;; WINNING BID - is the FIRST bid after bidding close.
-                        (print "place-bid : Make the royalty payments")
                         (unwrap! (payment-split nftIndex nextBidAmount tx-sender seriesOriginal) payment-error)
                         (unwrap! (record-bid nftIndex nextBidAmount currentBidIndex appTimestamp saleCycle) failed-to-stx-transfer)
                         (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycle u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
-                        (print "place-bid : Added internal transfer - transfering nft...")
                         ;; finally transfer ownership to the buyer (note: via the buyers transaction!)
                         (unwrap! (nft-transfer? loopbomb nftIndex owner tx-sender) failed-to-stx-transfer)
                     )
@@ -988,7 +968,6 @@
         (unwrap! (stx-transfer? bidAmount tx-sender (as-contract tx-sender)) failed-to-stx-transfer)
         (map-insert nft-bid-history {nft-index: nftIndex, bid-index: bidCounter} {bidder: tx-sender, amount: bidAmount, app-timestamp: appTimestamp, sale-cycle: saleCycle})
         (map-set nft-high-bid-counter {nft-index: nftIndex} {high-bid-counter: (+ bidCounter u1), sale-cycle: saleCycle})
-        (print {appTimestamp: appTimestamp, bidAmount: bidAmount, bidCounter: bidCounter, evt: "next-bid", nftIndex: nftIndex, saleCycle: saleCycle, txSender: tx-sender})
         (ok true)
     )
 )

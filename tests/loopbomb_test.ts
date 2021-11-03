@@ -365,7 +365,7 @@ Clarinet.test({
       },
     };
     // todo: update index of events after removing print statements
-    assertEquals(mintNft, block.receipts[1].events[9]);
+    assertEquals(mintNft, block.receipts[1].events[7]);
 
     // test bad signature
     const badSig =
@@ -721,6 +721,6 @@ Clarinet.test({
       ),
     ]);
     // todo: test events inside
-    assertEquals(block.receipts[0].events.length, 12);
+    assertEquals(block.receipts[0].events.length, 11);
   },
 });
