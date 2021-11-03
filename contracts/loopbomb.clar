@@ -382,8 +382,8 @@
 ;; mintCounter - for editions this provides a safety hook back to the original in cases
 ;; where the asset hash is unknown (ie cant be found from nft-lookup).
 (define-public (mint-token (signature (buff 65)) (message-hash (buff 32)) (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint) (mintAddresses (list 4 principal)) (mintShares (list 4 uint)) (addresses (list 10 principal)) (shares (list 10 uint)) (secondaries (list 10 uint)))
-    (if (is-ok (recover-pubkey signature message-hash))
-    ;;(if (secp256k1-verify (sha256 asset-hash) signature (var-get signer))
+    (begin
+        (asserts! (is-ok (recover-pubkey signature message-hash)) (err u9))
         (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
             (let
                 (
@@ -425,12 +425,12 @@
                 (ok mintCounter)
             )
         )
-    (err u9))
+    )
 )
 
 (define-public (collection-mint-token (signature (buff 65)) (message-hash (buff 32)) (asset-hash (buff 32)) (metaDataUrl (buff 200)) (maxEditions uint) (editionCost uint) (clientMintPrice uint) (buyNowPrice uint))
-    (if (is-ok (recover-pubkey signature message-hash))
-    ;;(if (secp256k1-verify (sha256 asset-hash) signature (var-get signer))
+    (begin
+        (asserts! (is-ok (recover-pubkey signature message-hash)) (err u9))
         (if (< (len metaDataUrl) u10) (ok (var-get mint-counter))
             (let
                 (
@@ -471,7 +471,7 @@
                 (ok mintCounter)
             )
         )
-    (err u9))
+    )
 )
 
 ;; the message is the hash of the asset-hash of the original artwork
