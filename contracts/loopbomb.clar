@@ -440,7 +440,7 @@
                     (index (get nft-index (map-get? nft-lookup {asset-hash: asset-hash, edition: u1})))
                     (block-time (unwrap! (get-block-info? time u0) amount-not-set))
                 )
-                (print {evt: "mint-token", sender: tx-sender, meta-data-url: metaDataUrl})
+                (print {evt: "collection-mint-token", sender: tx-sender, meta-data-url: metaDataUrl})
                 (asserts! (< mintCounter collection-max-supply) collection-limit-reached)
                 (asserts! (> maxEditions u0) editions-error)
                 (asserts! (> (stx-get-balance tx-sender) (var-get mint-price)) cant-pay-mint-price)
@@ -1056,21 +1056,19 @@
 ;; also the scalor is 1 on first purchase - direct from artist and 2 for secondary sales - so the seller gets half the
 ;; sale value and each royalty address gets half their original amount.
 (define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
-    (begin
-        (if (> share u0)
-            (let
-                (
-                    (split (/ (* saleAmount share) percentage-with-twodp))
-                )
-                ;; ignore royalty payment if its to the buyer / tx-sender.
-                (if (not (is-eq tx-sender payee))
-                    (unwrap! (stx-transfer? split payer payee) transfer-error)
-                    (unwrap! (ok true) transfer-error)
-                )
-                (print {evt: "pay-royalty-primary", payee: payee, payer: payer, saleAmount: saleAmount, share: share, split: split, txSender: tx-sender})
-                (ok split)
+    (if (> share u0)
+        (let
+            (
+                (split (/ (* saleAmount share) percentage-with-twodp))
             )
-            (ok u0)
+            ;; ignore royalty payment if its to the buyer / tx-sender.
+            (if (not (is-eq tx-sender payee))
+                (unwrap! (stx-transfer? split payer payee) transfer-error)
+                true
+            )
+            (print {evt: "pay-royalty-primary", payee: payee, payer: payer, saleAmount: saleAmount, share: share, split: split, txSender: tx-sender})
+            (ok split)
         )
+        (ok u0)
     )
 )
