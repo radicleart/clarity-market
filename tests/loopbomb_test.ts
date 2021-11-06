@@ -523,8 +523,6 @@ Clarinet.test({
       `${deployer.address}.loopbomb`,
       `{amount: u100000000, evt: "mint-token", nftIndex: u0, owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
-    console.log(block.receipts[1].events);
-    console.log(block.receipts[1].events[8].contract_event.value);
 
     // test bad signature
     const badSig =
@@ -873,5 +871,59 @@ Clarinet.test({
     ]);
     // todo: test events inside
     assertEquals(block.receipts[0].events.length, 11);
+    block.receipts[0].events.expectSTXTransferEvent(
+      1000000000,
+      newAdministrator.address,
+      wallet1.address
+    );
+    block.receipts[0].events.expectPrintEvent(
+      `${deployer.address}.loopbomb`,
+      `{evt: "pay-royalty-primary", payee: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u5000000000, split: u1000000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
+    );
+    block.receipts[0].events.expectSTXTransferEvent(
+      800000000,
+      newAdministrator.address,
+      wallet3.address
+    );
+    block.receipts[0].events.expectPrintEvent(
+      `${deployer.address}.loopbomb`,
+      `{evt: "pay-royalty-primary", payee: ST2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1HR05NNC, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u4000000000, split: u800000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
+    );
+    block.receipts[0].events.expectSTXTransferEvent(
+      400000000,
+      newAdministrator.address,
+      wallet4.address
+    );
+    block.receipts[0].events.expectPrintEvent(
+      `${deployer.address}.loopbomb`,
+      `{evt: "pay-royalty-primary", payee: ST2NEB84ASENDXKYGJPQW86YXQCEFEX2ZQPG87ND, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u2000000000, split: u400000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
+    );
+    block.receipts[0].events.expectSTXTransferEvent(
+      200000000,
+      newAdministrator.address,
+      wallet5.address
+    );
+    block.receipts[0].events.expectPrintEvent(
+      `${deployer.address}.loopbomb`,
+      `{evt: "pay-royalty-primary", payee: ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u1000000000, split: u200000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
+    );
+    block.receipts[0].events.expectPrintEvent(
+      `${deployer.address}.loopbomb`,
+      `{evt: "pay-royalty-primary", payee: ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u1000000000, split: u200000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
+    );
+    block.receipts[0].events.expectPrintEvent(
+      `${deployer.address}.loopbomb`,
+      `{evt: "collection-payment-split", nftIndex: u0, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, saleCycle: u1, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
+    );
+    block.receipts[0].events.expectPrintEvent(
+      `${deployer.address}.loopbomb`,
+      `{amount: u2000000000, evt: "buy-now", nftIndex: u0, owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, recipient: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
+    );
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      "0",
+      wallet1.address,
+      newAdministrator.address,
+      "loopbomb"
+    );
   },
 });
