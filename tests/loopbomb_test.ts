@@ -512,7 +512,7 @@ Clarinet.test({
     );
     block.receipts[1].events.expectPrintEvent(
       `${deployer.address}.loopbomb`,
-      `{evt: "contract-paymint-split", mintPrice: u100000000, nftIndex: u0, payer: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, txSender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
+      `{evt: "paymint-split", mintPrice: u100000000, nftIndex: u0, payer: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, txSender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
     block.receipts[1].events.expectNonFungibleTokenMintEvent(
       "0",
@@ -931,7 +931,7 @@ Clarinet.test({
     );
     block.receipts[0].events.expectPrintEvent(
       `${deployer.address}.loopbomb`,
-      `{evt: "collection-payment-split", nftIndex: u0, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, saleCycle: u1, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
+      `{evt: "payment-split", nftIndex: u0, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, saleCycle: u1, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectPrintEvent(
       `${deployer.address}.loopbomb`,
