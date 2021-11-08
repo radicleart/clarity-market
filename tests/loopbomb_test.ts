@@ -782,6 +782,24 @@ Clarinet.test({
       wallet4.address,
       "loopbomb"
     );
+
+    // check wallet 4 owns nft
+    client
+      .getOwner(0)
+      .result.expectOk()
+      .expectSome()
+      .expectPrincipal(wallet4.address);
+
+    // check that approval has been reset
+    client.getApproval(0).result.expectErr().expectUint(ErrCode.ERR_NOT_FOUND);
+
+    // check that wallet 3 cannot transfer anymore
+    block = chain.mineBlock([
+      client.transfer(0, wallet4.address, wallet1.address, wallet3.address),
+    ]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
   },
 });
 

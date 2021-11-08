@@ -112,12 +112,9 @@
 
 ;; sets an approval principal - allowed to call transfer on owner behalf.
 (define-public (set-approval-for (nftIndex uint) (approval principal))
-    (if (is-owner nftIndex tx-sender)
-        (begin
-            (map-set nft-approvals {nft-index: nftIndex} {approval: approval})
-            (ok true)
-        )
-        nft-not-owned-err
+    (begin
+        (asserts! (is-owner nftIndex tx-sender) nft-not-owned-err)
+        (ok (map-set nft-approvals {nft-index: nftIndex} {approval: approval}))
     )
 )
 
@@ -185,7 +182,10 @@
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
   (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
     (match (nft-transfer? loopbomb nftIndex owner recipient)
-        success (ok true)
+        success (begin 
+            (reset-approval-for nftIndex)
+            (ok success)
+        )
         error (nft-transfer-err error))
     nft-not-owned-err)
 )
@@ -194,7 +194,10 @@
 (define-public (burn (nftIndex uint) (owner principal))
   (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
     (match (nft-burn? loopbomb nftIndex owner)
-        success (ok true)
+        success (begin
+            (reset-approval-for nftIndex)
+            (ok success)
+        )
         error (nft-transfer-err error))
     nft-not-owned-err)
 )
@@ -215,8 +218,9 @@
   (is-eq user (unwrap! (get approval (map-get? nft-approvals {nft-index: nftIndex})) false))
 )
 (define-private (is-owner-or-approval (nftIndex uint) (user principal))
-    (if (is-owner nftIndex user) true
-        (if (is-approval nftIndex user) true false)
+    (if (or (is-owner nftIndex user) (is-approval nftIndex user))
+        true
+        false
     )
 )
 
@@ -614,6 +618,7 @@
         (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycleIndex u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
         ;; finally transfer ownership to the buyer (note: via the buyers transaction!)
         (print {evt: "buy-now", nftIndex: nftIndex, owner: owner, recipient: recipient, amount: amount})
+        (reset-approval-for nftIndex)
         (nft-transfer? loopbomb nftIndex owner recipient)
     )
 )
@@ -1071,4 +1076,8 @@
         )
         (ok u0)
     )
+)
+
+(define-private (reset-approval-for (nftIndex uint))
+    (map-delete nft-approvals {nft-index: nftIndex})
 )
