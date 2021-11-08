@@ -427,6 +427,7 @@ export class LoopbombClient {
     incrementStx: number,
     reserveStx: number,
     amountStx: number,
+    biddingEndTime: number,
     sender: string
   ): Tx {
     return Tx.contractCall(
@@ -438,6 +439,7 @@ export class LoopbombClient {
         types.uint(incrementStx),
         types.uint(reserveStx),
         types.uint(amountStx),
+        types.uint(biddingEndTime),
       ],
       sender
     );

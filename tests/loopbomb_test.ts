@@ -443,7 +443,7 @@ Clarinet.test({
         1,
         0,
         100000000,
-        0,
+        200000000,
         wallet1.address
       ),
     ]);
@@ -869,7 +869,7 @@ Clarinet.test({
         1,
         0,
         1000000000,
-        2000000000,
+        0,
         wallet1.address
       ),
     ]);
@@ -879,6 +879,30 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true); // assert that the result of the tx was ok and the input number
     block.receipts[1].result.expectOk().expectUint(0); // assert that the result of the tx was ok and the input number
 
+    // shouldn't be able to buy now since buy now price set to 0
+    block = chain.mineBlock([
+      client.buyNow(
+        0,
+        wallet1.address,
+        newAdministrator.address,
+        newAdministrator.address
+      ),
+    ]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_NOT_APPROVED_TO_SELL);
+
+    // update sale data
+    block = chain.mineBlock([
+      client.setSaleData(0, 1, 0, 0, 2000000000, 10000, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectUint(0);
+    block.receipts[0].events.expectPrintEvent(
+      `${deployer.address}.loopbomb`,
+      `{amount: u2000000000, biddingEndTime: u10000, evt: "set-sale-data", increment: u0, nftIndex: u0, reserve: u0, saleType: u1}`
+    );
+
+    // buy now
     block = chain.mineBlock([
       client.buyNow(
         0,
@@ -945,3 +969,81 @@ Clarinet.test({
     );
   },
 });
+
+// Clarinet.test({
+//   name: "Loopbomb - test bidding",
+//   async fn(chain: Chain, accounts: Map<string, Account>) {
+//     const {
+//       administrator,
+//       deployer,
+//       wallet1,
+//       wallet2,
+//       wallet3,
+//       wallet4,
+//       wallet5,
+//       newAdministrator,
+//       client,
+//     } = getWalletsAndClient(chain, accounts);
+
+//     const sig =
+//       "4e53f47a3583c00bc49b54bdaff0ca544c55d3a1872c87abe606e20264518744b9a0710ec247b208672850bf1c2f99b1712290cd414ba7737460394564b56cdd01";
+//     const msg =
+//       "53f5924a377df35f12ad40630ca720496c4f9061c31469fef5789e17b09dfcd4";
+//     const hsh =
+//       "4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6";
+//     const url =
+//       "68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e";
+
+//     const newMintAddresses = [
+//       wallet2.address,
+//       wallet3.address,
+//       wallet4.address,
+//       wallet5.address,
+//     ];
+//     const newMintShares = [5000000000, 4000000000, 2000000000, 1000000000];
+//     const newAddresses = [
+//       wallet2.address,
+//       wallet3.address,
+//       wallet4.address,
+//       wallet5.address,
+//       wallet2.address,
+//       wallet3.address,
+//       wallet4.address,
+//       wallet5.address,
+//       wallet2.address,
+//       wallet3.address,
+//     ];
+//     const newShares = [
+//       5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
+//     ];
+//     const newSecondaries = [
+//       5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
+//     ];
+//     let block = chain.mineBlock([
+//       client.setCollectionRoyalties(
+//         newMintAddresses,
+//         newMintShares,
+//         newAddresses,
+//         newShares,
+//         newSecondaries,
+//         administrator.address
+//       ),
+//       client.collectionMintToken(
+//         hexStringToArrayBuffer(sig),
+//         hexStringToArrayBuffer(msg),
+//         hexStringToArrayBuffer(hsh),
+//         hexStringToArrayBuffer(url),
+//         1,
+//         0,
+//         1000000000,
+//         2000000000,
+//         wallet1.address
+//       ),
+//     ]);
+
+//     assertEquals(block.receipts.length, 2);
+//     assertEquals(block.height, 2);
+//     block.receipts[0].result.expectOk().expectBool(true); // assert that the result of the tx was ok and the input number
+//     block.receipts[1].result.expectOk().expectUint(0); // assert that the result of the tx was ok and the input number
+//   },
+// });
