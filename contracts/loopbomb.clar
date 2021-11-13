@@ -6,8 +6,8 @@
 ;; (impl-trait 'params.platformAddress.nft-approvable-trait.nft-approvable-trait)
 ;; (impl-trait 'params.platformAddress.nft-trait.nft-trait)
 ;; mainnet
-;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-approvable-trait.nft-approvable-trait)
-;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
+(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-approvable-trait.nft-approvable-trait)
+(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
