@@ -896,7 +896,7 @@ Clarinet.test({
     block = chain.mineBlock([
       client.setSaleData(0, 1, 0, 0, 2000000000, 10000, wallet1.address),
     ]);
-    block.receipts[0].result.expectOk().expectUint(0);
+    block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[0].events.expectPrintEvent(
       `${deployer.address}.loopbomb`,
       `{amount: u2000000000, biddingEndTime: u10000, evt: "set-sale-data", increment: u0, nftIndex: u0, reserve: u0, saleType: u1}`
