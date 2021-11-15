@@ -46,6 +46,7 @@
 
 (define-constant percentage-with-twodp u10000000000)
 
+(define-constant err-permission-denied u1)
 (define-constant not-allowed (err u10))
 (define-constant not-found (err u11))
 (define-constant amount-not-set (err u12))
@@ -104,7 +105,7 @@
 
 ;; see nft-tradable-trait
 (define-public (set-approval-for (nftIndex uint) (approval principal))
-    (if (is-owner nftIndex tx-sender)
+    (if (is-owner nftIndex contract-caller)
         (begin
             (map-set nft-approvals {nft-index: nftIndex} {approval: approval})
             (ok true)
@@ -175,30 +176,21 @@
 
 ;; Transfers tokens to a 'SPecified principal.
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
-  (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
+  (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex contract-caller))
     (match (nft-transfer? loopbomb nftIndex owner recipient)
-        success (ok true)
-        error (nft-transfer-err error))
-    nft-not-owned-err)
+        success (ok success)
+        error (err {kind: "nft-transfer-failed", code: error}))
+    (err {kind: "permission-denied", code: err-permission-denied}))
 )
 
 ;; Burns tokens
 (define-public (burn (nftIndex uint) (owner principal))
-  (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex tx-sender))
+  (if (and (is-owner-or-approval nftIndex owner) (is-owner-or-approval nftIndex contract-caller))
     (match (nft-burn? loopbomb nftIndex owner)
-        success (ok true)
-        error (nft-transfer-err error))
-    nft-not-owned-err)
+        success (ok success)
+        error (err {kind: "nft-transfer-failed", code: error}))
+    (err {kind: "permission-denied", code: err-permission-denied}))
 )
-
-(define-private (nft-transfer-err (code uint))
-  (if (is-eq u1 code)
-    nft-not-owned-err
-    (if (is-eq u2 code)
-      sender-equals-recipient-err
-      (if (is-eq u3 code)
-        nft-not-found-err
-        (err code)))))
 
 (define-private (is-owner (nftIndex uint) (user principal))
   (is-eq user (unwrap! (nft-get-owner? loopbomb nftIndex) false))
