@@ -1,40 +1,33 @@
 ;; Contracts representing assets for sale in marketplace.
 (define-trait nft-tradable-trait
   (
-;; set-sale-data updates the sale type and purchase info for a given NFT. Only the owner can call this method
-;; and doing so make the asset transferable by the recipient - on condition of meeting the conditions of sale
-;; This is equivalent to the setApprovalForAll method in ERC 721 contracts.
-    ;; args - 1. sha256 asset hash
-    ;;        2. sale-type 0=not for sale, 1=buy now, 2=bidding
-    ;;        3. incremet - 0 if sale-type != 2 
-    ;;        4. reserve - 0 if sale-type != 2 
-    ;;        5. buy-now-or-starting-price - 0 if sale-type = 0 
-    ;;        6. bidding-end-date - in ms since turn of epoch
-    ;; responds with the token index
-    (set-sale-data (uint uint uint uint uint uint) (response uint uint))
+     ;; Sets or unsets a user or contract principal who is allowed to call transfer
+    (set-approval-for (uint principal) (response bool uint))
 
-    ;; args - nft-index
-    ;;        amount
-    ;;        timestamp
-    (make-offer (uint uint uint) (response uint uint))
+     ;; Sets or unsets a user or contract principal who is allowed to call transfer
+    (get-approval (uint) (response (optional principal) uint))
 
-    ;; args - nft-index
-    ;;        owner
-    ;;        buyer
-    (buy-now (uint principal principal) (response uint uint))
+    ;; list-item lists an item.
+    ;; Callable by the owner or approval principal
+    ;; Args: nft-index, amount
+    ;; returns ok true if successful
+    ;; emits {evt: "list-item", nftIndex: nftIndex, amount: amount}
+    ;; Returns: ok true
+    (list-item (uint uint) (response bool uint))
 
-    ;; args - nft-index
-    ;;        amount
-    ;;        timestamp
-    (place-bid (uint uint uint) (response uint uint))
+    ;; unlist-item removes a listing. 
+    ;; Callable by the owner or approval principal
+    ;; returns ok true if successful
+    ;; emits {evt: "unlist-item", nftIndex: nftIndex}
+    ;; Returns: ok true
+    (unlist-item (uint) (response bool uint))
 
-    ;; args - nft-index
-    ;;        amount
-    ;;        timestamp
-    (opening-bid (uint uint uint) (response uint uint))
-
-    ;; args - nft-index
-    ;;        closeType - refund and close or pay and close
-    (close-bidding (uint uint) (response uint uint))
+    ;; buy-now
+    ;; transfers item to tx-sender inexchange for amount of token
+    ;; fails if item is not listed
+    ;; Args: nft-index, amount
+    ;; emits {evt: "buy-now", nftIndex: nftIndex, owner: owner, recipient: recipient, amount: amount}
+    ;; Returns: ok true
+    (buy-now (uint principal principal) (response bool uint))
   )
 )
