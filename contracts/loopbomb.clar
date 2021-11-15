@@ -1,13 +1,9 @@
 ;; Interface definitions
-(impl-trait .nft-trait.nft-trait)
-(impl-trait .nft-approvable-trait.nft-approvable-trait)
+;; (impl-trait .nft-trait.nft-trait)
+;; (impl-trait .nft-tradable-trait.nft-tradable-trait)
 
-;; test/mocknet
-;; (impl-trait 'params.platformAddress.nft-approvable-trait.nft-approvable-trait)
-;; (impl-trait 'params.platformAddress.nft-trait.nft-trait)
-;; mainnet
-(impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-approvable-trait.nft-approvable-trait)
-(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
+;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-tradable-trait.nft-tradable-trait)
+;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 
 ;; contract variables
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
@@ -105,12 +101,12 @@
   (ok (nft-get-owner? loopbomb nftIndex))
 )
 
-;; from nft-trait: Gets the owner of the 'SPecified token ID.
+;; see nft-tradable-trait
 (define-read-only (get-approval (nftIndex uint))
   (ok (some (unwrap! (get approval (map-get? nft-approvals {nft-index: nftIndex})) not-found)))
 )
 
-;; sets an approval principal - allowed to call transfer on owner behalf.
+;; see nft-tradable-trait
 (define-public (set-approval-for (nftIndex uint) (approval principal))
     (if (is-owner nftIndex tx-sender)
         (begin
@@ -571,31 +567,52 @@
 (define-public (set-sale-data (nftIndex uint) (sale-type uint) (increment-stx uint) (reserve-stx uint) (amount-stx uint) (bidding-end-time uint))
     (let
         (
-            ;; before we start... check the hash corresponds to a minted asset
+            ;; keeps track of the sale cycles for this NFT.
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (currentBidIndex (default-to u0 (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex}))))
             (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
         )
+        ;; u2 means bidding is in progress and the sale data can't be changed.
         (asserts! (not (and (> currentAmount u0) (is-eq saleType u2))) bidding-error)
+        ;; owner or approval can do this.
+        (asserts! (or (is-approval nftIndex tx-sender) (is-owner nftIndex tx-sender)) not-allowed)
+        ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
+        (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: sale-type, increment-stx: increment-stx, reserve-stx: reserve-stx, amount-stx: amount-stx, bidding-end-time: bidding-end-time}) not-allowed)
         (print {evt: "set-sale-data", nftIndex: nftIndex, saleType: sale-type, increment: increment-stx, reserve: reserve-stx, amount: amount-stx, biddingEndTime: bidding-end-time})
-        (if (is-owner nftIndex tx-sender)
-            ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
-            (if (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: sale-type, increment-stx: increment-stx, reserve-stx: reserve-stx, amount-stx: amount-stx, bidding-end-time: bidding-end-time})
-                (ok nftIndex) not-allowed
-            )
-            not-allowed
-        )
+        (ok true)
     )
 )
 
-;; buy-now
-;; pay royalties and transfer asset ownership to tx-sender.
-;; Checks that:
-;;             a) asset is registered
-;;             b) on sale via buy now
-;;             c) amount is set
-;;
+;; see nft-tradable-trait
+(define-public (unlist-item (nftIndex uint))
+    (let
+        (
+            (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+        )
+        (asserts! (or (is-approval nftIndex tx-sender) (is-owner nftIndex tx-sender)) not-allowed)
+        ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
+        (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0}) not-allowed)
+        (print {evt: "unlist-item", nftIndex: nftIndex})
+        (ok true)
+    )
+)
+
+;; see nft-tradable-trait
+(define-public (list-item (nftIndex uint) (amount uint))
+    (let
+        (
+            (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+        )
+        (asserts! (or (is-approval nftIndex tx-sender) (is-owner nftIndex tx-sender)) not-allowed)
+        ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
+        (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: amount, bidding-end-time: u0}) not-allowed)
+        (print {evt: "list-item", nftIndex: nftIndex, amount: amount})
+        (ok true)
+    )
+)
+
+;; see nft-tradable-trait
 (define-public (buy-now (nftIndex uint) (owner principal) (recipient principal))
     (let
         (
@@ -607,7 +624,7 @@
         )
         (asserts! (is-some ahash) asset-not-registered)
         (asserts! (is-eq saleType u1) not-approved-to-sell)
-        (asserts! (> amount u0) amount-not-set)
+        (asserts! (>= amount u0) amount-not-set)
 
         ;; Make the royalty payments - then zero out the sale data and register the transfer
         (unwrap! (payment-split nftIndex amount tx-sender seriesOriginal) payment-error)
