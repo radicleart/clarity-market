@@ -23,11 +23,6 @@
 (define-constant token-symbol "LOOP")
 (define-constant collection-max-supply u10000)
 
-;; Non Fungible Token, modeled after ERC-721 via nft-trait
-;; Note this is a basic implementation - no support yet for setting approvals for assets
-;; NFT are identified by nft-index (uint) which is tied via a reverse lookup to a real world
-;; asset hash - SHA 256 32 byte value. The Asset Hash is used to tie arbitrary real world
-;; data to the NFT
 (define-non-fungible-token loopbomb uint)
 
 ;; data structures
