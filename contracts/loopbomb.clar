@@ -10,7 +10,6 @@
 (define-data-var mint-price uint u1000000)
 (define-data-var base-token-uri (string-ascii 256) "https://loopbomb.io/nfts/")
 (define-data-var mint-counter uint u0)
-(define-data-var platform-fee uint u5)
 (define-data-var signer (buff 33) 0x02815c03f6d7181332afb1b0114f5a1c97286b6092957910ae3fab4006598aee1b)
 (define-data-var is-collection bool true)
 (define-data-var collection-mint-addresses (list 4 principal) (list))
@@ -212,17 +211,8 @@
 ;; the contract administrator can change the contract administrator
 (define-public (transfer-administrator (new-administrator principal))
     (begin
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set administrator new-administrator)
-        (ok true)
-    )
-)
-
-;; the contract administrator can change the transfer fee charged by the contract on sale of tokens
-(define-public (change-fee (new-fee uint))
-    (begin
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
-        (var-set platform-fee new-fee)
         (ok true)
     )
 )
@@ -833,7 +823,6 @@
             (the-mint-price  (var-get mint-price))
             (the-base-token-uri  (var-get base-token-uri))
             (the-mint-counter  (var-get mint-counter))
-            (the-platform-fee  (var-get platform-fee))
             (the-token-name  token-name)
             (the-token-symbol  token-symbol)
         )
@@ -841,7 +830,6 @@
                     (mintPrice the-mint-price)
                     (baseTokenUri the-base-token-uri)
                     (mintCounter the-mint-counter)
-                    (platformFee the-platform-fee)
                     (tokenName the-token-name)
                     (tokenSymbol the-token-symbol)))
     )
