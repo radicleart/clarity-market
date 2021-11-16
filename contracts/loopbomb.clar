@@ -3,8 +3,8 @@
 ;; (impl-trait .nft-tradable-trait.nft-tradable-trait)
 
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-tradable-trait.nft-tradable-trait)
-;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
-
+;; (impl-trait 'SP1JSH2FPE8BWNTP228YZ1AZZ0HE0064PS6RXRAY4.nft-trait.nft-trait)
+;; 
 ;; contract variables
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
 (define-data-var mint-price uint u1000000)
@@ -113,7 +113,7 @@
 
 (define-public (set-is-collection (new-is-collection bool))
     (begin 
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set is-collection new-is-collection)
         (ok true)
     )
@@ -121,7 +121,7 @@
 
 (define-public (set-collection-royalties (new-mint-addresses (list 4 principal)) (new-mint-shares (list 4 uint)) (new-addresses (list 10 principal)) (new-shares (list 10 uint)) (new-secondaries (list 10 uint)))
     (begin 
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set collection-mint-addresses new-mint-addresses)
         (var-set collection-mint-shares new-mint-shares)
         (var-set collection-addresses new-addresses)
@@ -133,7 +133,7 @@
 
 (define-public (set-collection-mint-addresses (new-mint-addresses (list 4 principal)))
     (begin 
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set collection-mint-addresses new-mint-addresses)
         (ok true)
     )
@@ -141,7 +141,7 @@
 
 (define-public (set-collection-mint-shares (new-mint-shares (list 4 uint)))
     (begin 
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set collection-mint-shares new-mint-shares)
         (ok true)
     )
@@ -149,7 +149,7 @@
 
 (define-public (set-collection-addresses (new-addresses (list 10 principal)))
     (begin 
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set collection-addresses new-addresses)
         (ok true)
     )
@@ -157,7 +157,7 @@
 
 (define-public (set-collection-shares (new-shares (list 10 uint)))
     (begin 
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set collection-shares new-shares)
         (ok true)
     )
@@ -165,7 +165,7 @@
 
 (define-public (set-collection-secondaries (new-secondaries (list 10 uint)))
     (begin 
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set collection-secondaries new-secondaries)
         (ok true)
     )
@@ -231,7 +231,7 @@
 ;; are located
 (define-public (update-base-token-uri (new-base-token-uri (string-ascii 256)))
     (begin
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set base-token-uri new-base-token-uri)
         (ok true)
     )
@@ -240,7 +240,7 @@
 ;; the contract administrator can change the mint price
 (define-public (update-mint-price (new-mint-price uint))
     (begin
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set mint-price new-mint-price)
         (ok true)
     )
@@ -248,7 +248,7 @@
 
 (define-public (update-signer (new-signer (buff 33)))
     (begin
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (var-set signer new-signer)
         (print {evt: "update-signer", new-signer: new-signer})
         (ok true)
@@ -261,7 +261,7 @@
         (
             (balance (stx-get-balance (as-contract tx-sender)))
         )
-        (asserts! (is-eq (var-get administrator) tx-sender) not-allowed)
+        (asserts! (is-eq (var-get administrator) contract-caller) not-allowed)
         (unwrap! (stx-transfer? balance (as-contract tx-sender) recipient) failed-to-stx-transfer)
         (print {evt: "transfer-balance", recipient: recipient, balance: balance})
         (ok balance)
@@ -511,7 +511,7 @@
             (edition         (unwrap! (get edition (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (seriesOriginal  (unwrap! (get series-original (map-get? nft-data {nft-index: nftIndex})) not-allowed))
         )
-        (asserts! (is-owner nftIndex tx-sender) nft-not-owned-err)
+        (asserts! (is-owner nftIndex contract-caller) nft-not-owned-err)
         (asserts! (is-eq nftIndex seriesOriginal) not-originale)
         (ok (map-set nft-data {nft-index: nftIndex} {asset-hash: ahash, meta-data-url: metaDataUrl, max-editions: maxEditions, edition: edition, edition-cost: editionCost, series-original: seriesOriginal}))
     )
@@ -534,7 +534,7 @@
         ;; u2 means bidding is in progress and the sale data can't be changed.
         (asserts! (not (and (> currentAmount u0) (is-eq saleType u2))) bidding-error)
         ;; owner or approval can do this.
-        (asserts! (or (is-approval nftIndex tx-sender) (is-owner nftIndex tx-sender)) not-allowed)
+        (asserts! (or (is-approval nftIndex contract-caller) (is-owner nftIndex contract-caller)) not-allowed)
         ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
         (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: sale-type, increment-stx: increment-stx, reserve-stx: reserve-stx, amount-stx: amount-stx, bidding-end-time: bidding-end-time}) not-allowed)
         (print {evt: "set-sale-data", nftIndex: nftIndex, saleType: sale-type, increment: increment-stx, reserve: reserve-stx, amount: amount-stx, biddingEndTime: bidding-end-time})
@@ -548,7 +548,7 @@
         (
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
         )
-        (asserts! (or (is-approval nftIndex tx-sender) (is-owner nftIndex tx-sender)) not-allowed)
+        (asserts! (or (is-approval nftIndex contract-caller) (is-owner nftIndex contract-caller)) not-allowed)
         ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
         (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0}) not-allowed)
         (print {evt: "unlist-item", nftIndex: nftIndex})
@@ -562,7 +562,7 @@
         (
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
         )
-        (asserts! (or (is-approval nftIndex tx-sender) (is-owner nftIndex tx-sender)) not-allowed)
+        (asserts! (or (is-approval nftIndex contract-caller) (is-owner nftIndex contract-caller)) not-allowed)
         ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
         (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: amount, bidding-end-time: u0}) not-allowed)
         (print {evt: "list-item", nftIndex: nftIndex, amount: amount})
@@ -728,7 +728,7 @@
         )
         (asserts! (or (is-eq closeType u1) (is-eq closeType u2)) failed-to-close-1)
         ;; only the owner or administrator can call close
-        (asserts! (or (is-owner nftIndex tx-sender) (unwrap! (is-administrator) not-allowed)) not-allowed)
+        (asserts! (or (is-owner nftIndex contract-caller) (unwrap! (is-administrator) not-allowed)) not-allowed)
         ;; only the administrator can call close BEFORE the end time - note we use the less accurate
         ;; but fool proof block time here to prevent owner/client code jerry mandering the close function
         (asserts! (or (> block-time bidding-end-time) (unwrap! (is-administrator) failed-to-close-3)) failed-to-close-3)
