@@ -245,15 +245,6 @@ export class LoopbombClient {
     );
   }
 
-  updateBaseTokenURI(newBaseTokenUri: string, sender: string): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "update-base-token-uri",
-      [types.ascii(newBaseTokenUri)],
-      sender
-    );
-  }
-
   updateMintPrice(newMintPrice: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
@@ -346,7 +337,7 @@ export class LoopbombClient {
     signature: ArrayBuffer,
     messageHash: ArrayBuffer,
     assetHash: ArrayBuffer,
-    metaDataUrl: ArrayBuffer,
+    metaDataUrl: string,
     maxEditions: number,
     editionCost: number,
     clientMintPrice: number,
@@ -360,7 +351,7 @@ export class LoopbombClient {
         types.buff(signature),
         types.buff(messageHash),
         types.buff(assetHash),
-        types.buff(metaDataUrl),
+        types.ascii(metaDataUrl),
         types.uint(maxEditions),
         types.uint(editionCost),
         types.uint(clientMintPrice),
@@ -374,7 +365,7 @@ export class LoopbombClient {
     signature: ArrayBuffer,
     messageHash: ArrayBuffer,
     hashes: ArrayBuffer[],
-    metaUrls: ArrayBuffer[],
+    metaUrls: string[],
     maxEditions: number,
     editionCost: number,
     clientMintPrice: number,
@@ -388,7 +379,7 @@ export class LoopbombClient {
         types.buff(signature),
         types.buff(messageHash),
         types.list(hashes.map((hash) => types.buff(hash))),
-        types.list(metaUrls.map((metaUrl) => types.buff(metaUrl))),
+        types.list(metaUrls.map((metaUrl) => types.ascii(metaUrl))),
         types.uint(maxEditions),
         types.uint(editionCost),
         types.uint(clientMintPrice),
@@ -526,10 +517,6 @@ export class LoopbombClient {
 
   isAdministrator(sender: Account): ReadOnlyFn {
     return this.callReadOnlyFn("is-administrator", [], sender);
-  }
-
-  getBaseTokenUri(): ReadOnlyFn {
-    return this.callReadOnlyFn("get-base-token-uri");
   }
 
   getMintCounter(): ReadOnlyFn {

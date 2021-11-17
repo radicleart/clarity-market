@@ -223,10 +223,6 @@ Clarinet.test({
     const mintPrice = client.getMintPrice();
     mintPrice.result.expectUint(1000000);
 
-    // should return base token uri
-    const baseTokenUri = client.getBaseTokenUri();
-    baseTokenUri.result.expectAscii("https://loopbomb.io/nfts/");
-
     // should return initial mint counter
     const mintCounter = client.getMintCounter();
     mintCounter.result.expectOk().expectUint(0);
@@ -271,36 +267,6 @@ Clarinet.test({
     // should return new admin address
     const currentAdministrator = client.getAdministrator();
     currentAdministrator.result.expectPrincipal(newAdministrator.address);
-  },
-});
-
-Clarinet.test({
-  name: "Loopbomb - test update-base-token-uri",
-  async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      newAdministrator,
-      client,
-    } = getWalletsAndClient(chain, accounts);
-
-    // should not be able to update base token uri if sender not current administrator
-    let block = chain.mineBlock([
-      client.updateBaseTokenURI("https://google.com/", wallet1.address),
-    ]);
-    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
-
-    // should be able to change base token uri
-    block = chain.mineBlock([
-      client.updateBaseTokenURI("https://google.com/", administrator.address),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    // should return new base token uri
-    const currentAdministrator = client.getBaseTokenUri();
-    currentAdministrator.result.expectAscii("https://google.com/");
   },
 });
 
@@ -403,7 +369,7 @@ Clarinet.test({
     const hsh =
       "4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6";
     const url =
-      "68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e";
+      "https://gaia.blockstack.org/hub/1MNnYMskXjRmQU6m6sFMBe6a7xVdMvH9dp/to_the_machine_eternal/bob_jaroc/72ba02ef43182ddcb5ccb385b36001e4b41051d50e84d21435d494a732715181.json";
 
     const newMintAddresses = [
       wallet2.address,
@@ -439,7 +405,7 @@ Clarinet.test({
         hexStringToArrayBuffer(sig),
         hexStringToArrayBuffer(msg),
         hexStringToArrayBuffer(hsh),
-        hexStringToArrayBuffer(url),
+        url,
         1,
         0,
         100000000,
@@ -486,11 +452,7 @@ Clarinet.test({
 
     block.receipts[1].events.expectPrintEvent(
       `${deployer.address}.loopbomb`,
-      `{evt: "verify-sig", pubkey: 0x02815c03f6d7181332afb1b0114f5a1c97286b6092957910ae3fab4006598aee1b, signer: 0x02815c03f6d7181332afb1b0114f5a1c97286b6092957910ae3fab4006598aee1b}`
-    );
-    block.receipts[1].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
-      `{evt: "collection-mint-token", meta-data-url: 0x68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e, sender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
+      `{evt: "collection-mint-token", meta-data-url: "https://gaia.blockstack.org/hub/1MNnYMskXjRmQU6m6sFMBe6a7xVdMvH9dp/to_the_machine_eternal/bob_jaroc/72ba02ef43182ddcb5ccb385b36001e4b41051d50e84d21435d494a732715181.json", sender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
     block.receipts[1].events.expectSTXTransferEvent(
       90000000,
@@ -510,10 +472,6 @@ Clarinet.test({
       `${deployer.address}.loopbomb`,
       `{evt: "pay-royalty-primary", payee: ST2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1HR05NNC, payer: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, saleAmount: u100000000, share: u1000000000, split: u10000000, txSender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
-    block.receipts[1].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
-      `{evt: "paymint-split", mintPrice: u100000000, nftIndex: u0, payer: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, txSender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
-    );
     block.receipts[1].events.expectNonFungibleTokenMintEvent(
       "0",
       wallet1.address,
@@ -532,7 +490,7 @@ Clarinet.test({
         hexStringToArrayBuffer(badSig),
         hexStringToArrayBuffer(msg),
         hexStringToArrayBuffer(hsh),
-        hexStringToArrayBuffer(url),
+        url,
         1,
         0,
         100000000,
@@ -565,7 +523,7 @@ Clarinet.test({
     const hsh =
       "4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6";
     const url =
-      "68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e";
+      "https://gaia.blockstack.org/hub/1MNnYMskXjRmQU6m6sFMBe6a7xVdMvH9dp/to_the_machine_eternal/bob_jaroc/72ba02ef43182ddcb5ccb385b36001e4b41051d50e84d21435d494a732715181.json";
 
     const newMintAddresses = [
       wallet2.address,
@@ -595,7 +553,7 @@ Clarinet.test({
         hexStringToArrayBuffer(sig),
         hexStringToArrayBuffer(msg),
         Array.from({ length: 20 }).map((_) => hexStringToArrayBuffer(hsh)),
-        Array.from({ length: 20 }).map((_) => hexStringToArrayBuffer(url)),
+        Array.from({ length: 20 }).map((_) => url),
         1,
         0,
         100000000,
@@ -635,7 +593,7 @@ Clarinet.test({
           "38135b5a33f71e17dfbd57db7efd7fd480f6e653f92c56301e043a6f19eb2599",
           "c8a29c29e7aece9517e7ed2fb040db0cc8af56b3eeab6a2a7af4b9cb04ecffa9",
         ].map((hash) => hexStringToArrayBuffer(hash)),
-        Array.from({ length: 20 }).map((_) => hexStringToArrayBuffer(url)),
+        Array.from({ length: 20 }).map((_) => url),
         1,
         0,
         100000000,
@@ -669,7 +627,7 @@ Clarinet.test({
     const hsh =
       "4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6";
     const url =
-      "68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e";
+      "https://gaia.blockstack.org/hub/1MNnYMskXjRmQU6m6sFMBe6a7xVdMvH9dp/to_the_machine_eternal/bob_jaroc/72ba02ef43182ddcb5ccb385b36001e4b41051d50e84d21435d494a732715181.json";
 
     const newMintAddresses = [
       wallet2.address,
@@ -699,7 +657,7 @@ Clarinet.test({
         hexStringToArrayBuffer(sig),
         hexStringToArrayBuffer(msg),
         hexStringToArrayBuffer(hsh),
-        hexStringToArrayBuffer(url),
+        url,
         1,
         0,
         100000000,
@@ -825,7 +783,7 @@ Clarinet.test({
     const hsh =
       "4123b04d3e2bf6133bb5b36d7508f3d0099eced4a62174904f3f66a0fc2092d6";
     const url =
-      "68747470733a2f2f676169612e626c6f636b737461636b2e6f72672f6875622f31476953724c534d546d447343464d5a32616d4376755571744155356d336f3470372f393962653932346230326263646664626265326330653833333239356539303365663339613637303261666335353931633062323532363233333031303635632e6a736f6e";
+      "https://gaia.blockstack.org/hub/1MNnYMskXjRmQU6m6sFMBe6a7xVdMvH9dp/to_the_machine_eternal/bob_jaroc/72ba02ef43182ddcb5ccb385b36001e4b41051d50e84d21435d494a732715181.json";
 
     const newMintAddresses = [
       wallet2.address,
@@ -865,7 +823,7 @@ Clarinet.test({
         hexStringToArrayBuffer(sig),
         hexStringToArrayBuffer(msg),
         hexStringToArrayBuffer(hsh),
-        hexStringToArrayBuffer(url),
+        url,
         1,
         0,
         1000000000,
@@ -912,7 +870,7 @@ Clarinet.test({
       ),
     ]);
     // todo: test events inside
-    assertEquals(block.receipts[0].events.length, 11);
+    assertEquals(block.receipts[0].events.length, 10);
     block.receipts[0].events.expectSTXTransferEvent(
       1000000000,
       newAdministrator.address,
@@ -952,10 +910,6 @@ Clarinet.test({
     block.receipts[0].events.expectPrintEvent(
       `${deployer.address}.loopbomb`,
       `{evt: "pay-royalty-primary", payee: ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u1000000000, split: u200000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
-    );
-    block.receipts[0].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
-      `{evt: "payment-split", nftIndex: u0, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, saleCycle: u1, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectPrintEvent(
       `${deployer.address}.loopbomb`,
@@ -1032,7 +986,7 @@ Clarinet.test({
 //         hexStringToArrayBuffer(sig),
 //         hexStringToArrayBuffer(msg),
 //         hexStringToArrayBuffer(hsh),
-//         hexStringToArrayBuffer(url),
+//         url,
 //         1,
 //         0,
 //         1000000000,
