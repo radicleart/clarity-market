@@ -676,8 +676,7 @@ Clarinet.test({
       client.transfer(0, deployer.address, wallet2.address, wallet1.address),
     ]);
     block.receipts[0].result
-      .expectErr()
-      .expectTuple();
+      .expectErr().expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
 
     // wallet 1 owns nft, wallet 1 should be able to transfer
     block = chain.mineBlock([
@@ -704,29 +703,21 @@ Clarinet.test({
       client.transfer(0, wallet3.address, wallet4.address, wallet2.address),
     ]);
     block.receipts[0].result
-      .expectErr()
-      .expectTuple();
+      .expectErr().expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
 
-    // wallet 1 shouldn't be able to set approval anymore
+    // wallet 1 can still set approval - see https://github.com/stacksgov/sips/issues/40
     block = chain.mineBlock([
-      client.setApprovalFor(0, wallet3.address, wallet1.address),
+      client.setApproved(wallet3.address, 0, true, wallet1.address),
     ]);
     block.receipts[0].result
-      .expectErr()
-      .expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
+      .expectOk()
+      .expectBool(true);
 
     // wallet 2 sets approval for wallet 3
     block = chain.mineBlock([
-      client.setApprovalFor(0, wallet3.address, wallet2.address),
+      client.setApproved(wallet3.address, 0, true, wallet2.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-
-    // check that wallet 3 was given approval
-    client
-      .getApproval(0)
-      .result.expectOk()
-      .expectSome()
-      .expectPrincipal(wallet3.address);
 
     // wallet 3 should be able to transfer even though wallet 2 owns the nft
     block = chain.mineBlock([
@@ -748,16 +739,12 @@ Clarinet.test({
       .expectSome()
       .expectPrincipal(wallet4.address);
 
-    // check that approval has been reset
-    client.getApproval(0).result.expectErr().expectUint(ErrCode.ERR_NOT_FOUND);
-
     // check that wallet 3 cannot transfer anymore
     block = chain.mineBlock([
       client.transfer(0, wallet4.address, wallet1.address, wallet3.address),
     ]);
     block.receipts[0].result
-      .expectErr()
-      .expectTuple();
+      .expectErr().expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
   },
 });
 

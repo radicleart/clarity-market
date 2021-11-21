@@ -65,11 +65,11 @@ export class LoopbombClient {
     return result;
   }
 
-  setApprovalFor(nftIndex: number, approval: string, sender: string): Tx {
+  setApproved(operator: string, nftIndex: number, approved: boolean, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
-      "set-approval-for",
-      [types.uint(nftIndex), types.principal(approval)],
+      "set-approved",
+      [types.principal(operator), types.uint(nftIndex), types.bool(approved)],
       sender
     );
   }
@@ -505,10 +505,6 @@ export class LoopbombClient {
 
   getOwner(nftIndex: number): ReadOnlyFn {
     return this.callReadOnlyFn("get-owner", [types.uint(nftIndex)]);
-  }
-
-  getApproval(nftIndex: number): ReadOnlyFn {
-    return this.callReadOnlyFn("get-approval", [types.uint(nftIndex)]);
   }
 
   getAdministrator(): ReadOnlyFn {
