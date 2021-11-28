@@ -65,11 +65,11 @@ export class LoopbombClient {
     return result;
   }
 
-  setApproved(operator: string, nftIndex: number, approved: boolean, sender: string): Tx {
+  setApproved(nftIndex: number, operator: string, approved: boolean, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "set-approved",
-      [types.principal(operator), types.uint(nftIndex), types.bool(approved)],
+      [types.uint(nftIndex), types.principal(operator), types.bool(approved)],
       sender
     );
   }

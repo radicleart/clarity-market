@@ -705,17 +705,23 @@ Clarinet.test({
     block.receipts[0].result
       .expectErr().expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
 
-    // wallet 1 can still set approval - see https://github.com/stacksgov/sips/issues/40
+    // wallet 2 can set approval - see https://github.com/stacksgov/sips/issues/40
     block = chain.mineBlock([
-      client.setApproved(wallet3.address, 0, true, wallet1.address),
+      client.setApproved(0, wallet3.address, true, wallet2.address),
     ]);
     block.receipts[0].result
       .expectOk()
       .expectBool(true);
-
-    // wallet 2 sets approval for wallet 3
+  
     block = chain.mineBlock([
-      client.setApproved(wallet3.address, 0, true, wallet2.address),
+        client.setApproved(0, wallet3.address, true, wallet3.address),
+    ]);
+    block.receipts[0].result
+      .expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
+  
+      // wallet 2 sets approval for wallet 3
+    block = chain.mineBlock([
+      client.setApproved(0, wallet3.address, true, wallet2.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
