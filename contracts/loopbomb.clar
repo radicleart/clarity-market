@@ -3,7 +3,7 @@
 ;; (impl-trait .nft-approvable-trait.nft-approvable-trait)
 
 ;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-approvable-trait.nft-approvable-trait)
-;; (impl-trait 'SP1JSH2FPE8BWNTP228YZ1AZZ0HE0064PS6RXRAY4.nft-trait.nft-trait)
+;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 ;; 
 ;; contract variables
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
@@ -204,7 +204,6 @@
 		(default-to false (map-get? approvals {owner: owner, operator: contract-caller, nft-index: nftIndex}))
 	)
 )
-
 
 ;; public methods
 ;; --------------

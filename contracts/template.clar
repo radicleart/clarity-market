@@ -2,9 +2,9 @@
 ;; (impl-trait .nft-trait.nft-trait)
 ;; (impl-trait .nft-tradable-trait.nft-tradable-trait)
 
-(impl-trait 'params.administrator.nft-trait.nft-trait)
-;; (impl-trait 'SP1JSH2FPE8BWNTP228YZ1AZZ0HE0064PS6RXRAY4.nft-trait.nft-trait)
-(impl-trait 'params.administrator.nft-approvable-trait.nft-approvable-trait)
+;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
+(impl-trait 'params.nfttrait)
+(impl-trait 'params.approvabletrait)
 
 ;; contract variables
 (define-data-var administrator principal 'params.administrator)
