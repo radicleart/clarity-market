@@ -1,10 +1,11 @@
 ;; Interface definitions
-(impl-trait .nft-trait.nft-trait)
-(impl-trait .nft-operable-trait.nft-operable-trait)
-
-;; (impl-trait 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW.nft-approvable-trait.nft-approvable-trait)
+;; mainnet
 ;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
-;; 
+(impl-trait .nft-trait.nft-trait)
+(impl-trait .operable.operable)
+(impl-trait .transferable.transferable)
+
+
 ;; contract variables
 (define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
 (define-data-var mint-price uint u1000000)
@@ -171,6 +172,11 @@
     nft-not-owned-err)
 )
 
+(define-public (transfer-memo (id uint) (sender principal) (recipient principal) (memo (buff 34)))
+    (let ((result (transfer id sender recipient)))
+      (print memo)
+      result))
+
 ;; Burns tokens
 (define-public (burn (nftIndex uint) (owner principal))
   (if (unwrap! (is-approved nftIndex owner) nft-not-owned-err)
@@ -191,7 +197,7 @@
         nft-not-found-err
         (err code)))))
 
-;; see nft-approvable-trait
+;; see operable-trait
 (define-public (set-approved (nftIndex uint) (operator principal) (approved bool))
     (let
         (
@@ -564,7 +570,7 @@
             (owner           (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed))
         )
         (asserts! (unwrap! (is-approved nftIndex owner) nft-not-owned-err) nft-not-owned-err)
-	    ;; (map-set approvals {owner: tx-sender, operator: operator, nft-index: token-id} true)
+        ;; (map-set approvals {owner: tx-sender, operator: operator, nft-index: token-id} true)
         ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
         (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: amount, bidding-end-time: u0}) not-allowed)
         (print {evt: "list-item", nftIndex: nftIndex, amount: amount})

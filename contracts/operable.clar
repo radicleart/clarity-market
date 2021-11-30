@@ -1,4 +1,4 @@
-(define-trait nft-operable-trait
+(define-trait operable
   (
     ;; set approval for an operator to handle a specified id or amount of the asset
     ;; must return `(ok true)` on success, never `(ok false)`

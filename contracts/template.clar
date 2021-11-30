@@ -1,10 +1,9 @@
 ;; Interface definitions
-;; (impl-trait .nft-trait.nft-trait)
-;; (impl-trait .nft-tradable-trait.nft-tradable-trait)
-
+;; mainnet
 ;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 (impl-trait 'params.nfttrait)
-(impl-trait 'params.approvabletrait)
+(impl-trait 'params.operabletrait)
+(impl-trait 'params.transferabletrait)
 
 ;; contract variables
 (define-data-var administrator principal 'params.administrator)
@@ -93,12 +92,12 @@
             (maxEditions     (unwrap! (get max-editions (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (seriesOriginal  (unwrap! (get series-original (map-get? nft-data {nft-index: nftIndex})) not-allowed))
         )
-        (asserts! (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed)) not-allowed)
+        (asserts! (unwrap! (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed)) not-allowed) not-allowed)
         (ok (map-set nft-data {nft-index: nftIndex} {asset-hash: ahash, meta-data-url: newMetaDataUrl, max-editions: maxEditions, edition: edition, edition-cost: editionCost, series-original: seriesOriginal}))
     )
 )
 
-;; from nft-trait: Gets the owner of the 'SPecified token ID.
+;; from nft-trait: Gets the owner of the 'Specified token ID.
 (define-read-only (get-owner (nftIndex uint))
   (ok (nft-get-owner? loopbomb nftIndex))
 )
@@ -165,16 +164,21 @@
 
 ;; Transfers tokens to a 'SPecified principal.
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
-  (if (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) nft-not-owned-err))
+  (if (unwrap! (is-approved nftIndex owner) nft-not-owned-err)
     (match (nft-transfer? loopbomb nftIndex owner recipient)
         success (begin (ok success)) 
         error (nft-transfer-err error))
     nft-not-owned-err)
 )
 
+(define-public (transfer-memo (id uint) (sender principal) (recipient principal) (memo (buff 34)))
+    (let ((result (transfer id sender recipient)))
+      (print memo)
+      result))
+
 ;; Burns tokens
 (define-public (burn (nftIndex uint) (owner principal))
-  (if (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) nft-not-owned-err))
+  (if (unwrap! (is-approved nftIndex owner) nft-not-owned-err)
     (match (nft-burn? loopbomb nftIndex owner)
         success (begin
             (ok success)
@@ -192,20 +196,37 @@
         nft-not-found-err
         (err code)))))
 
-;; see nft-approvable-trait
-(define-public (set-approved (token-id uint) (operator principal) (approved bool))
-	(ok (map-set approvals {owner: tx-sender, operator: operator, nft-index: token-id} approved))
+;; see operable-trait
+(define-public (set-approved (nftIndex uint) (operator principal) (approved bool))
+    (let
+        (
+            (owner (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed))
+        )
+        (begin
+            (if (is-eq owner contract-caller)
+                (ok (map-set approvals {owner: owner, operator: operator, nft-index: nftIndex} approved))
+                not-allowed
+            )
+        )
+    )
 )
 
-(define-read-only (is-approved (nftIndex uint) (owner principal))
-	(or
-		(is-eq owner tx-sender)
-		(is-eq owner contract-caller)
-		(default-to false (map-get? approvals {owner: owner, operator: tx-sender, nft-index: nftIndex}))
-		(default-to false (map-get? approvals {owner: owner, operator: contract-caller, nft-index: nftIndex}))
-	)
+(define-read-only (is-approved (nftIndex uint) (address principal))
+    (let
+        (
+            (owner (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed))
+        )
+        (begin 
+            (if (or
+                (is-eq owner tx-sender)
+                (is-eq owner contract-caller)
+                (default-to false (map-get? approvals {owner: owner, operator: tx-sender, nft-index: nftIndex}))
+                (default-to false (map-get? approvals {owner: owner, operator: contract-caller, nft-index: nftIndex}))
+            ) (ok true) nft-not-owned-err
+            )
+        )
+    )
 )
-
 
 ;; public methods
 ;; --------------
@@ -487,12 +508,13 @@
 (define-public (set-edition-cost (nftIndex uint) (maxEditions uint) (editionCost uint))
     (let
         (
+            (owner           (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed))
             (ahash           (unwrap! (get asset-hash   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (metaDataUrl     (unwrap! (get meta-data-url   (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (edition         (unwrap! (get edition (map-get? nft-data {nft-index: nftIndex})) not-allowed))
             (seriesOriginal  (unwrap! (get series-original (map-get? nft-data {nft-index: nftIndex})) not-allowed))
         )
-        (asserts! (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) nft-not-owned-err)) nft-not-owned-err)
+        (asserts! (unwrap! (is-approved nftIndex owner) nft-not-owned-err) nft-not-owned-err)
         (asserts! (is-eq nftIndex seriesOriginal) not-originale)
         (ok (map-set nft-data {nft-index: nftIndex} {asset-hash: ahash, meta-data-url: metaDataUrl, max-editions: maxEditions, edition: edition, edition-cost: editionCost, series-original: seriesOriginal}))
     )
@@ -507,6 +529,7 @@
     (let
         (
             ;; keeps track of the sale cycles for this NFT.
+            (owner           (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed))
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (saleType (unwrap! (get sale-type (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
             (currentBidIndex (default-to u0 (get high-bid-counter (map-get? nft-high-bid-counter {nft-index: nftIndex}))))
@@ -515,7 +538,7 @@
         ;; u2 means bidding is in progress and the sale data can't be changed.
         (asserts! (not (and (> currentAmount u0) (is-eq saleType u2))) bidding-error)
         ;; owner or approval can do this.
-        (asserts! (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) nft-not-owned-err)) not-allowed)
+        (asserts! (unwrap! (is-approved nftIndex owner) nft-not-owned-err) nft-not-owned-err)
         ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
         (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: sale-type, increment-stx: increment-stx, reserve-stx: reserve-stx, amount-stx: amount-stx, bidding-end-time: bidding-end-time}) not-allowed)
         (print {evt: "set-sale-data", nftIndex: nftIndex, saleType: sale-type, increment: increment-stx, reserve: reserve-stx, amount: amount-stx, biddingEndTime: bidding-end-time})
@@ -528,8 +551,9 @@
     (let
         (
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (owner           (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed))
         )
-        (asserts! (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) nft-not-owned-err)) not-allowed)
+        (asserts! (unwrap! (is-approved nftIndex owner) nft-not-owned-err) nft-not-owned-err)
         ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
         (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0}) not-allowed)
         (print {evt: "unlist-item", nftIndex: nftIndex})
@@ -542,9 +566,10 @@
     (let
         (
             (saleCycleIndex (unwrap! (get sale-cycle-index (map-get? nft-sale-data {nft-index: nftIndex})) amount-not-set))
+            (owner           (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed))
         )
-        (asserts! (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) nft-not-owned-err)) not-allowed)
-	    ;; (map-set approvals {owner: tx-sender, operator: operator, nft-index: token-id} true)
+        (asserts! (unwrap! (is-approved nftIndex owner) nft-not-owned-err) nft-not-owned-err)
+        ;; (map-set approvals {owner: tx-sender, operator: operator, nft-index: token-id} true)
         ;; Note - don't override the sale cyle index here as this is a public method and can be called ad hoc. Sale cycle is update at end of sale!
         (asserts! (map-set nft-sale-data {nft-index: nftIndex} {sale-cycle-index: saleCycleIndex, sale-type: u1, increment-stx: u0, reserve-stx: u0, amount-stx: amount, bidding-end-time: u0}) not-allowed)
         (print {evt: "list-item", nftIndex: nftIndex, amount: amount})
@@ -706,10 +731,11 @@
             (currentBidder (unwrap! (get-current-bidder nftIndex currentBidIndex) bidding-error))
             (currentAmount (unwrap! (get-current-bid-amount nftIndex currentBidIndex) bidding-error))
             (seriesOriginal  (unwrap! (get series-original (map-get? nft-data {nft-index: nftIndex})) not-allowed))
+            (owner           (unwrap! (nft-get-owner? loopbomb nftIndex) not-allowed))
         )
         (asserts! (or (is-eq closeType u1) (is-eq closeType u2)) failed-to-close-1)
         ;; only the owner or administrator can call close
-        (asserts! (or (is-approved nftIndex (unwrap! (nft-get-owner? loopbomb nftIndex) nft-not-owned-err)) (unwrap! (is-administrator) not-allowed)) not-allowed)
+        (asserts! (or (unwrap! (is-approved nftIndex owner) nft-not-owned-err) (unwrap! (is-administrator) not-allowed)) not-allowed)
         ;; only the administrator can call close BEFORE the end time - note we use the less accurate
         ;; but fool proof block time here to prevent owner/client code jerry mandering the close function
         (asserts! (or (> block-time bidding-end-time) (unwrap! (is-administrator) failed-to-close-3)) failed-to-close-3)
