@@ -4,7 +4,7 @@ import {
   Account,
   types,
   ReadOnlyFn,
-} from "https://deno.land/x/clarinet@v0.10.0/index.ts";
+} from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 
 export enum ErrCode {
   ERR_NFT_DATA_NOT_FOUND = 101,
@@ -13,7 +13,7 @@ export enum ErrCode {
   ERR_NOT_ADMINISTRATOR = 403,
 }
 
-export class CrashpunksV2Client {
+export class CrashPunksV2Client {
   contractName: string = "crashpunks-v2";
   chain: Chain;
   deployer: Account;
@@ -112,7 +112,7 @@ export class CrashpunksV2Client {
     return Tx.contractCall(
       this.contractName,
       "update-metadata-url",
-      [types.ascii(newMetadataUrl)],
+      [types.uint(nftIndex), types.ascii(newMetadataUrl)],
       sender
     );
   }

@@ -4,162 +4,13 @@ import {
   Chain,
   Account,
   types,
-} from "https://deno.land/x/clarinet@v0.18.0/index.ts";
+} from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 import { LoopbombClient, ErrCode } from "../src/loopbomb-client.ts";
 import { formatBuffString, hexStringToArrayBuffer } from "../src/utils.ts";
 import {
   assertEquals,
   assert,
 } from "https://deno.land/std@0.90.0/testing/asserts.ts";
-
-declare global {
-  interface Array<T> {
-    expectSTXTransferEvent(
-      amount: Number,
-      sender: String,
-      recipient: String
-    ): Object;
-    expectFungibleTokenTransferEvent(
-      amount: Number,
-      sender: String,
-      recipient: String,
-      assetId: String
-    ): Object;
-    expectFungibleTokenMintEvent(
-      amount: Number,
-      recipient: String,
-      assetId: String
-    ): Object;
-    expectFungibleTokenBurnEvent(
-      amount: Number,
-      sender: String,
-      assetId: String
-    ): Object;
-    expectPrintEvent(contract_identifier: string, value: string): Object;
-    // Absence of test vectors at the moment - token field could present some challenges.
-    expectNonFungibleTokenTransferEvent(
-      token: String,
-      sender: String,
-      recipient: String,
-      assetId: String
-    ): Object;
-    expectNonFungibleTokenMintEvent(
-      token: String,
-      recipient: String,
-      assetId: String
-    ): Object;
-    // expectNonFungibleTokenBurnEvent(
-    //   token: String,
-    //   sender: String,
-    //   assetId: String
-    // ): Object;
-    // expectEvent(sel: (e: Object) => Object): Object;
-  }
-}
-
-// Array.prototype.expectPrintEvent = function (
-//   contract_identifier: string,
-//   value: string
-// ) {
-//   for (let event of this) {
-//     try {
-//       let e: any = {};
-//       e["contract_identifier"] =
-//         event.contract_event.contract_identifier.expectPrincipal(
-//           contract_identifier
-//         );
-
-//       if (event.contract_event.topic.endsWith("print")) {
-//         e["topic"] = event.contract_event.topic;
-//       } else {
-//         continue;
-//       }
-
-//       if (event.contract_event.value.endsWith(value)) {
-//         e["value"] = event.contract_event.value;
-//       } else {
-//         continue;
-//       }
-//       return e;
-//     } catch (error) {
-//       continue;
-//     }
-//   }
-//   throw new Error(`Unable to retrieve expected PrintEvent`);
-// };
-
-Array.prototype.expectNonFungibleTokenTransferEvent = function (
-  token: String,
-  sender: String,
-  recipient: String,
-  assetId: String
-) {
-  for (let event of this) {
-    try {
-      let e: any = {};
-      e["value"] = event.nft_transfer_event.value.expectUint(token);
-      e["sender"] = event.nft_transfer_event.sender.expectPrincipal(sender);
-      e["recipient"] =
-        event.nft_transfer_event.recipient.expectPrincipal(recipient);
-      if (event.nft_transfer_event.asset_identifier.endsWith(assetId)) {
-        e["asset_identifier"] = event.nft_transfer_event.asset_identifier;
-      } else {
-        continue;
-      }
-      return e;
-    } catch (error) {
-      continue;
-    }
-  }
-  throw new Error(`Unable to retrieve expected NonFungibleTokenTransferEvent`);
-};
-
-Array.prototype.expectNonFungibleTokenMintEvent = function (
-  token: String,
-  recipient: String,
-  assetId: String
-) {
-  for (let event of this) {
-    try {
-      let e: any = {};
-      e["value"] = event.nft_mint_event.value.expectUint(token);
-      e["recipient"] =
-        event.nft_mint_event.recipient.expectPrincipal(recipient);
-      if (event.nft_mint_event.asset_identifier.endsWith(assetId)) {
-        e["asset_identifier"] = event.nft_mint_event.asset_identifier;
-      } else {
-        continue;
-      }
-      return e;
-    } catch (error) {
-      continue;
-    }
-  }
-  throw new Error(`Unable to retrieve expected NonFungibleTokenMintEvent`);
-};
-
-// Array.prototype.expectNonFungibleTokenBurnEvent = function (
-//   token: String,
-//   sender: String,
-//   assetId: String
-// ) {
-//   for (let event of this) {
-//     try {
-//       let e: any = {};
-//       e["token"] = event.nft_burn_event.amount.expectInt(token);
-//       e["sender"] = event.nft_burn_event.sender.expectPrincipal(sender);
-//       if (event.nft_burn_event.asset_identifier.endsWith(assetId)) {
-//         e["assetId"] = event.nft_burn_event.asset_identifier;
-//       } else {
-//         continue;
-//       }
-//       return e;
-//     } catch (error) {
-//       continue;
-//     }
-//   }
-//   throw new Error(`Unable to retrieve expected NonFungibleTokenBurnEvent`);
-// };
 
 const getWalletsAndClient = (
   chain: Chain,
@@ -473,8 +324,9 @@ Clarinet.test({
       `{evt: "pay-royalty-primary", payee: ST2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1HR05NNC, payer: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, saleAmount: u100000000, share: u1000000000, split: u10000000, txSender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
     block.receipts[1].events.expectNonFungibleTokenMintEvent(
-      "0",
+      "u0",
       wallet1.address,
+      `${deployer.address}.loopbomb`,
       "loopbomb"
     );
     block.receipts[1].events.expectPrintEvent(
@@ -676,7 +528,8 @@ Clarinet.test({
       client.transfer(0, deployer.address, wallet2.address, wallet1.address),
     ]);
     block.receipts[0].result
-      .expectErr().expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
+      .expectErr()
+      .expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
 
     // wallet 1 owns nft, wallet 1 should be able to transfer
     block = chain.mineBlock([
@@ -685,9 +538,10 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true);
 
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
-      "0",
+      "u0",
       wallet1.address,
       wallet2.address,
+      `${deployer.address}.loopbomb`,
       "loopbomb"
     );
 
@@ -703,23 +557,21 @@ Clarinet.test({
       client.transfer(0, wallet3.address, wallet4.address, wallet2.address),
     ]);
     block.receipts[0].result
-      .expectErr().expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
+      .expectErr()
+      .expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
 
     // wallet 2 can set approval - see https://github.com/stacksgov/sips/issues/40
     block = chain.mineBlock([
       client.setApproved(0, wallet3.address, true, wallet2.address),
     ]);
-    block.receipts[0].result
-      .expectOk()
-      .expectBool(true);
-  
+    block.receipts[0].result.expectOk().expectBool(true);
+
     block = chain.mineBlock([
-        client.setApproved(0, wallet3.address, true, wallet3.address),
+      client.setApproved(0, wallet3.address, true, wallet3.address),
     ]);
-    block.receipts[0].result
-      .expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
-  
-      // wallet 2 sets approval for wallet 3
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
+
+    // wallet 2 sets approval for wallet 3
     block = chain.mineBlock([
       client.setApproved(0, wallet3.address, true, wallet2.address),
     ]);
@@ -732,9 +584,10 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true);
 
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
-      "0",
+      "u0",
       wallet2.address,
       wallet4.address,
+      `${deployer.address}.loopbomb`,
       "loopbomb"
     );
 
@@ -750,7 +603,8 @@ Clarinet.test({
       client.transfer(0, wallet4.address, wallet1.address, wallet3.address),
     ]);
     block.receipts[0].result
-      .expectErr().expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
+      .expectErr()
+      .expectUint(ErrCode.ERR_NFT_NOT_OWNED_ERR);
   },
 });
 
@@ -909,9 +763,10 @@ Clarinet.test({
       `{amount: u2000000000, evt: "buy-now", nftIndex: u0, owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, recipient: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
-      "0",
+      "u0",
       wallet1.address,
       newAdministrator.address,
+      `${deployer.address}.loopbomb`,
       "loopbomb"
     );
   },

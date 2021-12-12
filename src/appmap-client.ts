@@ -4,7 +4,7 @@ import {
   Account,
   types,
   ReadOnlyFn,
-} from "https://deno.land/x/clarinet@v0.10.0/index.ts";
+} from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 
 export enum ErrCode {
   ERR_NOT_FOUND = 100,

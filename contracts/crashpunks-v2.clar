@@ -106,7 +106,7 @@
         (asserts! (is-eq contract-caller (unwrap-panic (unwrap-panic (contract-call? .crashpunks-v1 get-owner nftIndex)))) ERR-NOT-V1-OWNER)
 
         ;; 1. transfer v1 NFT to this contract
-        (try! (contract-call? .crashpunks-v1 transfer nftIndex contract-caller (as-contract tx-sender) ))
+        (try! (contract-call? .crashpunks-v1 transfer nftIndex contract-caller (as-contract tx-sender)))
 
         ;; 2. Burn the v1 NFT
         (try! (contract-call? .crashpunks-v1 burn nftIndex (as-contract tx-sender)))

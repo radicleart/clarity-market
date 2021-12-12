@@ -4,7 +4,7 @@ import {
   Account,
   types,
   ReadOnlyFn,
-} from "https://deno.land/x/clarinet@v0.10.0/index.ts";
+} from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 
 export enum ErrCode {
   ERR_NOT_ALLOWED = 10,
@@ -65,7 +65,12 @@ export class LoopbombClient {
     return result;
   }
 
-  setApproved(nftIndex: number, operator: string, approved: boolean, sender: string): Tx {
+  setApproved(
+    nftIndex: number,
+    operator: string,
+    approved: boolean,
+    sender: string
+  ): Tx {
     return Tx.contractCall(
       this.contractName,
       "set-approved",

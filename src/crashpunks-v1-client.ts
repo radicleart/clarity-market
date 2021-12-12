@@ -4,7 +4,7 @@ import {
   Account,
   types,
   ReadOnlyFn,
-} from "https://deno.land/x/clarinet@v0.10.0/index.ts";
+} from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 
 export enum ErrCode {
   ERR_NOT_ALLOWED = 10,
@@ -40,7 +40,7 @@ export enum ErrCode {
   ERR_SENDER_EQUALS_RECIPIENT_ERR = 405,
 }
 
-export class LoopbombClient {
+export class CrashPunksV1Client {
   contractName: string = "crashpunks-v1";
   chain: Chain;
   deployer: Account;
