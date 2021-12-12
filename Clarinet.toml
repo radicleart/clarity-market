@@ -1,10 +1,22 @@
 [project]
 name = "clarinet-clarity-market"
-requirements = ["nft-trait.clar", "operable.clar", "transferable.clar"]
+requirements = []
 costs_version = 1
 [contracts.appmap]
 path = "contracts/appmap.clar"
 depends_on = []
+
+[contracts.crashpunks-v2]
+path = "contracts/crashpunks-v2.clar"
+depends_on = ["nft-trait", "operable"]
+
+[contracts.crashpunks-v1]
+path = "contracts/crashpunks-v1.clar"
+depends_on = ["nft-trait", "operable", "transferable"]
+
+[contracts.loopbomb]
+path = "contracts/loopbomb.clar"
+depends_on = ["nft-trait", "operable", "transferable"]
 
 [contracts.nft-trait]
 path = "contracts/nft-trait.clar"
@@ -17,7 +29,3 @@ depends_on = []
 [contracts.transferable]
 path = "contracts/transferable.clar"
 depends_on = []
-
-[contracts.loopbomb]
-path = "contracts/loopbomb.clar"
-depends_on = ["nft-trait", "operable", "transferable"]
