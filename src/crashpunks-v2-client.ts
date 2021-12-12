@@ -125,4 +125,8 @@ export class CrashPunksV2Client {
       sender
     );
   }
+
+  getTokenByIndex(nftIndex: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-token-by-index", [types.uint(nftIndex)]);
+  }
 }

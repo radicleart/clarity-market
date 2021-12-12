@@ -26,7 +26,7 @@ const getWalletsAndClient = (
   clientV2: CrashPunksV2Client;
 } => {
   const administrator = {
-    address: "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+    address: "SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6",
     balance: 1000000,
     name: "administrator",
     mnemonic: "asdf",
@@ -55,6 +55,7 @@ const getWalletsAndClient = (
   };
 };
 
+// mints a v1 token and returns its asset-hash and token-uri
 const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
   const {
     administrator,
@@ -96,7 +97,9 @@ const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
   ];
   const newShares = [9000000000, 1000000000, 0, 0];
   const newSecondaries = [9000000000, 1000000000, 0, 0];
-  let block = chain.mineBlock([
+
+  // the testing for this is done in loopbomb_test
+  chain.mineBlock([
     clientV1.setCollectionRoyalties(
       newMintAddresses,
       newMintShares,
@@ -117,10 +120,23 @@ const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
       wallet1.address
     ),
   ]);
+  let tokenInfo = (
+    clientV1
+      .getTokenByIndex(0)
+      .result.expectOk()
+      .expectOk()
+      .expectTuple() as any
+  )["tokenInfo"]
+    .expectSome()
+    .expectTuple();
+  return {
+    assetHashV1: tokenInfo["asset-hash"],
+    metadataUrlV1: tokenInfo["meta-data-url"],
+  };
 };
 
 Clarinet.test({
-  name: "Ensure can upgrade v1 -> v2",
+  name: "CrashpunksV2 - Ensure can upgrade v1 -> v2",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const {
       administrator,
@@ -131,9 +147,45 @@ Clarinet.test({
       clientV2,
     } = getWalletsAndClient(chain, accounts);
 
-    mintV1Token(chain, accounts);
+    // mint and get original v1 token info to make sure it copied to v2 correctly
+    const { assetHashV1, metadataUrlV1 } = mintV1Token(chain, accounts);
 
     let block = chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
-    console.log(block);
+
+    block.receipts[0].result.expectOk().expectUint(0);
+
+    // 1. Transfers v1 NFT to this contract
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      "u0",
+      wallet1.address,
+      `${deployer.address}.crashpunks-v2`,
+      `${deployer.address}.crashpunks-v1`,
+      "crashpunks"
+    );
+
+    // 2. Mints the v2 NFT with the same nftIndex
+    block.receipts[0].events.expectNonFungibleTokenMintEvent(
+      "u0",
+      wallet1.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+
+    // 3. Burns the original v1 NFT
+    block.receipts[0].events.expectNonFungibleTokenBurnEvent(
+      "u0",
+      `${deployer.address}.crashpunks-v2`,
+      `${deployer.address}.crashpunks-v1`,
+      "crashpunks"
+    );
+
+    // get new v2 info
+    const v2Info: any = clientV2
+      .getTokenByIndex(0)
+      .result.expectOk()
+      .expectSome()
+      .expectTuple();
+    assertEquals(v2Info["asset-hash"], assetHashV1);
+    assertEquals(v2Info["meta-data-url"], metadataUrlV1);
   },
 });

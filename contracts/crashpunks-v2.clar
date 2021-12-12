@@ -34,7 +34,7 @@
 
 ;; data structures
 (define-map approvals {owner: principal, operator: principal, nft-index: uint} bool)
-(define-map nft-data {nft-index: uint} {asset-hash: (buff 32), meta-data-url: (string-ascii 256) })
+(define-map nft-data uint {asset-hash: (buff 32), meta-data-url: (string-ascii 256) })
 
 ;; SIP-09: get last token id
 (define-read-only (get-last-token-id)
@@ -43,7 +43,7 @@
 
 ;; SIP-09: URI for metadata associated with the token
 (define-read-only (get-token-uri (nftIndex uint))
-  (ok (get meta-data-url (map-get? nft-data {nft-index: nftIndex})))
+  (ok (get meta-data-url (map-get? nft-data nftIndex)))
 )
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
@@ -97,27 +97,27 @@
 ;; upgrade from v1 to v2
 ;; Owner of crashpunks v1 calls this upgrade function
 ;; 1. Transfers v1 NFT to this contract
-;; 2. This contract burns the v1 NFT
-;; 3. This contract mints the v2 NFT with the same nftIndex for contract-caller
+;; 2. This contract mints the v2 NFT with the same nftIndex for contract-caller
+;; 3. Copy the v1 data to v2
+;; 4. This contract burns the v1 NFT
 (define-public (upgrade-v1-to-v2 (nftIndex uint))
     ;; TODO: UPDATE V1 CONTRACT TO MAINNET CONTRACT
     (begin 
         ;; assert contract caller owns the v1 NFT at this nftIndex
-        (asserts! (is-eq contract-caller (unwrap-panic (unwrap-panic (contract-call? .crashpunks-v1 get-owner nftIndex)))) ERR-NOT-V1-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-owner nftIndex) (err u1001)) (err u1000))) ERR-NOT-V1-OWNER)
 
         ;; 1. transfer v1 NFT to this contract
         (try! (contract-call? .crashpunks-v1 transfer nftIndex contract-caller (as-contract tx-sender)))
-
-        ;; 2. Burn the v1 NFT
-        (try! (contract-call? .crashpunks-v1 burn nftIndex (as-contract tx-sender)))
-
-        ;; 3. Mint the v2 NFT with the same nftIndex for contract-caller
+        
+        ;; 2. Mint the v2 NFT with the same nftIndex for contract-caller
         (try! (nft-mint? crashpunks-v2 nftIndex contract-caller))
 
-        ;; 4. Copy metadata url to v2
+        ;; 3. Copy v1 data to v2
         (try! (copy-data-from-v1 nftIndex))
 
-        (ok true)
+        ;; 4. Burn the v1 NFT
+        (try! (contract-call? .crashpunks-v1 burn nftIndex (as-contract tx-sender)))
+        (ok nftIndex)
     )
 )
 
@@ -129,7 +129,7 @@
         (meta-data-url (get meta-data-url v1-token-info))
         )
         (ok (map-set nft-data
-            {nft-index: nftIndex}
+            nftIndex
             {asset-hash: asset-hash, meta-data-url: meta-data-url}
         ))
     )
@@ -138,12 +138,12 @@
 (define-public (update-metadata-url (nftIndex uint) (newMetadataUrl (string-ascii 256)))
     (let
         (
-            (data (unwrap! (map-get? nft-data {nft-index: nftIndex}) ERR-NFT-DATA-NOT-FOUND))
+            (data (unwrap! (map-get? nft-data nftIndex) ERR-NFT-DATA-NOT-FOUND))
         )
         ;; TODO: update these assertions
         ;; (asserts! (unwrap! (is-approved nftIndex (unwrap! (nft-get-owner? crashpunks nftIndex) not-allowed)) not-allowed) not-allowed)
         (ok (map-set nft-data
-            {nft-index: nftIndex} 
+            nftIndex 
             (merge data
                 {
                     meta-data-url: newMetadataUrl
@@ -159,4 +159,8 @@
         (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
         (ok (var-set administrator new-administrator))
     )
+)
+
+(define-read-only (get-token-by-index (nftIndex uint))
+    (ok (map-get? nft-data nftIndex))
 )
