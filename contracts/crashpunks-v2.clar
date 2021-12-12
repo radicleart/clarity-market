@@ -16,16 +16,19 @@
 (define-data-var collection-shares (list 10 uint) (list))
 (define-data-var collection-secondaries (list 10 uint) (list))
 
+
 ;; constants
 (define-constant token-name "crashpunks-v2")
 (define-constant token-symbol "CPS-v2")
 (define-constant collection-max-supply u9216)
 
-
 (define-constant ERR-NFT-DATA-NOT-FOUND (err u101))
+(define-constant ERR-COULDNT-GET-V1-DATA (err u102))
 
 (define-constant ERR-NOT-AUTHORIZED (err u401))
 (define-constant ERR-NOT-OWNER (err u402))
+(define-constant ERR-NOT-V1-OWNER (err u403))
+(define-constant ERR-NOT-ADMINISTRATOR (err u404))
 
 (define-non-fungible-token crashpunks-v2 uint)
 
@@ -75,7 +78,7 @@
     )
 )
 
-;; see operable-trait
+;; operable-trait
 (define-public (set-approved (nftIndex uint) (operator principal) (approved bool))
     (let
         (
@@ -89,7 +92,50 @@
     )
 )
 
-(define-public (update-meta-data-url (nftIndex uint) (newMetaDataUrl (string-ascii 256)))
+;; public methods
+
+;; upgrade from v1 to v2
+;; Owner of crashpunks v1 calls this upgrade function
+;; 1. Transfers v1 NFT to this contract
+;; 2. This contract burns the v1 NFT
+;; 3. This contract mints the v2 NFT with the same nftIndex for contract-caller
+(define-public (upgrade-v1-to-v2 (nftIndex uint))
+    ;; TODO: UPDATE V1 CONTRACT TO MAINNET CONTRACT
+    (begin 
+        ;; assert contract caller owns the v1 NFT at this nftIndex
+        (asserts! (is-eq contract-caller (unwrap-panic (unwrap-panic (contract-call? .crashpunks-v1 get-owner nftIndex)))) ERR-NOT-V1-OWNER)
+
+        ;; 1. transfer v1 NFT to this contract
+        (try! (contract-call? .crashpunks-v1 transfer nftIndex contract-caller (as-contract tx-sender) ))
+
+        ;; 2. Burn the v1 NFT
+        (try! (contract-call? .crashpunks-v1 burn nftIndex (as-contract tx-sender)))
+
+        ;; 3. Mint the v2 NFT with the same nftIndex for contract-caller
+        (try! (nft-mint? crashpunks-v2 nftIndex contract-caller))
+
+        ;; 4. Copy metadata url to v2
+        (try! (copy-data-from-v1 nftIndex))
+
+        (ok true)
+    )
+)
+
+(define-private (copy-data-from-v1 (nftIndex uint))
+    (let (
+        (v1-all-data (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-token-by-index nftIndex) ERR-COULDNT-GET-V1-DATA) ERR-COULDNT-GET-V1-DATA))
+        (v1-token-info (unwrap! (get tokenInfo v1-all-data) ERR-COULDNT-GET-V1-DATA))
+        (asset-hash (get asset-hash v1-token-info))
+        (meta-data-url (get meta-data-url v1-token-info))
+        )
+        (ok (map-set nft-data
+            {nft-index: nftIndex}
+            {asset-hash: asset-hash, meta-data-url: meta-data-url}
+        ))
+    )
+)
+
+(define-public (update-metadata-url (nftIndex uint) (newMetadataUrl (string-ascii 256)))
     (let
         (
             (data (unwrap! (map-get? nft-data {nft-index: nftIndex}) ERR-NFT-DATA-NOT-FOUND))
@@ -100,9 +146,17 @@
             {nft-index: nftIndex} 
             (merge data
                 {
-                    meta-data-url: newMetaDataUrl
+                    meta-data-url: newMetadataUrl
                 }
             )
         ))
+    )
+)
+
+;; the contract administrator can change the contract administrator
+(define-public (transfer-administrator (new-administrator principal))
+    (begin
+        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
+        (ok (var-set administrator new-administrator))
     )
 )
