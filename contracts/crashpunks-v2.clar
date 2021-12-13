@@ -121,7 +121,7 @@
     ;; TODO: MAKE SURE THESE CONTRACT CALLS WORK, MAKE SURE THE CONRACT ADDRESSES WORKS FOR MAINNET
     (begin 
         ;; assert contract caller owns the v1 NFT at this nftIndex
-        (asserts! (is-eq contract-caller (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-owner nftIndex) (err u1001)) (err u1000))) ERR-NOT-V1-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-owner nftIndex) ERR-NOT-V1-OWNER) ERR-NOT-V1-OWNER)) ERR-NOT-V1-OWNER)
 
         ;; 1. transfer v1 NFT to this contract
         (try! (contract-call? .crashpunks-v1 transfer nftIndex contract-caller (as-contract tx-sender)))
