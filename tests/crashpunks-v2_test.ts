@@ -220,7 +220,8 @@ Clarinet.test({
       clientV2.listItem(0, 100000000, wallet1.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    // console.log(
+
+    // check is listed
     assertEquals(
       clientV2
         .getTokenMarketByIndex(0)

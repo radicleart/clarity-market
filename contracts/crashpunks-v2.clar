@@ -114,6 +114,17 @@
             (ok (map-delete approvals {owner: owner, operator: operator, nft-index: nftIndex}))
         )
     )
+
+)
+(define-public (burn (nftIndex uint))
+    (let 
+        (
+            (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-NOT-OWNER))
+        )
+        (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
+        (map-delete nft-market nftIndex)
+        (nft-burn? crashpunks-v2 nftIndex contract-caller)
+    )
 )
 
 ;; public methods
