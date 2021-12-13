@@ -6,13 +6,12 @@
 ;; contract variables
 
 (define-data-var administrator principal 'SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6)
+
 ;; 50 stx
 (define-data-var mint-price uint u50000000)
 
 ;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK IF OFF BY 1 ERROR
 (define-data-var mint-counter uint u5721)
-(define-data-var signer (buff 33) 0x02815c03f6d7181332afb1b0114f5a1c97286b6092957910ae3fab4006598aee1b)
-(define-data-var is-collection bool true)
 
 ;; addresses to receive mint fee
 (define-data-var collection-mint-addresses (list 4 principal) (list))
@@ -24,7 +23,6 @@
 (define-data-var collection-royalty-addresses (list 10 principal) (list))
 ;; percent royalty fee each address receives
 (define-data-var collection-royalty-shares (list 10 uint) (list))
-
 
 ;; constants
 (define-constant percentage-with-twodp u10000000000)
@@ -99,14 +97,12 @@
         (
             (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER))
         )
-        (if (or
+        (ok (or
             (is-eq owner tx-sender)
             (is-eq owner contract-caller)
             (default-to false (map-get? approvals {owner: owner, operator: tx-sender, nft-index: nftIndex}))
             (default-to false (map-get? approvals {owner: owner, operator: contract-caller, nft-index: nftIndex}))
         ) 
-            (ok true) 
-            ERR-NOT-AUTHORIZED
         )
     )
 )
@@ -174,6 +170,7 @@
         (try! (paymint-split mintCounter mintPrice contract-caller))
         (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
         (var-set mint-counter (+ mintCounter u1))
+        (map-set mint-pass contract-caller (- mintPassBalance u1))
         (ok true)
     )
 )
