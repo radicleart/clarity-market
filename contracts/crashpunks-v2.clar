@@ -92,7 +92,7 @@
 )
 
 ;; operable-trait
-(define-read-only (is-approved (nftIndex uint) (address principal))
+(define-read-only (is-approved (nftIndex uint))
     (let
         (
             (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER))

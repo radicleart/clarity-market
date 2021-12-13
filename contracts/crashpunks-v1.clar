@@ -214,7 +214,7 @@
     )
 )
 
-(define-read-only (is-approved (nftIndex uint))
+(define-read-only (is-approved (nftIndex uint) (address principal))
     (let
         (
             (owner (unwrap! (nft-get-owner? crashpunks nftIndex) not-allowed))
