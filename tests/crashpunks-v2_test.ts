@@ -431,3 +431,32 @@ Clarinet.test({
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NFT_LISTED);
   },
 });
+
+// Clarinet.test({
+//   name: "CrashpunksV2 - playground",
+//   async fn(chain: Chain, accounts: Map<string, Account>) {
+//     const {
+//       administrator,
+//       deployer,
+//       wallet1,
+//       wallet2,
+//       wallet3,
+//       newAdministrator,
+//       clientV2,
+//     } = getWalletsAndClient(chain, accounts);
+
+//     // mint and upgrade
+//     mintV1Token(chain, accounts);
+//     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+//     let block = chain.mineBlock([
+//       Tx.contractCall(
+//         "crashpunks-v2",
+//         "get-v1-mint-counter",
+//         [],
+//         wallet1.address
+//       ),
+//     ]);
+//     console.log(block);
+//   },
+// });

@@ -7,7 +7,9 @@
 
 (define-data-var administrator principal 'SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6)
 (define-data-var mint-price uint u1000)
-(define-data-var mint-counter uint u0)
+
+;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK OFF BY 1 ERROR
+(define-data-var mint-counter uint u5721)
 (define-data-var signer (buff 33) 0x02815c03f6d7181332afb1b0114f5a1c97286b6092957910ae3fab4006598aee1b)
 (define-data-var is-collection bool true)
 
@@ -210,7 +212,6 @@
             (owner (unwrap! (unwrap! (get-owner nftIndex) ERR-COULDNT-GET-NFT-OWNER) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
         )
-        ;; (unwrap! (payment-split nftIndex amount tx-sender seriesOriginal) payment-error)
         (try! (payment-split nftIndex price contract-caller))
         (try! (nft-transfer? crashpunks-v2 nftIndex owner buyer))
         (map-delete nft-market nftIndex)
@@ -245,6 +246,7 @@
     (ok (map-get? nft-market nftIndex))
 )
 
+;; TODO: update this to use a list of {address, share}, and fold 
 (define-private (payment-split (nftIndex uint) (saleAmount uint) (payer principal)) 
     (let 
         (
