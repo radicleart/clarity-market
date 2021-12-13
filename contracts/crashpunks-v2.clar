@@ -148,7 +148,7 @@
         (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
         (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
 
-        (try! (paymint-split mintCounter mintPrice contract-caller))
+        (try! (paymint-split mintPrice contract-caller))
         (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
         (var-set mint-counter (+ mintCounter u1))
         (map-set mint-pass contract-caller (- mintPassBalance u1))
@@ -279,7 +279,7 @@
     )
 )
 
-(define-private (paymint-split (nftIndex uint) (mintPrice uint) (payer principal)) 
+(define-private (paymint-split (mintPrice uint) (payer principal)) 
     (let (
             (split u0)
             (mintAddresses (var-get collection-mint-addresses))
