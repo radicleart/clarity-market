@@ -337,19 +337,16 @@
 )
 
 (define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
-    (if (> share u0)
-        (let
-            (
-                (split (/ (* saleAmount share) percentage-with-twodp))
-            )
-            ;; ignore royalty payment if its to the buyer / tx-sender.
-            (if (not (is-eq contract-caller payee))
+    (let ((split (/ (* saleAmount share) percentage-with-twodp)))
+        ;; ignore royalty payment if its to the buyer / tx-sender.
+        (if (and 
+                (> share u0)
+                (not (is-eq contract-caller payee)) 
                 (try! (stx-transfer? split payer payee))
-                true
             )
             (ok split)
+            (ok u0)
         )
-        (ok u0)
     )
 )
 
