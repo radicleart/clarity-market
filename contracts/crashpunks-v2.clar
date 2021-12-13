@@ -9,7 +9,7 @@
 ;; 50 stx
 (define-data-var mint-price uint u50000000)
 
-;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK OFF BY 1 ERROR
+;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK IF OFF BY 1 ERROR
 (define-data-var mint-counter uint u5721)
 (define-data-var signer (buff 33) 0x02815c03f6d7181332afb1b0114f5a1c97286b6092957910ae3fab4006598aee1b)
 (define-data-var is-collection bool true)
@@ -41,6 +41,7 @@
 (define-constant ERR-PAYMENT-ADDRESS (err u106))
 (define-constant ERR-NFT-LISTED (err u107))
 (define-constant ERR-COLLECTION-LIMIT-REACHED (err u108))
+(define-constant ERR-MINT-PASS-LIMIT-REACHED (err u109))
 
 
 (define-constant ERR-NOT-AUTHORIZED (err u401))
@@ -62,6 +63,9 @@
 ;; nftIndex -> price (in ustx)
 ;; if nftIndex is not in map, it is not listed for sale
 (define-map nft-market uint {price: uint})
+
+;; whitelist address -> # they can mint
+(define-map mint-pass principal uint)
 
 ;; SIP-09: get last token id
 (define-read-only (get-last-token-id)
@@ -174,22 +178,47 @@
     )
 )
 
-(define-public (admin-mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
+(define-read-only (get-mint-pass-balance (account principal))
+    (default-to u0
+        (map-get? mint-pass account))
+)
+
+(define-public (mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
     (let 
         (
             (mintCounter (var-get mint-counter))
+            (mintPrice (var-get mint-price))
+            (mintPassBalance (get-mint-pass-balance contract-caller))
         )
-        ;; only admin can mint now since public sale over
         (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
         (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
+        (asserts! (> u0 mintPassBalance) ERR-MINT-PASS-LIMIT-REACHED)
 
         (map-insert nft-data mintCounter {asset-hash: assetHash, metadata-url: metadataUrl})
 
+        (try! (paymint-split mintCounter mintPrice contract-caller))
         (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
         (var-set mint-counter (+ mintCounter u1))
         (ok true)
     )
 )
+
+;; (define-public (admin-mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
+;;     (let 
+;;         (
+;;             (mintCounter (var-get mint-counter))
+;;         )
+;;         ;; only admin can mint now since public sale over
+;;         (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
+;;         (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
+
+;;         (map-insert nft-data mintCounter {asset-hash: assetHash, metadata-url: metadataUrl})
+
+;;         (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
+;;         (var-set mint-counter (+ mintCounter u1))
+;;         (ok true)
+;;     )
+;; )
 
 ;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
 (define-public (admin-mint-airdrop (recipient principal) (nftIndex uint))
@@ -198,6 +227,13 @@
         (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-AUTHORIZED)
         (try! (nft-mint? crashpunks-v2 nftIndex recipient))
         (ok true)
+    )
+)
+
+(define-public (set-mint-pass) (account principal) (limit uint)
+    (begin
+        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
+        (ok (map-set mint-pass account limit))
     )
 )
 
@@ -274,6 +310,21 @@
     (ok (map-get? nft-market nftIndex))
 )
 
+(define-private (paymint-split (nftIndex uint) (mintPrice uint) (payer principal)) 
+    (let 
+        (
+            (split u0)
+            (mintAddresses (var-get collection-mint-addresses))
+            (mintShares (var-get collection-mint-shares))
+        )
+        (+ split (unwrap! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u0) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u0) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
+        (+ split (unwrap! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u1) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u1) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
+        (+ split (unwrap! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u2) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u2) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
+        (+ split (unwrap! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u3) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u3) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
+        (ok split)
+    )
+)
+
 ;; TODO: update this to use a list of {address, share}, and fold 
 (define-private (payment-split (nftIndex uint) (saleAmount uint) (payer principal)) 
     (let 
@@ -314,3 +365,6 @@
         (ok u0)
     )
 )
+
+;; TODO: add all whitelists
+;; (map-set mint-pass 'SP3BPB30CSNHF29C1SEZZV3ADWWS6131V6TFYAPG1 u5)
