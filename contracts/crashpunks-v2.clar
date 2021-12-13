@@ -42,6 +42,7 @@
 (define-constant ERR-NFT-LISTED (err u107))
 (define-constant ERR-COLLECTION-LIMIT-REACHED (err u108))
 (define-constant ERR-MINT-PASS-LIMIT-REACHED (err u109))
+(define-constant ERR-ADD-MINT-PASS (err u110))
 
 
 (define-constant ERR-NOT-AUTHORIZED (err u401))
@@ -124,16 +125,6 @@
     )
 
 )
-(define-public (burn (nftIndex uint))
-    (let 
-        (
-            (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-NOT-OWNER))
-        )
-        (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
-        (map-delete nft-market nftIndex)
-        (nft-burn? crashpunks-v2 nftIndex contract-caller)
-    )
-)
 
 ;; public methods
 
@@ -164,25 +155,6 @@
     )
 )
 
-(define-private (copy-data-from-v1 (nftIndex uint))
-    (let (
-        (v1-all-data (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-token-by-index nftIndex) ERR-COULDNT-GET-V1-DATA) ERR-COULDNT-GET-V1-DATA))
-        (v1-token-info (unwrap! (get tokenInfo v1-all-data) ERR-COULDNT-GET-V1-DATA))
-        (asset-hash (get asset-hash v1-token-info))
-        (metadata-url (get meta-data-url v1-token-info))
-        )
-        (ok (map-set nft-data
-            nftIndex
-            {asset-hash: asset-hash, metadata-url: metadata-url}
-        ))
-    )
-)
-
-(define-read-only (get-mint-pass-balance (account principal))
-    (default-to u0
-        (map-get? mint-pass account))
-)
-
 (define-public (mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
     (let 
         (
@@ -190,7 +162,6 @@
             (mintPrice (var-get mint-price))
             (mintPassBalance (get-mint-pass-balance contract-caller))
         )
-        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
         (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
         (asserts! (> u0 mintPassBalance) ERR-MINT-PASS-LIMIT-REACHED)
 
@@ -203,22 +174,10 @@
     )
 )
 
-;; (define-public (admin-mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
-;;     (let 
-;;         (
-;;             (mintCounter (var-get mint-counter))
-;;         )
-;;         ;; only admin can mint now since public sale over
-;;         (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
-;;         (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
 
-;;         (map-insert nft-data mintCounter {asset-hash: assetHash, metadata-url: metadataUrl})
-
-;;         (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
-;;         (var-set mint-counter (+ mintCounter u1))
-;;         (ok true)
-;;     )
-;; )
+(define-public (batch-mint-token (entries (list 20 {assetHash: (buff 32), metadataUrl: (string-ascii 256)})))
+    (ok (fold mint-token-helper entries true))
+)
 
 ;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
 (define-public (admin-mint-airdrop (recipient principal) (nftIndex uint))
@@ -235,6 +194,10 @@
         (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
         (ok (map-set mint-pass account limit))
     )
+)
+
+(define-public (batch-set-mint-pass (entries (list 200 {account: principal, limit: uint})))
+    (ok (fold set-mint-pass-helper entries true))
 )
 
 (define-public (update-metadata-url (nftIndex uint) (newMetadataUrl (string-ascii 256)))
@@ -254,6 +217,7 @@
     )
 )
 
+;; marketplace function
 (define-public (list-item (nftIndex uint) (amount uint))
     (begin 
         (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
@@ -261,6 +225,7 @@
     )
 )
 
+;; marketplace function
 (define-public (unlist-item (nftIndex uint))
     (begin 
         (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
@@ -268,6 +233,7 @@
     )
 )
 
+;; marketplace function
 (define-public (buy-now (nftIndex uint))
     (let 
         (
@@ -280,6 +246,17 @@
         (try! (nft-transfer? crashpunks-v2 nftIndex owner buyer))
         (map-delete nft-market nftIndex)
         (ok true)
+    )
+)
+
+(define-public (burn (nftIndex uint))
+    (let 
+        (
+            (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-NOT-OWNER))
+        )
+        (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
+        (map-delete nft-market nftIndex)
+        (nft-burn? crashpunks-v2 nftIndex contract-caller)
     )
 )
 
@@ -302,12 +279,35 @@
     )
 )
 
+;; read only methods
 (define-read-only (get-token-data-by-index (nftIndex uint))
     (ok (map-get? nft-data nftIndex))
 )
 
 (define-read-only (get-token-market-by-index (nftIndex uint))
     (ok (map-get? nft-market nftIndex))
+)
+
+(define-read-only (get-mint-pass-balance (account principal))
+    (default-to u0
+        (map-get? mint-pass account)
+    )
+)
+
+
+;; private methods
+(define-private (copy-data-from-v1 (nftIndex uint))
+    (let (
+        (v1-all-data (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-token-by-index nftIndex) ERR-COULDNT-GET-V1-DATA) ERR-COULDNT-GET-V1-DATA))
+        (v1-token-info (unwrap! (get tokenInfo v1-all-data) ERR-COULDNT-GET-V1-DATA))
+        (asset-hash (get asset-hash v1-token-info))
+        (metadata-url (get meta-data-url v1-token-info))
+        )
+        (ok (map-set nft-data
+            nftIndex
+            {asset-hash: asset-hash, metadata-url: metadata-url}
+        ))
+    )
 )
 
 (define-private (paymint-split (nftIndex uint) (mintPrice uint) (payer principal)) 
@@ -364,6 +364,14 @@
         )
         (ok u0)
     )
+)
+
+(define-private (mint-token-helper (entry {assetHash: (buff 32), metadataUrl: (string-ascii 256)}) (initial-value bool))
+    (unwrap-panic (mint-token (get assetHash entry) (get metadataUrl entry)))
+)
+
+(define-private (set-mint-pass-helper (entry {account: principal, limit: uint}) (initial-value bool))
+    (unwrap-panic (set-mint-pass (get account entry) (get limit entry)))
 )
 
 ;; TODO: add all whitelists

@@ -111,6 +111,75 @@ export class CrashPunksV2Client {
     );
   }
 
+  mintToken(assetHash: ArrayBuffer, metadataUrl: string, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "mint-token",
+      [types.buff(assetHash), types.buff(metadataUrl)],
+      sender
+    );
+  }
+
+  batchMintToken(
+    entries: Array<{ assetHash: ArrayBuffer; metadataUrl: string }>,
+    sender: string
+  ): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "batch-mint-token",
+      [
+        types.list(
+          entries.map((entry) =>
+            types.tuple({
+              assetHash: entry.assetHash,
+              metadataUrl: entry.metadataUrl,
+            })
+          )
+        ),
+      ],
+      sender
+    );
+  }
+
+  batchSetMintPass(
+    entries: Array<{ account: string; limit: string }>,
+    sender: string
+  ): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "batch-set-mint-pass",
+      [
+        types.list(
+          entries.map((entry) =>
+            types.tuple({
+              account: entry.account,
+              limit: entry.limit,
+            })
+          )
+        ),
+      ],
+      sender
+    );
+  }
+
+  adminMintAirdrop(recipient: string, nftIndex: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "admin-mint-airdrop",
+      [types.principal(recipient), types.uint(nftIndex)],
+      sender
+    );
+  }
+
+  setMintPass(account: string, limit: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "set-mint-pass",
+      [types.principal(account), types.uint(limit)],
+      sender
+    );
+  }
+
   updateMetadataUrl(
     nftIndex: number,
     newMetadataUrl: string,
@@ -146,6 +215,15 @@ export class CrashPunksV2Client {
     return Tx.contractCall(
       this.contractName,
       "buy-now",
+      [types.uint(nftIndex)],
+      sender
+    );
+  }
+
+  burn(nftIndex: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "burn",
       [types.uint(nftIndex)],
       sender
     );
@@ -197,6 +275,12 @@ export class CrashPunksV2Client {
   getTokenMarketByIndex(nftIndex: number): ReadOnlyFn {
     return this.callReadOnlyFn("get-token-market-by-index", [
       types.uint(nftIndex),
+    ]);
+  }
+
+  getMintPassBalance(account: string): ReadOnlyFn {
+    return this.callReadOnlyFn("get-mint-pass-balance", [
+      types.principal(account),
     ]);
   }
 }
