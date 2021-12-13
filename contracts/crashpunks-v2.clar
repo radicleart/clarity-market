@@ -155,6 +155,10 @@
     )
 )
 
+(define-public (batch-upgrade-v1-to-v2 (entries (list 200 uint)))
+    (ok (fold upgrade-v1-to-v2-helper entries u0))
+)
+
 (define-public (mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
     (let 
         (
@@ -173,7 +177,6 @@
         (ok true)
     )
 )
-
 
 (define-public (batch-mint-token (entries (list 20 {assetHash: (buff 32), metadataUrl: (string-ascii 256)})))
     (ok (fold mint-token-helper entries true))
@@ -364,6 +367,10 @@
         )
         (ok u0)
     )
+)
+
+(define-private (upgrade-v1-to-v2-helper (nftIndex uint) (initial-value uint))
+    (unwrap-panic (upgrade-v1-to-v2 nftIndex))
 )
 
 (define-private (mint-token-helper (entry {assetHash: (buff 32), metadataUrl: (string-ascii 256)}) (initial-value bool))

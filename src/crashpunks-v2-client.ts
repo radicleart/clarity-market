@@ -111,6 +111,15 @@ export class CrashPunksV2Client {
     );
   }
 
+  batchUpgradeV1ToV2(entries: number[], sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "batch-upgrade-v1-to-v2",
+      [types.list(entries.map((nftIndex) => types.uint(nftIndex)))],
+      sender
+    );
+  }
+
   mintToken(assetHash: ArrayBuffer, metadataUrl: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
