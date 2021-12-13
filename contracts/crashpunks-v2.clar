@@ -283,11 +283,11 @@
 
 ;; read only methods
 (define-read-only (get-token-data-by-index (nftIndex uint))
-    (ok (map-get? nft-data nftIndex))
+    (map-get? nft-data nftIndex)
 )
 
 (define-read-only (get-token-market-by-index (nftIndex uint))
-    (ok (map-get? nft-market nftIndex))
+    (map-get? nft-market nftIndex)
 )
 
 (define-read-only (get-mint-pass-balance (account principal))
@@ -345,7 +345,6 @@
         (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u7) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u7) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
         (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u8) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u8) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
         (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u9) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u9) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        ;; (print {evt: "payment-split", nftIndex: nftIndex, saleCycle: saleCycle, payer: payer, saleAmount: saleAmount, txSender: tx-sender})
         (ok split)
     )
 )
@@ -361,7 +360,6 @@
                 (try! (stx-transfer? split payer payee))
                 true
             )
-            ;; (print {evt: "pay-royalty-primary", payee: payee, payer: payer, saleAmount: saleAmount, share: share, split: split, txSender: tx-sender})
             (ok split)
         )
         (ok u0)

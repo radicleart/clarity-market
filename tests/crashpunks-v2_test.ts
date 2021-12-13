@@ -210,8 +210,7 @@ Clarinet.test({
     // get new v2 info
     const v2Info: any = clientV2
       .getTokenDataByIndex(0)
-      .result.expectOk()
-      .expectSome()
+      .result.expectSome()
       .expectTuple();
     assertEquals(v2Info["asset-hash"], assetHashV1);
     assertEquals(v2Info["metadata-url"], metadataUrlV1);
@@ -235,7 +234,7 @@ Clarinet.test({
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+    clientV2.getTokenMarketByIndex(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
@@ -245,18 +244,14 @@ Clarinet.test({
 
     // check is listed
     assertEquals(
-      clientV2
-        .getTokenMarketByIndex(0)
-        .result.expectOk()
-        .expectSome()
-        .expectTuple(),
+      clientV2.getTokenMarketByIndex(0).result.expectSome().expectTuple(),
       { price: types.uint(100000000) }
     );
 
     // unlist
     block = chain.mineBlock([clientV2.unlistItem(0, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+    clientV2.getTokenMarketByIndex(0).result.expectNone();
   },
 });
 
@@ -280,7 +275,7 @@ Clarinet.test({
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+    clientV2.getTokenMarketByIndex(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
@@ -288,11 +283,7 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     assertEquals(
-      clientV2
-        .getTokenMarketByIndex(0)
-        .result.expectOk()
-        .expectSome()
-        .expectTuple(),
+      clientV2.getTokenMarketByIndex(0).result.expectSome().expectTuple(),
       { price: types.uint(100000000) }
     );
 
@@ -351,7 +342,7 @@ Clarinet.test({
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+    clientV2.getTokenMarketByIndex(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
@@ -359,18 +350,14 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     assertEquals(
-      clientV2
-        .getTokenMarketByIndex(0)
-        .result.expectOk()
-        .expectSome()
-        .expectTuple(),
+      clientV2.getTokenMarketByIndex(0).result.expectSome().expectTuple(),
       { price: types.uint(100000000) }
     );
 
     // unlist
     block = chain.mineBlock([clientV2.unlistItem(0, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+    clientV2.getTokenMarketByIndex(0).result.expectNone();
 
     // wallet 2 trying to buy should fail
     block = chain.mineBlock([clientV2.buyNow(0, wallet2.address)]);
@@ -398,7 +385,7 @@ Clarinet.test({
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+    clientV2.getTokenMarketByIndex(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
@@ -406,11 +393,7 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     assertEquals(
-      clientV2
-        .getTokenMarketByIndex(0)
-        .result.expectOk()
-        .expectSome()
-        .expectTuple(),
+      clientV2.getTokenMarketByIndex(0).result.expectSome().expectTuple(),
       { price: types.uint(100000000) }
     );
 
