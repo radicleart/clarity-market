@@ -6,7 +6,8 @@
 ;; contract variables
 
 (define-data-var administrator principal 'SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6)
-(define-data-var mint-price uint u1000)
+;; 50 stx
+(define-data-var mint-price uint u50000000)
 
 ;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK OFF BY 1 ERROR
 (define-data-var mint-counter uint u5721)
@@ -30,7 +31,7 @@
 
 (define-constant token-name "crashpunks-v2")
 (define-constant token-symbol "CPS-v2")
-(define-constant collection-max-supply u9216)
+(define-constant COLLECTION-MAX-SUPPLY u9216)
 
 (define-constant ERR-NFT-DATA-NOT-FOUND (err u101))
 (define-constant ERR-COULDNT-GET-V1-DATA (err u102))
@@ -39,6 +40,8 @@
 (define-constant ERR-NFT-NOT-LISTED-FOR-SALE (err u105))
 (define-constant ERR-PAYMENT-ADDRESS (err u106))
 (define-constant ERR-NFT-LISTED (err u107))
+(define-constant ERR-COLLECTION-LIMIT-REACHED (err u108))
+
 
 (define-constant ERR-NOT-AUTHORIZED (err u401))
 (define-constant ERR-NOT-OWNER (err u402))
@@ -78,7 +81,6 @@
 ;; SIP-09: Transfer
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
     (begin
-        ;; TODO: update these assertions
         ;; (asserts! (and (is-owner-or-approval id owner) (is-owner-or-approval id contract-caller)) (err ERR-NOT-AUTHORIZED))
         (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (asserts! (is-none (map-get? nft-market nftIndex)) ERR-NFT-LISTED)
@@ -138,7 +140,7 @@
 ;; 3. Copy the v1 data to v2
 ;; 4. This contract burns the v1 NFT
 (define-public (upgrade-v1-to-v2 (nftIndex uint))
-    ;; TODO: UPDATE V1 CONTRACT TO MAINNET CONTRACT
+    ;; TODO: MAKE SURE THESE CONTRACT CALLS WORK, MAKE SURE THE CONRACT ADDRESSES WORKS FOR MAINNET
     (begin 
         ;; assert contract caller owns the v1 NFT at this nftIndex
         (asserts! (is-eq contract-caller (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-owner nftIndex) (err u1001)) (err u1000))) ERR-NOT-V1-OWNER)
@@ -172,13 +174,39 @@
     )
 )
 
+(define-public (admin-mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
+    (let 
+        (
+            (mintCounter (var-get mint-counter))
+        )
+        ;; only admin can mint now since public sale over
+        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
+        (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
+
+        (map-insert nft-data mintCounter {asset-hash: assetHash, metadata-url: metadataUrl})
+
+        (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
+        (var-set mint-counter (+ mintCounter u1))
+        (ok true)
+    )
+)
+
+;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
+(define-public (admin-mint-airdrop (recipient principal) (nftIndex uint))
+    (begin
+        (asserts! (< nftIndex COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
+        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-AUTHORIZED)
+        (try! (nft-mint? crashpunks-v2 nftIndex recipient))
+        (ok true)
+    )
+)
+
 (define-public (update-metadata-url (nftIndex uint) (newMetadataUrl (string-ascii 256)))
     (let
         (
             (data (unwrap! (map-get? nft-data nftIndex) ERR-NFT-DATA-NOT-FOUND))
         )
-        ;; TODO: update these assertions
-        ;; (asserts! (unwrap! (is-approved nftIndex (unwrap! (nft-get-owner? crashpunks nftIndex) not-allowed)) not-allowed) not-allowed)
+        (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (ok (map-set nft-data
             nftIndex 
             (merge data
@@ -209,7 +237,7 @@
         (
             (ahash (unwrap! (get asset-hash (map-get? nft-data nftIndex)) ERR-ASSET-NOT-REGISTERED))
             (price (unwrap! (get price (map-get? nft-market nftIndex)) ERR-NFT-NOT-LISTED-FOR-SALE))
-            (owner (unwrap! (unwrap! (get-owner nftIndex) ERR-COULDNT-GET-NFT-OWNER) ERR-COULDNT-GET-NFT-OWNER))
+            (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
         )
         (try! (payment-split nftIndex price contract-caller))
