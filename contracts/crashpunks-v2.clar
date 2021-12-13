@@ -24,6 +24,10 @@
 ;; percent royalty fee each address receives
 (define-data-var collection-royalty-shares (list 10 uint) (list))
 
+;; TODO: update this
+(define-data-var base-uri (string-ascii 80) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}")
+(define-data-var metadata-frozen bool false)
+
 ;; constants
 (define-constant percentage-with-twodp u10000000000)
 
@@ -31,10 +35,9 @@
 (define-constant token-symbol "CPS-v2")
 (define-constant COLLECTION-MAX-SUPPLY u9216)
 
-(define-constant ERR-NFT-DATA-NOT-FOUND (err u101))
+(define-constant ERR-METADATA-FROZEN (err u101))
 (define-constant ERR-COULDNT-GET-V1-DATA (err u102))
 (define-constant ERR-COULDNT-GET-NFT-OWNER (err u103))
-(define-constant ERR-ASSET-NOT-REGISTERED (err u104))
 (define-constant ERR-NFT-NOT-LISTED-FOR-SALE (err u105))
 (define-constant ERR-PAYMENT-ADDRESS (err u106))
 (define-constant ERR-NFT-LISTED (err u107))
@@ -57,9 +60,6 @@
 (define-map approvals {owner: principal, operator: principal, nft-index: uint} bool)
 (define-map approvals-all {owner: principal, operator: principal} bool)
 
-;; nftIndex -> {assetHash, metadataUrl}
-(define-map nft-data uint {asset-hash: (buff 32), metadata-url: (string-ascii 256) })
-
 ;; nftIndex -> price (in ustx)
 ;; if nftIndex is not in map, it is not listed for sale
 (define-map nft-market uint {price: uint})
@@ -73,8 +73,8 @@
 )
 
 ;; SIP-09: URI for metadata associated with the token
-(define-read-only (get-token-uri (nftIndex uint))
-  (ok (get metadata-url (map-get? nft-data nftIndex)))
+(define-read-only (get-token-uri (id uint))
+    (ok (some (var-get base-uri)))
 )
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
@@ -116,8 +116,7 @@
 ;; Owner of crashpunks v1 calls this upgrade function
 ;; 1. Transfers v1 NFT to this contract
 ;; 2. This contract mints the v2 NFT with the same nftIndex for contract-caller
-;; 3. Copy the v1 data to v2
-;; 4. This contract burns the v1 NFT
+;; 3. This contract burns the v1 NFT
 (define-public (upgrade-v1-to-v2 (nftIndex uint))
     ;; TODO: MAKE SURE THESE CONTRACT CALLS WORK, MAKE SURE THE CONRACT ADDRESSES WORKS FOR MAINNET
     (begin 
@@ -130,10 +129,7 @@
         ;; 2. Mint the v2 NFT with the same nftIndex for contract-caller
         (try! (nft-mint? crashpunks-v2 nftIndex contract-caller))
 
-        ;; 3. Copy v1 data to v2
-        (try! (copy-data-from-v1 nftIndex))
-
-        ;; 4. Burn the v1 NFT
+        ;; 3. Burn the v1 NFT
         (try! (contract-call? .crashpunks-v1 burn nftIndex (as-contract tx-sender)))
         (ok nftIndex)
     )
@@ -143,7 +139,7 @@
     (ok (fold upgrade-v1-to-v2-helper entries u0))
 )
 
-(define-public (mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
+(define-public (mint-token)
     (let (
             (mintCounter (var-get mint-counter))
             (mintPrice (var-get mint-price))
@@ -151,8 +147,6 @@
         )
         (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
         (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
-
-        (map-insert nft-data mintCounter {asset-hash: assetHash, metadata-url: metadataUrl})
 
         (try! (paymint-split mintCounter mintPrice contract-caller))
         (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
@@ -162,7 +156,8 @@
     )
 )
 
-(define-public (batch-mint-token (entries (list 20 {assetHash: (buff 32), metadataUrl: (string-ascii 256)})))
+;; only size of list matters, content of list doesn't matter
+(define-public (batch-mint-token (entries (list 20 uint)))
     (ok (fold mint-token-helper entries true))
 )
 
@@ -187,20 +182,6 @@
     (ok (fold set-mint-pass-helper entries true))
 )
 
-(define-public (update-metadata-url (nftIndex uint) (newMetadataUrl (string-ascii 256)))
-    (let ((data (unwrap! (map-get? nft-data nftIndex) ERR-NFT-DATA-NOT-FOUND)))
-        (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
-        (ok (map-set nft-data
-            nftIndex 
-            (merge data
-                {
-                    metadata-url: newMetadataUrl
-                }
-            )
-        ))
-    )
-)
-
 ;; marketplace function
 (define-public (list-item (nftIndex uint) (amount uint))
     (begin 
@@ -221,7 +202,6 @@
 (define-public (buy-now (nftIndex uint))
     (let 
         (
-            (ahash (unwrap! (get asset-hash (map-get? nft-data nftIndex)) ERR-ASSET-NOT-REGISTERED))
             (price (unwrap! (get price (map-get? nft-market nftIndex)) ERR-NFT-NOT-LISTED-FOR-SALE))
             (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
@@ -260,11 +240,23 @@
     )
 )
 
-;; read only methods
-(define-read-only (get-token-data-by-index (nftIndex uint))
-    (map-get? nft-data nftIndex)
+(define-public (set-base-uri (new-base-uri (string-ascii 80)))
+    (begin
+        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-AUTHORIZED)
+        (asserts! (not (var-get metadata-frozen)) ERR-METADATA-FROZEN)
+        (var-set base-uri new-base-uri)
+        (ok true))
 )
 
+(define-public (freeze-metadata)
+    (begin
+        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-AUTHORIZED)
+        (var-set metadata-frozen true)
+        (ok true)
+    )
+)
+
+;; read only methods
 (define-read-only (get-token-market-by-index (nftIndex uint))
     (map-get? nft-market nftIndex)
 )
@@ -284,20 +276,6 @@
             (map-get? approvals-all {owner: owner, operator: operator})
         )
         (map-get? approvals {owner: owner, operator: operator, nft-index: nftIndex})
-    )
-)
-
-(define-private (copy-data-from-v1 (nftIndex uint))
-    (let (
-        (v1-all-data (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-token-by-index nftIndex) ERR-COULDNT-GET-V1-DATA) ERR-COULDNT-GET-V1-DATA))
-        (v1-token-info (unwrap! (get tokenInfo v1-all-data) ERR-COULDNT-GET-V1-DATA))
-        (asset-hash (get asset-hash v1-token-info))
-        (metadata-url (get meta-data-url v1-token-info))
-        )
-        (ok (map-set nft-data
-            nftIndex
-            {asset-hash: asset-hash, metadata-url: metadata-url}
-        ))
     )
 )
 
@@ -354,8 +332,8 @@
     (unwrap-panic (upgrade-v1-to-v2 nftIndex))
 )
 
-(define-private (mint-token-helper (entry {assetHash: (buff 32), metadataUrl: (string-ascii 256)}) (initial-value bool))
-    (unwrap-panic (mint-token (get assetHash entry) (get metadataUrl entry)))
+(define-private (mint-token-helper (entry uint) (initial-value bool))
+    (unwrap-panic (mint-token))
 )
 
 (define-private (set-mint-pass-helper (entry {account: principal, limit: uint}) (initial-value bool))

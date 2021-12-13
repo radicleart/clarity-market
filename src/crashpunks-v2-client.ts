@@ -124,32 +124,15 @@ export class CrashPunksV2Client {
     );
   }
 
-  mintToken(assetHash: ArrayBuffer, metadataUrl: string, sender: string): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "mint-token",
-      [types.buff(assetHash), types.ascii(metadataUrl)],
-      sender
-    );
+  mintToken(sender: string): Tx {
+    return Tx.contractCall(this.contractName, "mint-token", [], sender);
   }
 
-  batchMintToken(
-    entries: Array<{ assetHash: ArrayBuffer; metadataUrl: string }>,
-    sender: string
-  ): Tx {
+  batchMintToken(entries: number[], sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "batch-mint-token",
-      [
-        types.list(
-          entries.map((entry) =>
-            types.tuple({
-              assetHash: entry.assetHash,
-              metadataUrl: entry.metadataUrl,
-            })
-          )
-        ),
-      ],
+      [types.list(entries.map((entry) => types.uint(entry)))],
       sender
     );
   }
@@ -277,12 +260,6 @@ export class CrashPunksV2Client {
       ],
       sender
     );
-  }
-
-  getTokenDataByIndex(nftIndex: number): ReadOnlyFn {
-    return this.callReadOnlyFn("get-token-data-by-index", [
-      types.uint(nftIndex),
-    ]);
   }
 
   getTokenMarketByIndex(nftIndex: number): ReadOnlyFn {

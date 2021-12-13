@@ -148,19 +148,6 @@ const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
       wallet1.address
     ),
   ]);
-  let tokenInfo = (
-    clientV1
-      .getTokenByIndex(0)
-      .result.expectOk()
-      .expectOk()
-      .expectTuple() as any
-  )["tokenInfo"]
-    .expectSome()
-    .expectTuple();
-  return {
-    assetHashV1: tokenInfo["asset-hash"],
-    metadataUrlV1: tokenInfo["meta-data-url"],
-  };
 };
 
 Clarinet.test({
@@ -175,8 +162,8 @@ Clarinet.test({
       clientV2,
     } = getWalletsAndClient(chain, accounts);
 
-    // mint v1 and get original v1 token info to make sure it copied to v2 correctly
-    const { assetHashV1, metadataUrlV1 } = mintV1Token(chain, accounts);
+    // mint v1 token
+    mintV1Token(chain, accounts);
 
     let block = chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
@@ -206,14 +193,6 @@ Clarinet.test({
       `${deployer.address}.crashpunks-v1`,
       "crashpunks"
     );
-
-    // get new v2 info
-    const v2Info: any = clientV2
-      .getTokenDataByIndex(0)
-      .result.expectSome()
-      .expectTuple();
-    assertEquals(v2Info["asset-hash"], assetHashV1);
-    assertEquals(v2Info["metadata-url"], metadataUrlV1);
   },
 });
 
@@ -423,9 +402,7 @@ Clarinet.test({
     setCollectionRoyalties(chain, accounts, "V2");
 
     // should fail since no mint pass
-    let block = chain.mineBlock([
-      clientV2.mintToken(hexStringToArrayBuffer(hsh), url, wallet1.address),
-    ]);
+    let block = chain.mineBlock([clientV2.mintToken(wallet1.address)]);
     block.receipts[0].result
       .expectErr()
       .expectUint(ErrCode.ERR_MINT_PASS_LIMIT_REACHED);
@@ -447,9 +424,7 @@ Clarinet.test({
     clientV2.getMintPassBalance(wallet1.address).result.expectUint(1);
 
     // wallet 1 can now mint
-    block = chain.mineBlock([
-      clientV2.mintToken(hexStringToArrayBuffer(hsh), url, wallet1.address),
-    ]);
+    block = chain.mineBlock([clientV2.mintToken(wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[0].events.expectSTXTransferEvent(
       25000000,
@@ -482,9 +457,7 @@ Clarinet.test({
     clientV2.getMintPassBalance(wallet1.address).result.expectUint(0);
 
     // check that wallet 1 can't mint again
-    block = chain.mineBlock([
-      clientV2.mintToken(hexStringToArrayBuffer(hsh), url, wallet1.address),
-    ]);
+    block = chain.mineBlock([clientV2.mintToken(wallet1.address)]);
     block.receipts[0].result
       .expectErr()
       .expectUint(ErrCode.ERR_MINT_PASS_LIMIT_REACHED);
