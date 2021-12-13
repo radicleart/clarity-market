@@ -55,6 +55,7 @@
 ;; {owner, operator, nftIndex} -> boolean
 ;; if {owner, operator, nftIndex} is in map, then operator can perform actions on behalf of owner for this nftIndex
 (define-map approvals {owner: principal, operator: principal, nft-index: uint} bool)
+(define-map approvals-all {owner: principal, operator: principal} bool)
 
 ;; nftIndex -> {assetHash, metadataUrl}
 (define-map nft-data uint {asset-hash: (buff 32), metadata-url: (string-ascii 256) })
@@ -91,37 +92,22 @@
     )
 )
 
-;; operable-trait
-(define-read-only (is-approved (nftIndex uint) (address principal))
-    (let
-        (
-            (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER))
-        )
-        (ok (or
-            (is-eq owner tx-sender)
-            (is-eq owner contract-caller)
-            (is-eq owner address)
-            (default-to false (map-get? approvals {owner: owner, operator: tx-sender, nft-index: nftIndex}))
-            (default-to false (map-get? approvals {owner: owner, operator: contract-caller, nft-index: nftIndex}))
-            (default-to false (map-get? approvals {owner: owner, operator: address, nft-index: nftIndex}))
-        ) 
-        )
+;; operable
+(define-read-only (is-approved (nftIndex uint) (operator principal))
+    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER)))
+        (ok (is-owned-or-approved nftIndex operator owner))
     )
 )
 
-;; operable-trait
+;; operable
 (define-public (set-approved (nftIndex uint) (operator principal) (approved bool))
-    (let
-        (
-            (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-NOT-OWNER))
-        )
-        (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
-        (if approved
-            (ok (map-set approvals {owner: owner, operator: operator, nft-index: nftIndex} approved))
-            (ok (map-delete approvals {owner: owner, operator: operator, nft-index: nftIndex}))
-        )
+    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER)))
+        (ok (map-set approvals {owner: contract-caller, operator: operator, nft-index: nftIndex} approved))
     )
+)
 
+(define-public (set-approved-all (operator principal) (approved bool))
+    (ok (map-set approvals-all {owner: contract-caller, operator: operator} approved))
 )
 
 ;; public methods
@@ -158,8 +144,7 @@
 )
 
 (define-public (mint-token (assetHash (buff 32)) (metadataUrl (string-ascii 256)))
-    (let 
-        (
+    (let (
             (mintCounter (var-get mint-counter))
             (mintPrice (var-get mint-price))
             (mintPassBalance (get-mint-pass-balance contract-caller))
@@ -203,10 +188,7 @@
 )
 
 (define-public (update-metadata-url (nftIndex uint) (newMetadataUrl (string-ascii 256)))
-    (let
-        (
-            (data (unwrap! (map-get? nft-data nftIndex) ERR-NFT-DATA-NOT-FOUND))
-        )
+    (let ((data (unwrap! (map-get? nft-data nftIndex) ERR-NFT-DATA-NOT-FOUND)))
         (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (ok (map-set nft-data
             nftIndex 
@@ -252,10 +234,7 @@
 )
 
 (define-public (burn (nftIndex uint))
-    (let 
-        (
-            (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-NOT-OWNER))
-        )
+    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-NOT-OWNER)))
         (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
         (map-delete nft-market nftIndex)
         (nft-burn? crashpunks-v2 nftIndex contract-caller)
@@ -298,6 +277,16 @@
 
 
 ;; private methods
+(define-private (is-owned-or-approved (nftIndex uint) (operator principal) (owner principal))
+    (default-to 
+        (default-to
+            (is-eq owner operator)
+            (map-get? approvals-all {owner: owner, operator: operator})
+        )
+        (map-get? approvals {owner: owner, operator: operator, nft-index: nftIndex})
+    )
+)
+
 (define-private (copy-data-from-v1 (nftIndex uint))
     (let (
         (v1-all-data (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-token-by-index nftIndex) ERR-COULDNT-GET-V1-DATA) ERR-COULDNT-GET-V1-DATA))
@@ -313,8 +302,7 @@
 )
 
 (define-private (paymint-split (nftIndex uint) (mintPrice uint) (payer principal)) 
-    (let 
-        (
+    (let (
             (split u0)
             (mintAddresses (var-get collection-mint-addresses))
             (mintShares (var-get collection-mint-shares))
@@ -329,8 +317,7 @@
 
 ;; TODO: update this to use a list of {address, share}, and fold 
 (define-private (payment-split (nftIndex uint) (saleAmount uint) (payer principal)) 
-    (let 
-        (
+    (let (
             (addresses (var-get collection-royalty-addresses))
             (shares (var-get collection-royalty-shares))
             (split u0)
