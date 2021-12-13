@@ -14,10 +14,14 @@ export enum ErrCode {
   ERR_NFT_NOT_LISTED_FOR_SALE = 105,
   ERR_PAYMENT_ADDRESS = 106,
   ERR_NFT_LISTED = 107,
+  ERR_COLLECTION_LIMIT_REACHED = 108,
+  ERR_MINT_PASS_LIMIT_REACHED = 109,
+  ERR_ADD_MINT_PASS = 110,
 
   ERR_NOT_AUTHORIZED = 401,
   ERR_NOT_OWNER = 402,
-  ERR_NOT_ADMINISTRATOR = 403,
+  ERR_NOT_V1_OWNER = 403,
+  ERR_NOT_ADMINISTRATOR = 404,
 }
 
 export class CrashPunksV2Client {
@@ -124,7 +128,7 @@ export class CrashPunksV2Client {
     return Tx.contractCall(
       this.contractName,
       "mint-token",
-      [types.buff(assetHash), types.buff(metadataUrl)],
+      [types.buff(assetHash), types.ascii(metadataUrl)],
       sender
     );
   }
@@ -150,6 +154,24 @@ export class CrashPunksV2Client {
     );
   }
 
+  adminMintAirdrop(recipient: string, nftIndex: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "admin-mint-airdrop",
+      [types.principal(recipient), types.uint(nftIndex)],
+      sender
+    );
+  }
+
+  setMintPass(account: string, limit: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "set-mint-pass",
+      [types.principal(account), types.uint(limit)],
+      sender
+    );
+  }
+
   batchSetMintPass(
     entries: Array<{ account: string; limit: string }>,
     sender: string
@@ -167,24 +189,6 @@ export class CrashPunksV2Client {
           )
         ),
       ],
-      sender
-    );
-  }
-
-  adminMintAirdrop(recipient: string, nftIndex: number, sender: string): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "admin-mint-airdrop",
-      [types.principal(recipient), types.uint(nftIndex)],
-      sender
-    );
-  }
-
-  setMintPass(account: string, limit: number, sender: string): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "set-mint-pass",
-      [types.principal(account), types.uint(limit)],
       sender
     );
   }

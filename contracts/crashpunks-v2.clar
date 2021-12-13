@@ -165,7 +165,7 @@
             (mintPassBalance (get-mint-pass-balance contract-caller))
         )
         (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
-        (asserts! (> u0 mintPassBalance) ERR-MINT-PASS-LIMIT-REACHED)
+        (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
 
         (map-insert nft-data mintCounter {asset-hash: assetHash, metadata-url: metadataUrl})
 
