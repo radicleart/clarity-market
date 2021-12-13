@@ -8,7 +8,7 @@ import {
 import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
 import { formatBuffString, hexStringToArrayBuffer } from "../src/utils.ts";
 import { CrashPunksV1Client } from "../src/crashpunks-v1-client.ts";
-import { CrashPunksV2Client } from "../src/crashpunks-v2-client.ts";
+import { CrashPunksV2Client, ErrCode } from "../src/crashpunks-v2-client.ts";
 
 const getWalletsAndClient = (
   chain: Chain,
@@ -63,6 +63,8 @@ const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
     wallet1,
     wallet2,
     wallet3,
+    wallet4,
+    wallet5,
     newAdministrator,
     clientV1,
   } = getWalletsAndClient(chain, accounts);
@@ -79,24 +81,28 @@ const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
   const newMintAddresses = [
     wallet2.address,
     wallet3.address,
-    wallet3.address,
-    wallet3.address,
+    wallet4.address,
+    wallet5.address,
   ];
-  const newMintShares = [9000000000, 1000000000, 0, 0];
+  const newMintShares = [5000000000, 4000000000, 2000000000, 1000000000];
   const newAddresses = [
     wallet2.address,
     wallet3.address,
+    wallet4.address,
+    wallet5.address,
+    wallet2.address,
     wallet3.address,
-    wallet3.address,
-    wallet3.address,
-    wallet3.address,
-    wallet3.address,
-    wallet3.address,
-    wallet3.address,
+    wallet4.address,
+    wallet5.address,
+    wallet2.address,
     wallet3.address,
   ];
-  const newShares = [9000000000, 1000000000, 0, 0];
-  const newSecondaries = [9000000000, 1000000000, 0, 0];
+  const newShares = [
+    5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
+  ];
+  const newSecondaries = [
+    5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
+  ];
 
   // the testing for this is done in loopbomb_test
   chain.mineBlock([
@@ -181,11 +187,246 @@ Clarinet.test({
 
     // get new v2 info
     const v2Info: any = clientV2
-      .getTokenByIndex(0)
+      .getTokenDataByIndex(0)
       .result.expectOk()
       .expectSome()
       .expectTuple();
     assertEquals(v2Info["asset-hash"], assetHashV1);
-    assertEquals(v2Info["meta-data-url"], metadataUrlV1);
+    assertEquals(v2Info["metadata-url"], metadataUrlV1);
+  },
+});
+
+Clarinet.test({
+  name: "CrashpunksV2 - Ensure can list and unlist by owner",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      newAdministrator,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
+
+    // mint and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+    // shouldn't be listed
+    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+
+    // list for 100 stx
+    let block = chain.mineBlock([
+      clientV2.listItem(0, 100000000, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    // console.log(
+    assertEquals(
+      clientV2
+        .getTokenMarketByIndex(0)
+        .result.expectOk()
+        .expectSome()
+        .expectTuple(),
+      { price: types.uint(100000000) }
+    );
+
+    // unlist
+    block = chain.mineBlock([clientV2.unlistItem(0, wallet1.address)]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+  },
+});
+
+Clarinet.test({
+  name: "CrashpunksV2 - Ensure can NFT be listed and bought",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      wallet3,
+      wallet4,
+      wallet5,
+      newAdministrator,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
+
+    // mint and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+    // shouldn't be listed
+    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+
+    // list for 100 stx
+    let block = chain.mineBlock([
+      clientV2.listItem(0, 100000000, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    assertEquals(
+      clientV2
+        .getTokenMarketByIndex(0)
+        .result.expectOk()
+        .expectSome()
+        .expectTuple(),
+      { price: types.uint(100000000) }
+    );
+
+    const newMintAddresses = [
+      wallet2.address,
+      wallet3.address,
+      wallet4.address,
+      wallet5.address,
+    ];
+    const newMintShares = [5000000000, 4000000000, 2000000000, 1000000000];
+    const newRoyaltyAddresses = [
+      wallet2.address, // this will be ignored, nftowner is always the first index in the contract
+      wallet3.address,
+      wallet4.address,
+      wallet5.address,
+      wallet2.address,
+      wallet3.address,
+      wallet4.address,
+      wallet5.address,
+      wallet2.address,
+      wallet3.address,
+    ];
+    const newRoyaltyShares = [
+      5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
+    ];
+
+    block = chain.mineBlock([
+      clientV2.setCollectionRoyalties(
+        newMintAddresses,
+        newMintShares,
+        newRoyaltyAddresses,
+        newRoyaltyShares,
+        administrator.address
+      ),
+      clientV2.buyNow(0, wallet2.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectOk().expectBool(true);
+
+    block.receipts[1].events.expectSTXTransferEvent(
+      50000000,
+      wallet2.address,
+      wallet1.address
+    );
+
+    block.receipts[1].events.expectSTXTransferEvent(
+      40000000,
+      wallet2.address,
+      wallet3.address
+    );
+
+    block.receipts[1].events.expectSTXTransferEvent(
+      20000000,
+      wallet2.address,
+      wallet4.address
+    );
+
+    block.receipts[1].events.expectSTXTransferEvent(
+      10000000,
+      wallet2.address,
+      wallet5.address
+    );
+
+    block.receipts[1].events.expectNonFungibleTokenTransferEvent(
+      "u0",
+      wallet1.address,
+      wallet2.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+  },
+});
+
+Clarinet.test({
+  name: "CrashpunksV2 - Ensure NFT can't be bought when unlisted",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      newAdministrator,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
+
+    // mint and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+    // shouldn't be listed
+    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+
+    // list for 100 stx
+    let block = chain.mineBlock([
+      clientV2.listItem(0, 100000000, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    assertEquals(
+      clientV2
+        .getTokenMarketByIndex(0)
+        .result.expectOk()
+        .expectSome()
+        .expectTuple(),
+      { price: types.uint(100000000) }
+    );
+
+    // unlist
+    block = chain.mineBlock([clientV2.unlistItem(0, wallet1.address)]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+
+    // wallet 2 trying to buy should fail
+    block = chain.mineBlock([clientV2.buyNow(0, wallet2.address)]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_NFT_NOT_LISTED_FOR_SALE);
+  },
+});
+
+Clarinet.test({
+  name: "CrashpunksV2 - Ensure NFT can't be transferred when listed",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      wallet3,
+      newAdministrator,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
+
+    // mint and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+    // shouldn't be listed
+    clientV2.getTokenMarketByIndex(0).result.expectOk().expectNone();
+
+    // list for 100 stx
+    let block = chain.mineBlock([
+      clientV2.listItem(0, 100000000, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    assertEquals(
+      clientV2
+        .getTokenMarketByIndex(0)
+        .result.expectOk()
+        .expectSome()
+        .expectTuple(),
+      { price: types.uint(100000000) }
+    );
+
+    // wallet 1 trying to transfer should fail
+    block = chain.mineBlock([
+      clientV2.transfer(0, wallet1.address, wallet2.address, wallet1.address),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NFT_LISTED);
   },
 });

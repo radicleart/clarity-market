@@ -8,6 +8,13 @@ import {
 
 export enum ErrCode {
   ERR_NFT_DATA_NOT_FOUND = 101,
+  ERR_COULDNT_GET_V1_DATA = 102,
+  ERR_COULDNT_GET_NFT_OWNER = 103,
+  ERR_ASSET_NOT_REGISTERED = 104,
+  ERR_NFT_NOT_LISTED_FOR_SALE = 105,
+  ERR_PAYMENT_ADDRESS = 106,
+  ERR_NFT_LISTED = 107,
+
   ERR_NOT_AUTHORIZED = 401,
   ERR_NOT_OWNER = 402,
   ERR_NOT_ADMINISTRATOR = 403,
@@ -117,6 +124,33 @@ export class CrashPunksV2Client {
     );
   }
 
+  listItem(nftIndex: number, amount: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "list-item",
+      [types.uint(nftIndex), types.uint(amount)],
+      sender
+    );
+  }
+
+  unlistItem(nftIndex: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "unlist-item",
+      [types.uint(nftIndex)],
+      sender
+    );
+  }
+
+  buyNow(nftIndex: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "buy-now",
+      [types.uint(nftIndex)],
+      sender
+    );
+  }
+
   transferAdministrator(newAdministrator: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
@@ -126,7 +160,43 @@ export class CrashPunksV2Client {
     );
   }
 
-  getTokenByIndex(nftIndex: number): ReadOnlyFn {
-    return this.callReadOnlyFn("get-token-by-index", [types.uint(nftIndex)]);
+  setCollectionRoyalties(
+    newMintAddresses: string[],
+    newMintShares: number[],
+    newRoyaltyAddresses: string[],
+    newRoyaltyShares: number[],
+    sender: string
+  ) {
+    return Tx.contractCall(
+      this.contractName,
+      "set-collection-royalties",
+      [
+        types.list(
+          newMintAddresses.map((newMintAddress) =>
+            types.principal(newMintAddress)
+          )
+        ),
+        types.list(
+          newMintShares.map((newMintShare) => types.uint(newMintShare))
+        ),
+        types.list(
+          newRoyaltyAddresses.map((newAddress) => types.principal(newAddress))
+        ),
+        types.list(newRoyaltyShares.map((newShare) => types.uint(newShare))),
+      ],
+      sender
+    );
+  }
+
+  getTokenDataByIndex(nftIndex: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-token-data-by-index", [
+      types.uint(nftIndex),
+    ]);
+  }
+
+  getTokenMarketByIndex(nftIndex: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-token-market-by-index", [
+      types.uint(nftIndex),
+    ]);
   }
 }

@@ -657,6 +657,7 @@ Clarinet.test({
     const newSecondaries = [
       5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
     ];
+
     let block = chain.mineBlock([
       client.setCollectionRoyalties(
         newMintAddresses,
