@@ -92,7 +92,7 @@
 )
 
 ;; operable-trait
-(define-read-only (is-approved (nftIndex uint))
+(define-read-only (is-approved (nftIndex uint) (address principal))
     (let
         (
             (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER))
@@ -100,8 +100,10 @@
         (ok (or
             (is-eq owner tx-sender)
             (is-eq owner contract-caller)
+            (is-eq owner address)
             (default-to false (map-get? approvals {owner: owner, operator: tx-sender, nft-index: nftIndex}))
             (default-to false (map-get? approvals {owner: owner, operator: contract-caller, nft-index: nftIndex}))
+            (default-to false (map-get? approvals {owner: owner, operator: address, nft-index: nftIndex}))
         ) 
         )
     )
