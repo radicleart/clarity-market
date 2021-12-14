@@ -7,10 +7,10 @@ import {
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 
 export enum ErrCode {
-  ERR_NFT_DATA_NOT_FOUND = 101,
+  ERR_METADATA_FROZEN = 101,
   ERR_COULDNT_GET_V1_DATA = 102,
   ERR_COULDNT_GET_NFT_OWNER = 103,
-  ERR_ASSET_NOT_REGISTERED = 104,
+  ERR_PRICE_WAS_ZERO = 104,
   ERR_NFT_NOT_LISTED_FOR_SALE = 105,
   ERR_PAYMENT_ADDRESS = 106,
   ERR_NFT_LISTED = 107,
@@ -106,6 +106,15 @@ export class CrashPunksV2Client {
     );
   }
 
+  setApprovedAll(operator: string, approved: boolean, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "set-approved-all",
+      [types.principal(operator), types.bool(approved)],
+      sender
+    );
+  }
+
   upgradeV1ToV2(nftIndex: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
@@ -156,7 +165,7 @@ export class CrashPunksV2Client {
   }
 
   batchSetMintPass(
-    entries: Array<{ account: string; limit: string }>,
+    entries: Array<{ account: string; limit: number }>,
     sender: string
   ): Tx {
     return Tx.contractCall(
@@ -166,25 +175,12 @@ export class CrashPunksV2Client {
         types.list(
           entries.map((entry) =>
             types.tuple({
-              account: entry.account,
-              limit: entry.limit,
+              account: types.principal(entry.account),
+              limit: types.uint(entry.limit),
             })
           )
         ),
       ],
-      sender
-    );
-  }
-
-  updateMetadataUrl(
-    nftIndex: number,
-    newMetadataUrl: string,
-    sender: string
-  ): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "update-metadata-url",
-      [types.uint(nftIndex), types.ascii(newMetadataUrl)],
       sender
     );
   }
@@ -240,7 +236,7 @@ export class CrashPunksV2Client {
     newRoyaltyAddresses: string[],
     newRoyaltyShares: number[],
     sender: string
-  ) {
+  ): Tx {
     return Tx.contractCall(
       this.contractName,
       "set-collection-royalties",
@@ -260,6 +256,19 @@ export class CrashPunksV2Client {
       ],
       sender
     );
+  }
+
+  setBaseUri(newBaseUri: string, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "set-base-uri",
+      [types.ascii(newBaseUri)],
+      sender
+    );
+  }
+
+  freezeMetadata(sender: string): Tx {
+    return Tx.contractCall(this.contractName, "freeze-metadata", [], sender);
   }
 
   getTokenMarketByIndex(nftIndex: number): ReadOnlyFn {

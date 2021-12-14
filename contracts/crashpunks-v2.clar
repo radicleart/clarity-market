@@ -38,6 +38,7 @@
 (define-constant ERR-METADATA-FROZEN (err u101))
 (define-constant ERR-COULDNT-GET-V1-DATA (err u102))
 (define-constant ERR-COULDNT-GET-NFT-OWNER (err u103))
+(define-constant ERR-PRICE-WAS-ZERO (err u104))
 (define-constant ERR-NFT-NOT-LISTED-FOR-SALE (err u105))
 (define-constant ERR-PAYMENT-ADDRESS (err u106))
 (define-constant ERR-NFT-LISTED (err u107))
@@ -131,12 +132,12 @@
 
         ;; 3. Burn the v1 NFT
         (try! (contract-call? .crashpunks-v1 burn nftIndex (as-contract tx-sender)))
-        (ok nftIndex)
+        (ok true)
     )
 )
 
 (define-public (batch-upgrade-v1-to-v2 (entries (list 200 uint)))
-    (ok (fold upgrade-v1-to-v2-helper entries u0))
+    (ok (fold upgrade-v1-to-v2-helper entries false))
 )
 
 (define-public (mint-token)
@@ -158,7 +159,7 @@
 
 ;; only size of list matters, content of list doesn't matter
 (define-public (batch-mint-token (entries (list 20 uint)))
-    (ok (fold mint-token-helper entries true))
+    (ok (fold mint-token-helper entries false))
 )
 
 ;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
@@ -179,13 +180,14 @@
 )
 
 (define-public (batch-set-mint-pass (entries (list 200 {account: principal, limit: uint})))
-    (ok (fold set-mint-pass-helper entries true))
+    (ok (fold set-mint-pass-helper entries false))
 )
 
 ;; marketplace function
 (define-public (list-item (nftIndex uint) (amount uint))
     (begin 
         (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
+        (asserts! (> amount u0) ERR-PRICE-WAS-ZERO)
         (ok (map-set nft-market nftIndex {price: amount}))
     )
 )
@@ -328,7 +330,7 @@
     )
 )
 
-(define-private (upgrade-v1-to-v2-helper (nftIndex uint) (initial-value uint))
+(define-private (upgrade-v1-to-v2-helper (nftIndex uint) (initial-value bool))
     (unwrap-panic (upgrade-v1-to-v2 nftIndex))
 )
 

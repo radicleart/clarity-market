@@ -5,7 +5,10 @@ import {
   Account,
   types,
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
-import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertThrows,
+} from "https://deno.land/std@0.90.0/testing/asserts.ts";
 import { formatBuffString, hexStringToArrayBuffer } from "../src/utils.ts";
 import { CrashPunksV1Client } from "../src/crashpunks-v1-client.ts";
 import { CrashPunksV2Client, ErrCode } from "../src/crashpunks-v2-client.ts";
@@ -128,7 +131,7 @@ const setCollectionRoyalties = (
   block.receipts[0].result.expectOk().expectBool(true);
 };
 
-// mints a v1 token and returns its asset-hash and token-uri
+// mints a v1 token
 const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
   const { wallet1, clientV1 } = getWalletsAndClient(chain, accounts);
 
@@ -139,7 +142,11 @@ const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
     clientV1.collectionMintToken(
       hexStringToArrayBuffer(sig),
       hexStringToArrayBuffer(msg),
-      hexStringToArrayBuffer(hsh),
+      hexStringToArrayBuffer(
+        Array.from({ length: 64 })
+          .map((_) => Math.floor(Math.random() * 10))
+          .join("")
+      ),
       url,
       1,
       0,
@@ -159,15 +166,22 @@ Clarinet.test({
       wallet1,
       wallet2,
       newAdministrator,
+      clientV1,
       clientV2,
     } = getWalletsAndClient(chain, accounts);
 
     // mint v1 token
     mintV1Token(chain, accounts);
 
-    let block = chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+    // fail if not wallet1 tries to upgrade
+    let block = chain.mineBlock([
+      clientV2.upgradeV1ToV2(0, administrator.address),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_V1_OWNER);
 
-    block.receipts[0].result.expectOk().expectUint(0);
+    block = chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+    block.receipts[0].result.expectOk().expectBool(true);
 
     // 1. Transfers v1 NFT to this contract
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
@@ -193,6 +207,32 @@ Clarinet.test({
       `${deployer.address}.crashpunks-v1`,
       "crashpunks"
     );
+
+    // ensure can batch upgrade
+    // mint 10 more v1
+    for (let i = 0; i < 10; i++) {
+      mintV1Token(chain, accounts);
+    }
+
+    // upgrade another 10
+    block = chain.mineBlock([
+      clientV2.batchUpgradeV1ToV2(
+        Array.from({ length: 10 }).map((_, index) => index + 1),
+        wallet1.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // make sure wallet1 owns v2 nftid 10
+    console.log(
+      clientV2
+        .getOwner(10)
+        .result.expectOk()
+        .expectSome()
+        .expectPrincipal(wallet1.address)
+    );
+    // make sure none own v2 nft id 11
+    clientV2.getOwner(11).result.expectOk().expectNone();
   },
 });
 
@@ -456,11 +496,66 @@ Clarinet.test({
     // check that wallet 1 mint pass decreased to 0
     clientV2.getMintPassBalance(wallet1.address).result.expectUint(0);
 
+    // check that wallet 1 owns 5721
+    clientV2
+      .getOwner(5721)
+      .result.expectOk()
+      .expectSome()
+      .expectPrincipal(wallet1.address);
+
     // check that wallet 1 can't mint again
     block = chain.mineBlock([clientV2.mintToken(wallet1.address)]);
     block.receipts[0].result
       .expectErr()
       .expectUint(ErrCode.ERR_MINT_PASS_LIMIT_REACHED);
+
+    // replenish 20 mint pass for wallet 1
+    // test batch set mint pass at the same time
+    block = chain.mineBlock([
+      // clientV2.setMintPass(wallet1.address, 20, administrator.address),
+      clientV2.batchSetMintPass(
+        [
+          { account: wallet1.address, limit: 20 },
+          { account: wallet2.address, limit: 1 },
+        ],
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // mint 20
+    block = chain.mineBlock([
+      clientV2.batchMintToken(
+        Array.from({ length: 20 }).map((k, index) => index),
+        wallet1.address
+      ),
+    ]);
+
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    for (let i = 5722; i < 5722 + 20; i++) {
+      clientV2
+        .getOwner(i)
+        .result.expectOk()
+        .expectSome()
+        .expectPrincipal(wallet1.address);
+    }
+
+    // expect nft id 5722+21 to not exist
+    clientV2
+      .getOwner(5722 + 21)
+      .result.expectOk()
+      .expectNone();
+
+    // expect last token id = 5722 + 19
+    clientV2
+      .getLastTokenId()
+      .result.expectOk()
+      .expectUint(5722 + 19);
+
+    // make sure wallet2 can use its mint pass as well
+    block = chain.mineBlock([clientV2.mintToken(wallet2.address)]);
+    block.receipts[0].result.expectOk().expectBool(true);
   },
 });
 
