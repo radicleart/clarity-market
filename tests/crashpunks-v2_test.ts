@@ -559,6 +559,42 @@ Clarinet.test({
   },
 });
 
+Clarinet.test({
+  name: "CrashpunksV2 - test admin airdrop",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      wallet3,
+      newAdministrator,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
+
+    // non-admin cannot airdrop
+    let block = chain.mineBlock([
+      clientV2.adminMintAirdrop(wallet1.address, 100, wallet1.address),
+    ]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
+
+    // admin can airdrop
+    block = chain.mineBlock([
+      clientV2.adminMintAirdrop(wallet1.address, 100, administrator.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // check owner of nft 100 is wallet 1
+    clientV2
+      .getOwner(100)
+      .result.expectOk()
+      .expectSome()
+      .expectPrincipal(wallet1.address);
+  },
+});
+
 // Clarinet.test({
 //   name: "CrashpunksV2 - playground",
 //   async fn(chain: Chain, accounts: Map<string, Account>) {

@@ -86,7 +86,6 @@
 ;; SIP-09: Transfer
 (define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
     (begin
-        ;; (asserts! (and (is-owner-or-approval id owner) (is-owner-or-approval id contract-caller)) (err ERR-NOT-AUTHORIZED))
         (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (asserts! (is-none (map-get? nft-market nftIndex)) ERR-NFT-LISTED)
         (nft-transfer? crashpunks-v2 nftIndex owner recipient)
@@ -166,7 +165,7 @@
 (define-public (admin-mint-airdrop (recipient principal) (nftIndex uint))
     (begin
         (asserts! (< nftIndex COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
-        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-AUTHORIZED)
+        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-ADMINISTRATOR)
         (try! (nft-mint? crashpunks-v2 nftIndex recipient))
         (ok true)
     )
@@ -233,7 +232,7 @@
 
 (define-public (set-collection-royalties (new-mint-addresses (list 4 principal)) (new-mint-shares (list 4 uint)) (new-royalty-addresses (list 10 principal)) (new-royalty-shares (list 10 uint)))
     (begin
-        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-AUTHORIZED)
+        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
         (var-set collection-mint-addresses new-mint-addresses)
         (var-set collection-mint-shares new-mint-shares)
         (var-set collection-royalty-addresses new-royalty-addresses)
@@ -244,7 +243,7 @@
 
 (define-public (set-base-uri (new-base-uri (string-ascii 80)))
     (begin
-        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-AUTHORIZED)
+        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-ADMINISTRATOR)
         (asserts! (not (var-get metadata-frozen)) ERR-METADATA-FROZEN)
         (var-set base-uri new-base-uri)
         (ok true))
@@ -252,7 +251,7 @@
 
 (define-public (freeze-metadata)
     (begin
-        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-AUTHORIZED)
+        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-ADMINISTRATOR)
         (var-set metadata-frozen true)
         (ok true)
     )
