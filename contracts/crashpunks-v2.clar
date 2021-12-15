@@ -1,7 +1,6 @@
 ;; Interface definitions
 (impl-trait .nft-trait.nft-trait)
 (impl-trait .operable.operable)
-;; (impl-trait .transferable.transferable)
 
 ;; contract variables
 
@@ -102,9 +101,7 @@
 
 ;; operable
 (define-public (set-approved (nftIndex uint) (operator principal) (approved bool))
-    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER)))
-        (ok (map-set approvals {owner: contract-caller, operator: operator, nft-index: nftIndex} approved))
-    )
+   (ok (map-set approvals {owner: contract-caller, operator: operator, nft-index: nftIndex} approved))
 )
 
 (define-public (set-approved-all (operator principal) (approved bool))
@@ -123,14 +120,11 @@
     (begin 
         ;; assert contract caller owns the v1 NFT at this nftIndex
         (asserts! (is-eq contract-caller (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-owner nftIndex) ERR-NOT-V1-OWNER) ERR-NOT-V1-OWNER)) ERR-NOT-V1-OWNER)
-
-        ;; 1. transfer v1 NFT to this contract
-        (try! (contract-call? .crashpunks-v1 transfer nftIndex contract-caller (as-contract tx-sender)))
         
-        ;; 2. Mint the v2 NFT with the same nftIndex for contract-caller
+        ;; 1. Mint the v2 NFT with the same nftIndex for contract-caller
         (try! (nft-mint? crashpunks-v2 nftIndex contract-caller))
 
-        ;; 3. Burn the v1 NFT
+        ;; 2. Burn the v1 NFT
         (try! (contract-call? .crashpunks-v1 burn nftIndex (as-contract tx-sender)))
         (ok true)
     )
@@ -162,6 +156,7 @@
 )
 
 ;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
+;; impact is that v1 nft is NOT burnt
 (define-public (admin-mint-airdrop (recipient principal) (nftIndex uint))
     (begin
         (asserts! (< nftIndex COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
@@ -216,7 +211,7 @@
 
 (define-public (burn (nftIndex uint))
     (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER)))
-        (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
+        (asserts! (is-approved nftIndex contract-caller) ERR-NOT-OWNER)
         (map-delete nft-market nftIndex)
         (nft-burn? crashpunks-v2 nftIndex contract-caller)
     )
