@@ -165,7 +165,7 @@
 (define-public (admin-mint-airdrop (recipient principal) (nftIndex uint))
     (begin
         (asserts! (< nftIndex COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
-        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-ADMINISTRATOR)
+        (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
         (try! (nft-mint? crashpunks-v2 nftIndex recipient))
         (ok true)
     )

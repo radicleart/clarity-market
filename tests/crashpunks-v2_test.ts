@@ -595,6 +595,61 @@ Clarinet.test({
   },
 });
 
+Clarinet.test({
+  name: "Ensure can freeze metadata",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { administrator, wallet1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+
+    const firstUri =
+      "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}";
+    const nextUri = "ipfs/QmdcBZnzSUwAKQdnVMKSkbVYoDD6DBkghPPUAwtVQjpwgq/{id}";
+    clientV2
+      .getTokenUri(0)
+      .result.expectOk()
+      .expectSome()
+      .expectAscii(firstUri);
+
+    // wallet 1 cant change token uri since not contract owner
+    let block = chain.mineBlock([
+      clientV2.setBaseUri(nextUri, wallet1.address),
+    ]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
+
+    // deployer can
+    block = chain.mineBlock([
+      clientV2.setBaseUri(nextUri, administrator.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    clientV2.getTokenUri(0).result.expectOk().expectSome().expectAscii(nextUri);
+
+    // wallet 1 cant freeze since not contract owner
+    block = chain.mineBlock([clientV2.freezeMetadata(wallet1.address)]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
+
+    // administrator can
+    block = chain.mineBlock([clientV2.freezeMetadata(administrator.address)]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // deployer can't change back
+    block = chain.mineBlock([
+      clientV2.setBaseUri(firstUri, administrator.address),
+    ]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_METADATA_FROZEN);
+
+    clientV2.getTokenUri(0).result.expectOk().expectSome().expectAscii(nextUri);
+  },
+});
+
 // Clarinet.test({
 //   name: "CrashpunksV2 - playground",
 //   async fn(chain: Chain, accounts: Map<string, Account>) {
