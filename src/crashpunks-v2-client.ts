@@ -221,10 +221,10 @@ export class CrashPunksV2Client {
     );
   }
 
-  transferAdministrator(newAdministrator: string, sender: string): Tx {
+  setAdministrator(newAdministrator: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
-      "transfer-administrator",
+      "set-administrator",
       [types.principal(newAdministrator)],
       sender
     );

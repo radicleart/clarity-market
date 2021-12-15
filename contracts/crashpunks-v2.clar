@@ -223,7 +223,7 @@
 )
 
 ;; the contract administrator can change the contract administrator
-(define-public (transfer-administrator (new-administrator principal))
+(define-public (set-administrator (new-administrator principal))
     (begin
         (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
         (ok (var-set administrator new-administrator))

@@ -683,6 +683,55 @@ Clarinet.test({
   },
 });
 
+Clarinet.test({
+  name: "CrashpunksV2 - Ensure can transfer administrator",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      wallet3,
+      newAdministrator,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
+
+    // non administrator can't change administrator
+    let block = chain.mineBlock([
+      clientV2.setAdministrator(
+        newAdministrator.address,
+        newAdministrator.address
+      ),
+    ]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
+
+    // administrator can change administrator
+    block = chain.mineBlock([
+      clientV2.setAdministrator(
+        newAdministrator.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // try an administrator function with new administrator
+    block = chain.mineBlock([
+      clientV2.setMintPass(wallet1.address, 5, newAdministrator.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // old administrator can't
+    block = chain.mineBlock([
+      clientV2.setMintPass(wallet2.address, 5, administrator.address),
+    ]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
+  },
+});
+
 // Clarinet.test({
 //   name: "CrashpunksV2 - playground",
 //   async fn(chain: Chain, accounts: Map<string, Account>) {
