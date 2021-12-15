@@ -1,7 +1,6 @@
 ;; Interface definitions
 (impl-trait .nft-trait.nft-trait)
 (impl-trait .operable.operable)
-;; (impl-trait .transferable.transferable)
 
 ;; contract variables
 
