@@ -1,15 +1,11 @@
 import {
   Clarinet,
-  Tx,
   Chain,
   Account,
   types,
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
-import {
-  assertEquals,
-  assertThrows,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
-import { formatBuffString, hexStringToArrayBuffer } from "../src/utils.ts";
+import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
+import { hexStringToArrayBuffer } from "../src/utils.ts";
 import { CrashPunksV1Client } from "../src/crashpunks-v1-client.ts";
 import { CrashPunksV2Client, ErrCode } from "../src/crashpunks-v2-client.ts";
 
@@ -72,13 +68,10 @@ const setCollectionRoyalties = (
 ) => {
   const {
     administrator,
-    deployer,
-    wallet1,
     wallet2,
     wallet3,
     wallet4,
     wallet5,
-    newAdministrator,
     clientV1,
     clientV2,
   } = getWalletsAndClient(chain, accounts);
@@ -160,15 +153,10 @@ const mintV1Token = (chain: Chain, accounts: Map<string, Account>) => {
 Clarinet.test({
   name: "CrashpunksV2 - Ensure can upgrade v1 -> v2",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      newAdministrator,
-      clientV1,
-      clientV2,
-    } = getWalletsAndClient(chain, accounts);
+    const { administrator, deployer, wallet1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
 
     // mint v1 token
     mintV1Token(chain, accounts);
@@ -224,13 +212,11 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true);
 
     // make sure wallet1 owns v2 nftid 10
-    console.log(
-      clientV2
-        .getOwner(10)
-        .result.expectOk()
-        .expectSome()
-        .expectPrincipal(wallet1.address)
-    );
+    clientV2
+      .getOwner(10)
+      .result.expectOk()
+      .expectSome()
+      .expectPrincipal(wallet1.address);
     // make sure none own v2 nft id 11
     clientV2.getOwner(11).result.expectOk().expectNone();
   },
@@ -239,14 +225,7 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - Ensure can list and unlist by owner",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      newAdministrator,
-      clientV2,
-    } = getWalletsAndClient(chain, accounts);
+    const { wallet1, clientV2 } = getWalletsAndClient(chain, accounts);
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
@@ -277,17 +256,8 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - Ensure can NFT be listed and bought",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      wallet3,
-      wallet4,
-      wallet5,
-      newAdministrator,
-      clientV2,
-    } = getWalletsAndClient(chain, accounts);
+    const { deployer, wallet1, wallet2, wallet3, wallet4, wallet5, clientV2 } =
+      getWalletsAndClient(chain, accounts);
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
@@ -347,14 +317,7 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - Ensure NFT can't be bought when unlisted",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      newAdministrator,
-      clientV2,
-    } = getWalletsAndClient(chain, accounts);
+    const { wallet1, wallet2, clientV2 } = getWalletsAndClient(chain, accounts);
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
@@ -389,15 +352,7 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - Ensure NFT can't be transferred when listed",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      wallet3,
-      newAdministrator,
-      clientV2,
-    } = getWalletsAndClient(chain, accounts);
+    const { wallet1, wallet2, clientV2 } = getWalletsAndClient(chain, accounts);
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
@@ -435,7 +390,6 @@ Clarinet.test({
       wallet3,
       wallet4,
       wallet5,
-      newAdministrator,
       clientV2,
     } = getWalletsAndClient(chain, accounts);
 
@@ -562,15 +516,10 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - test admin airdrop",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      wallet3,
-      newAdministrator,
-      clientV2,
-    } = getWalletsAndClient(chain, accounts);
+    const { administrator, wallet1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
 
     // non-admin cannot airdrop
     let block = chain.mineBlock([
@@ -653,15 +602,10 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - ensure can burn",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      wallet3,
-      newAdministrator,
-      clientV2,
-    } = getWalletsAndClient(chain, accounts);
+    const { administrator, deployer, wallet1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
@@ -675,7 +619,7 @@ Clarinet.test({
     block = chain.mineBlock([clientV2.burn(0, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[0].events.expectNonFungibleTokenBurnEvent(
-      "u0",
+      types.uint(0),
       wallet1.address,
       `${deployer.address}.crashpunks-v2`,
       "crashpunks-v2"
@@ -686,15 +630,8 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - Ensure can transfer administrator",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const {
-      administrator,
-      deployer,
-      wallet1,
-      wallet2,
-      wallet3,
-      newAdministrator,
-      clientV2,
-    } = getWalletsAndClient(chain, accounts);
+    const { administrator, wallet1, wallet2, newAdministrator, clientV2 } =
+      getWalletsAndClient(chain, accounts);
 
     // non administrator can't change administrator
     let block = chain.mineBlock([
@@ -732,31 +669,249 @@ Clarinet.test({
   },
 });
 
-// Clarinet.test({
-//   name: "CrashpunksV2 - playground",
-//   async fn(chain: Chain, accounts: Map<string, Account>) {
-//     const {
-//       administrator,
-//       deployer,
-//       wallet1,
-//       wallet2,
-//       wallet3,
-//       newAdministrator,
-//       clientV2,
-//     } = getWalletsAndClient(chain, accounts);
+Clarinet.test({
+  name: "CrashpunksV2 - ensure can give approval",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { administrator, deployer, wallet1, wallet2, wallet3, clientV2 } =
+      getWalletsAndClient(chain, accounts);
 
-//     // mint v1 and upgrade
-//     mintV1Token(chain, accounts);
-//     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+    // mint v1 and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
-//     let block = chain.mineBlock([
-//       Tx.contractCall(
-//         "crashpunks-v2",
-//         "get-v1-mint-counter",
-//         [],
-//         wallet1.address
-//       ),
-//     ]);
-//     console.log(block);
-//   },
-// });
+    // wallet 1 owns nft 0, admin can't transfer
+    let block = chain.mineBlock([
+      clientV2.transfer(
+        0,
+        wallet1.address,
+        wallet2.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
+
+    // check wallet2 can give admin approval to wallet 1's NFT, but admin still won't be able to transfer it
+    block = chain.mineBlock([
+      clientV2.setApproved(0, administrator.address, true, wallet2.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // check admin can't transfer still
+    block = chain.mineBlock([
+      clientV2.transfer(
+        0,
+        wallet1.address,
+        wallet2.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
+
+    // let wallet 1 transfer to wallet 2
+    block = chain.mineBlock([
+      clientV2.transfer(0, wallet1.address, wallet2.address, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      types.uint(0),
+      wallet1.address,
+      wallet2.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+
+    // admin should be able to transfer on behalf of wallet 2
+    block = chain.mineBlock([
+      clientV2.transfer(
+        0,
+        wallet2.address,
+        wallet3.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      types.uint(0),
+      wallet2.address,
+      wallet3.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+  },
+});
+
+Clarinet.test({
+  name: "CrashpunksV2 - ensure can give and remove approval",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { administrator, deployer, wallet1, wallet2, clientV2 } =
+      getWalletsAndClient(chain, accounts);
+
+    // mint v1 and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+    // check wallet1 can give admin approval to its NFT
+    let block = chain.mineBlock([
+      clientV2.setApproved(0, administrator.address, true, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // admin should be able to transfer on behalf of wallet 1
+    block = chain.mineBlock([
+      clientV2.transfer(
+        0,
+        wallet1.address,
+        wallet2.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      types.uint(0),
+      wallet1.address,
+      wallet2.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+
+    // transfer nft back to wallet1
+    block = chain.mineBlock([
+      clientV2.transfer(0, wallet2.address, wallet1.address, wallet2.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      types.uint(0),
+      wallet2.address,
+      wallet1.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+
+    // remove approval
+    chain.mineBlock([
+      clientV2.setApproved(0, administrator.address, false, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // admin should no longer be able to transfer on behalf of wallet 1
+    block = chain.mineBlock([
+      clientV2.transfer(
+        0,
+        wallet1.address,
+        wallet2.address,
+        administrator.address
+      ),
+    ]);
+  },
+});
+
+Clarinet.test({
+  name: "CrashpunksV2 - ensure can approve all",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { administrator, deployer, wallet1, wallet2, clientV2 } =
+      getWalletsAndClient(chain, accounts);
+
+    // mint v1 and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(1, wallet1.address)]);
+
+    // check wallet1 can give admin approval to its NFT 0
+    let block = chain.mineBlock([
+      clientV2.setApprovedAll(administrator.address, true, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // admin should be able to transfer nft 0 on behalf of wallet 1
+    block = chain.mineBlock([
+      clientV2.transfer(
+        0,
+        wallet1.address,
+        wallet2.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      types.uint(0),
+      wallet1.address,
+      wallet2.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+
+    // admin should be able to transfer nft 1 on behalf of wallet 1
+    block = chain.mineBlock([
+      clientV2.transfer(
+        1,
+        wallet1.address,
+        wallet2.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      types.uint(1),
+      wallet1.address,
+      wallet2.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+  },
+});
+
+Clarinet.test({
+  name: "CrashpunksV2 - ensure can approve all but block specified nft",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { administrator, deployer, wallet1, wallet2, clientV2 } =
+      getWalletsAndClient(chain, accounts);
+
+    // mint v1 and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(1, wallet1.address)]);
+
+    // check wallet1 can give admin approval to its NFT 0
+    let block = chain.mineBlock([
+      clientV2.setApprovedAll(administrator.address, true, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // admin should be able to transfer nft 0 on behalf of wallet 1
+    block = chain.mineBlock([
+      clientV2.transfer(
+        0,
+        wallet1.address,
+        wallet2.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      types.uint(0),
+      wallet1.address,
+      wallet2.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+
+    // block from transfering nft id 1
+    block = chain.mineBlock([
+      clientV2.setApproved(1, administrator.address, false, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    // admin should not be able to transfer nft 1 on behalf of wallet 1 because blocked
+    block = chain.mineBlock([
+      clientV2.transfer(
+        1,
+        wallet1.address,
+        wallet2.address,
+        administrator.address
+      ),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
+  },
+});
