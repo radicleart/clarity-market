@@ -243,7 +243,7 @@
 
 (define-public (set-base-uri (new-base-uri (string-ascii 80)))
     (begin
-        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-ADMINISTRATOR)
+        (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
         (asserts! (not (var-get metadata-frozen)) ERR-METADATA-FROZEN)
         (var-set base-uri new-base-uri)
         (ok true))
@@ -251,7 +251,7 @@
 
 (define-public (freeze-metadata)
     (begin
-        (asserts! (is-eq tx-sender (var-get administrator)) ERR-NOT-ADMINISTRATOR)
+        (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
         (var-set metadata-frozen true)
         (ok true)
     )
@@ -317,7 +317,7 @@
 
 (define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
     (let ((split (/ (* saleAmount share) percentage-with-twodp)))
-        ;; ignore royalty payment if its to the buyer / tx-sender.
+        ;; ignore royalty payment if its to the buyer / contract-caller.
         (if (and 
                 (> share u0)
                 (not (is-eq contract-caller payee)) 
