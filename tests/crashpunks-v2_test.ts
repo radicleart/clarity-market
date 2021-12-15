@@ -802,6 +802,7 @@ Clarinet.test({
         administrator.address
       ),
     ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
   },
 });
 
