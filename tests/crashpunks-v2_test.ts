@@ -650,6 +650,39 @@ Clarinet.test({
   },
 });
 
+Clarinet.test({
+  name: "CrashpunksV2 - ensure can burn",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const {
+      administrator,
+      deployer,
+      wallet1,
+      wallet2,
+      wallet3,
+      newAdministrator,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
+
+    // mint v1 and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+    // admin cannot burn
+    let block = chain.mineBlock([clientV2.burn(0, administrator.address)]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_OWNER);
+
+    // wallet 1 can burn
+    block = chain.mineBlock([clientV2.burn(0, wallet1.address)]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenBurnEvent(
+      "u0",
+      wallet1.address,
+      `${deployer.address}.crashpunks-v2`,
+      "crashpunks-v2"
+    );
+  },
+});
+
 // Clarinet.test({
 //   name: "CrashpunksV2 - playground",
 //   async fn(chain: Chain, accounts: Map<string, Account>) {

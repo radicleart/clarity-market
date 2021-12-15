@@ -7,8 +7,6 @@
 
 (define-data-var administrator principal 'SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6)
 
-;; 50 stx
-(define-data-var mint-price uint u50000000)
 
 ;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK IF OFF BY 1 ERROR
 (define-data-var mint-counter uint u5721)
@@ -30,6 +28,9 @@
 
 ;; constants
 (define-constant percentage-with-twodp u10000000000)
+
+;; 50 stx
+(define-constant MINT-PRICE u50000000)
 
 (define-constant token-name "crashpunks-v2")
 (define-constant token-symbol "CPS-v2")
@@ -142,13 +143,12 @@
 (define-public (mint-token)
     (let (
             (mintCounter (var-get mint-counter))
-            (mintPrice (var-get mint-price))
             (mintPassBalance (get-mint-pass-balance contract-caller))
         )
         (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
         (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
 
-        (try! (paymint-split mintPrice contract-caller))
+        (try! (paymint-split MINT-PRICE contract-caller))
         (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
         (var-set mint-counter (+ mintCounter u1))
         (map-set mint-pass contract-caller (- mintPassBalance u1))
@@ -218,7 +218,7 @@
     (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER)))
         (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
         (map-delete nft-market nftIndex)
-        (ok (nft-burn? crashpunks-v2 nftIndex contract-caller))
+        (nft-burn? crashpunks-v2 nftIndex contract-caller)
     )
 )
 
