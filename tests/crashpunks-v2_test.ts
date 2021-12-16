@@ -201,10 +201,7 @@ Clarinet.test({
         wallet1.address
       ),
     ]);
-    block.receipts[0].result
-      .expectOk()
-      .expectList()
-      .map((result) => result.expectOk().expectBool(true));
+    block.receipts[0].result.expectOk().expectBool(true);
 
     // make sure wallet1 owns v2 nftid 10
     clientV2
@@ -469,10 +466,7 @@ Clarinet.test({
         administrator.address
       ),
     ]);
-    block.receipts[0].result
-      .expectOk()
-      .expectList()
-      .map((result) => result.expectOk().expectBool(true));
+    block.receipts[0].result.expectOk().expectBool(true);
 
     // mint 20
     block = chain.mineBlock([
@@ -482,10 +476,7 @@ Clarinet.test({
       ),
     ]);
 
-    block.receipts[0].result
-      .expectOk()
-      .expectList()
-      .map((result) => result.expectOk().expectBool(true));
+    block.receipts[0].result.expectOk().expectBool(true);
 
     for (let i = 5722; i < 5722 + 20; i++) {
       clientV2

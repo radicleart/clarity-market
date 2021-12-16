@@ -127,7 +127,10 @@
 )
 
 (define-public (batch-upgrade-v1-to-v2 (entries (list 200 uint)))
-    (ok (map upgrade-v1-to-v2 entries))
+    (fold check-err
+        (map upgrade-v1-to-v2 entries)
+        (ok true)
+    )
 )
 
 (define-public (mint-token)
@@ -148,7 +151,11 @@
 
 ;; only size of list matters, content of list doesn't matter
 (define-public (batch-mint-token (entries (list 20 uint)))
-    (ok (map mint-token-helper entries))
+    ;; (ok (map mint-token-helper entries))
+    (fold check-err
+        (map mint-token-helper entries)
+        (ok true)
+    )
 )
 
 ;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
@@ -169,7 +176,11 @@
 )
 
 (define-public (batch-set-mint-pass (entries (list 200 {account: principal, limit: uint})))
-    (ok (map set-mint-pass-helper entries))
+    ;; (ok (map set-mint-pass-helper entries))
+    (fold check-err
+        (map set-mint-pass-helper entries)
+        (ok true)
+    )
 )
 
 ;; marketplace function
@@ -315,6 +326,13 @@
                 (try! (stx-transfer? split payer payee))
             )
         )
+    )
+)
+
+(define-private (check-err (result (response bool uint)) (prior (response bool uint)))
+    (match prior 
+        ok-value result
+        err-value (err err-value)
     )
 )
 
