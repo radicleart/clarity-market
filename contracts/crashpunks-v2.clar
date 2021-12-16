@@ -22,7 +22,7 @@
 (define-data-var collection-royalty-shares (list 10 uint) (list))
 
 ;; TODO: update this
-(define-data-var base-uri (string-ascii 80) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}")
+(define-data-var token-uri (string-ascii 80) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
@@ -75,7 +75,7 @@
 
 ;; SIP-09: URI for metadata associated with the token
 (define-read-only (get-token-uri (id uint))
-    (ok (some (var-get base-uri)))
+    (ok (some (var-get token-uri)))
 )
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
@@ -244,11 +244,11 @@
     )
 )
 
-(define-public (set-base-uri (new-base-uri (string-ascii 80)))
+(define-public (set-token-uri (new-token-uri (string-ascii 80)))
     (begin
         (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
         (asserts! (not (var-get metadata-frozen)) ERR-METADATA-FROZEN)
-        (var-set base-uri new-base-uri)
+        (var-set token-uri new-token-uri)
         (ok true))
 )
 

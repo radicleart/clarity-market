@@ -55,45 +55,36 @@ export class CrashPunksV2Client {
   }
 
   // SIP-09
-  getTokenUri(nftIndex: number): ReadOnlyFn {
-    return this.callReadOnlyFn("get-token-uri", [types.uint(nftIndex)]);
+  getTokenUri(id: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-token-uri", [types.uint(id)]);
   }
 
   // SIP-09
-  getOwner(nftIndex: number): ReadOnlyFn {
-    return this.callReadOnlyFn("get-owner", [types.uint(nftIndex)]);
+  getOwner(id: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-owner", [types.uint(id)]);
   }
 
   // SIP-09
-  transfer(
-    nftIndex: number,
-    owner: string,
-    recipient: string,
-    sender: string
-  ): Tx {
+  transfer(id: number, owner: string, recipient: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "transfer",
-      [
-        types.uint(nftIndex),
-        types.principal(owner),
-        types.principal(recipient),
-      ],
+      [types.uint(id), types.principal(owner), types.principal(recipient)],
       sender
     );
   }
 
   // operable
-  isApproved(nftIndex: number, address: string): ReadOnlyFn {
+  isApproved(id: number, address: string): ReadOnlyFn {
     return this.callReadOnlyFn("is-approved", [
-      types.uint(nftIndex),
+      types.uint(id),
       types.principal(address),
     ]);
   }
 
   // operable
   setApproved(
-    nftIndex: number,
+    id: number,
     operator: string,
     approved: boolean,
     sender: string
@@ -101,7 +92,7 @@ export class CrashPunksV2Client {
     return Tx.contractCall(
       this.contractName,
       "set-approved",
-      [types.uint(nftIndex), types.principal(operator), types.bool(approved)],
+      [types.uint(id), types.principal(operator), types.bool(approved)],
       sender
     );
   }
@@ -115,11 +106,11 @@ export class CrashPunksV2Client {
     );
   }
 
-  upgradeV1ToV2(nftIndex: number, sender: string): Tx {
+  upgradeV1ToV2(id: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "upgrade-v1-to-v2",
-      [types.uint(nftIndex)],
+      [types.uint(id)],
       sender
     );
   }
@@ -128,7 +119,7 @@ export class CrashPunksV2Client {
     return Tx.contractCall(
       this.contractName,
       "batch-upgrade-v1-to-v2",
-      [types.list(entries.map((nftIndex) => types.uint(nftIndex)))],
+      [types.list(entries.map((id) => types.uint(id)))],
       sender
     );
   }
@@ -146,11 +137,11 @@ export class CrashPunksV2Client {
     );
   }
 
-  adminMintAirdrop(recipient: string, nftIndex: number, sender: string): Tx {
+  adminMintAirdrop(recipient: string, id: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "admin-mint-airdrop",
-      [types.principal(recipient), types.uint(nftIndex)],
+      [types.principal(recipient), types.uint(id)],
       sender
     );
   }
@@ -185,40 +176,35 @@ export class CrashPunksV2Client {
     );
   }
 
-  listItem(nftIndex: number, amount: number, sender: string): Tx {
+  listItem(id: number, amount: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "list-item",
-      [types.uint(nftIndex), types.uint(amount)],
+      [types.uint(id), types.uint(amount)],
       sender
     );
   }
 
-  unlistItem(nftIndex: number, sender: string): Tx {
+  unlistItem(id: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "unlist-item",
-      [types.uint(nftIndex)],
+      [types.uint(id)],
       sender
     );
   }
 
-  buyNow(nftIndex: number, sender: string): Tx {
+  buyNow(id: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "buy-now",
-      [types.uint(nftIndex)],
+      [types.uint(id)],
       sender
     );
   }
 
-  burn(nftIndex: number, sender: string): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "burn",
-      [types.uint(nftIndex)],
-      sender
-    );
+  burn(id: number, sender: string): Tx {
+    return Tx.contractCall(this.contractName, "burn", [types.uint(id)], sender);
   }
 
   setAdministrator(newAdministrator: string, sender: string): Tx {
@@ -258,11 +244,11 @@ export class CrashPunksV2Client {
     );
   }
 
-  setBaseUri(newBaseUri: string, sender: string): Tx {
+  setTokenUri(newTokenUri: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
-      "set-base-uri",
-      [types.ascii(newBaseUri)],
+      "set-token-uri",
+      [types.ascii(newTokenUri)],
       sender
     );
   }
@@ -271,8 +257,8 @@ export class CrashPunksV2Client {
     return Tx.contractCall(this.contractName, "freeze-metadata", [], sender);
   }
 
-  getNftPrice(nftIndex: number): ReadOnlyFn {
-    return this.callReadOnlyFn("get-nft-price", [types.uint(nftIndex)]);
+  getNftPrice(id: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-nft-price", [types.uint(id)]);
   }
 
   getMintPassBalance(account: string): ReadOnlyFn {

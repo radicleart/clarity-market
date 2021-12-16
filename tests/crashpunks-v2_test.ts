@@ -554,7 +554,7 @@ Clarinet.test({
 
     // wallet 1 cant change token uri since not contract owner
     let block = chain.mineBlock([
-      clientV2.setBaseUri(nextUri, wallet1.address),
+      clientV2.setTokenUri(nextUri, wallet1.address),
     ]);
     block.receipts[0].result
       .expectErr()
@@ -562,7 +562,7 @@ Clarinet.test({
 
     // deployer can
     block = chain.mineBlock([
-      clientV2.setBaseUri(nextUri, administrator.address),
+      clientV2.setTokenUri(nextUri, administrator.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
@@ -580,7 +580,7 @@ Clarinet.test({
 
     // deployer can't change back
     block = chain.mineBlock([
-      clientV2.setBaseUri(firstUri, administrator.address),
+      clientV2.setTokenUri(firstUri, administrator.address),
     ]);
     block.receipts[0].result
       .expectErr()
