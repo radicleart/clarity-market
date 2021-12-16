@@ -127,7 +127,7 @@
 )
 
 (define-public (batch-upgrade-v1-to-v2 (entries (list 200 uint)))
-    (ok (fold upgrade-v1-to-v2-helper entries false))
+    (ok (map upgrade-v1-to-v2 entries))
 )
 
 (define-public (mint-token)
@@ -148,7 +148,7 @@
 
 ;; only size of list matters, content of list doesn't matter
 (define-public (batch-mint-token (entries (list 20 uint)))
-    (ok (fold mint-token-helper entries false))
+    (ok (map mint-token-helper entries))
 )
 
 ;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
@@ -169,7 +169,7 @@
 )
 
 (define-public (batch-set-mint-pass (entries (list 200 {account: principal, limit: uint})))
-    (ok (fold set-mint-pass-helper entries false))
+    (ok (map set-mint-pass-helper entries))
 )
 
 ;; marketplace function
@@ -318,16 +318,13 @@
     )
 )
 
-(define-private (upgrade-v1-to-v2-helper (id uint) (initial-value bool))
-    (unwrap-panic (upgrade-v1-to-v2 id))
+;; unused param on purpose
+(define-private (mint-token-helper (entry uint))
+    (mint-token)
 )
 
-(define-private (mint-token-helper (entry uint) (initial-value bool))
-    (unwrap-panic (mint-token))
-)
-
-(define-private (set-mint-pass-helper (entry {account: principal, limit: uint}) (initial-value bool))
-    (unwrap-panic (set-mint-pass (get account entry) (get limit entry)))
+(define-private (set-mint-pass-helper (entry {account: principal, limit: uint}))
+    (set-mint-pass (get account entry) (get limit entry))
 )
 
 ;; TODO: add all whitelists
