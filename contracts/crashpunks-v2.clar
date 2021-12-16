@@ -1,7 +1,6 @@
 ;; Interface definitions
 (impl-trait .nft-trait.nft-trait)
 (impl-trait .operable.operable)
-;; (impl-trait .transferable.transferable)
 
 ;; contract variables
 
@@ -50,21 +49,21 @@
 
 (define-constant ERR-NOT-AUTHORIZED (err u401))
 (define-constant ERR-NOT-OWNER (err u402))
-(define-constant ERR-NOT-V1-OWNER (err u403))
-(define-constant ERR-NOT-ADMINISTRATOR (err u404))
+(define-constant ERR-NOT-ADMINISTRATOR (err u403))
+(define-constant ERR-NOT-FOUND (err u404))
 
 (define-non-fungible-token crashpunks-v2 uint)
 
 ;; data structures
 
-;; {owner, operator, nftIndex} -> boolean
-;; if {owner, operator, nftIndex} is in map, then operator can perform actions on behalf of owner for this nftIndex
+;; {owner, operator, id} -> boolean
+;; if {owner, operator, id}->true in map, then operator can perform actions on behalf of owner for this id
 (define-map approvals {owner: principal, operator: principal, nft-index: uint} bool)
 (define-map approvals-all {owner: principal, operator: principal} bool)
 
-;; nftIndex -> price (in ustx)
-;; if nftIndex is not in map, it is not listed for sale
-(define-map nft-market uint {price: uint})
+;; id -> price (in ustx)
+;; if id is not in map, it is not listed for sale
+(define-map nft-price uint uint)
 
 ;; whitelist address -> # they can mint
 (define-map mint-pass principal uint)
@@ -80,31 +79,29 @@
 )
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
-(define-read-only (get-owner (nftIndex uint))
-  (ok (nft-get-owner? crashpunks-v2 nftIndex))
+(define-read-only (get-owner (id uint))
+  (ok (nft-get-owner? crashpunks-v2 id))
 )
 
 ;; SIP-09: Transfer
-(define-public (transfer (nftIndex uint) (owner principal) (recipient principal))
+(define-public (transfer (id uint) (owner principal) (recipient principal))
     (begin
-        (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
-        (asserts! (is-none (map-get? nft-market nftIndex)) ERR-NFT-LISTED)
-        (nft-transfer? crashpunks-v2 nftIndex owner recipient)
+        (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
+        (asserts! (is-none (map-get? nft-price id)) ERR-NFT-LISTED)
+        (nft-transfer? crashpunks-v2 id owner recipient)
     )
 )
 
 ;; operable
-(define-read-only (is-approved (nftIndex uint) (operator principal))
-    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER)))
-        (ok (is-owned-or-approved nftIndex operator owner))
+(define-read-only (is-approved (id uint) (operator principal))
+    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)))
+        (ok (is-owned-or-approved id operator owner))
     )
 )
 
 ;; operable
-(define-public (set-approved (nftIndex uint) (operator principal) (approved bool))
-    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER)))
-        (ok (map-set approvals {owner: contract-caller, operator: operator, nft-index: nftIndex} approved))
-    )
+(define-public (set-approved (id uint) (operator principal) (approved bool))
+    (ok (map-set approvals {owner: contract-caller, operator: operator, nft-index: id} approved))
 )
 
 (define-public (set-approved-all (operator principal) (approved bool))
@@ -115,23 +112,16 @@
 
 ;; upgrade from v1 to v2
 ;; Owner of crashpunks v1 calls this upgrade function
-;; 1. Transfers v1 NFT to this contract
-;; 2. This contract mints the v2 NFT with the same nftIndex for contract-caller
-;; 3. This contract burns the v1 NFT
-(define-public (upgrade-v1-to-v2 (nftIndex uint))
+;; 1. This contract burns the v1 NFT
+;; 2. This contract mints the v2 NFT with the same id for contract-caller
+(define-public (upgrade-v1-to-v2 (id uint))
     ;; TODO: MAKE SURE THESE CONTRACT CALLS WORK, MAKE SURE THE CONRACT ADDRESSES WORKS FOR MAINNET
     (begin 
-        ;; assert contract caller owns the v1 NFT at this nftIndex
-        (asserts! (is-eq contract-caller (unwrap! (unwrap! (contract-call? .crashpunks-v1 get-owner nftIndex) ERR-NOT-V1-OWNER) ERR-NOT-V1-OWNER)) ERR-NOT-V1-OWNER)
+        ;; 1. Burn the v1 NFT
+        (try! (contract-call? .crashpunks-v1 burn id contract-caller))
 
-        ;; 1. transfer v1 NFT to this contract
-        (try! (contract-call? .crashpunks-v1 transfer nftIndex contract-caller (as-contract tx-sender)))
-        
-        ;; 2. Mint the v2 NFT with the same nftIndex for contract-caller
-        (try! (nft-mint? crashpunks-v2 nftIndex contract-caller))
-
-        ;; 3. Burn the v1 NFT
-        (try! (contract-call? .crashpunks-v1 burn nftIndex (as-contract tx-sender)))
+        ;; 2. Mint the v2 NFT with the same id for contract-caller
+        (try! (nft-mint? crashpunks-v2 id contract-caller))
         (ok true)
     )
 )
@@ -162,11 +152,11 @@
 )
 
 ;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
-(define-public (admin-mint-airdrop (recipient principal) (nftIndex uint))
+(define-public (admin-mint-airdrop (recipient principal) (id uint))
     (begin
-        (asserts! (< nftIndex COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
+        (asserts! (< id COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
         (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
-        (try! (nft-mint? crashpunks-v2 nftIndex recipient))
+        (try! (nft-mint? crashpunks-v2 id recipient))
         (ok true)
     )
 )
@@ -183,42 +173,44 @@
 )
 
 ;; marketplace function
-(define-public (list-item (nftIndex uint) (amount uint))
+(define-public (list-item (id uint) (amount uint))
     (begin 
-        (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
+
+        ;; (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (asserts! (> amount u0) ERR-PRICE-WAS-ZERO)
-        (ok (map-set nft-market nftIndex {price: amount}))
+        (ok (map-set nft-price id amount))
     )
 )
 
 ;; marketplace function
-(define-public (unlist-item (nftIndex uint))
+(define-public (unlist-item (id uint))
     (begin 
-        (asserts! (unwrap! (is-approved nftIndex contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
-        (ok (map-delete nft-market nftIndex))
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (ok (map-delete nft-price id))
     )
 )
 
 ;; marketplace function
-(define-public (buy-now (nftIndex uint))
+(define-public (buy-now (id uint))
     (let 
         (
-            (price (unwrap! (get price (map-get? nft-market nftIndex)) ERR-NFT-NOT-LISTED-FOR-SALE))
-            (owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER))
+            (price (unwrap! (map-get? nft-price id) ERR-NFT-NOT-LISTED-FOR-SALE))
+            (owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
         )
-        (try! (payment-split nftIndex price contract-caller))
-        (try! (nft-transfer? crashpunks-v2 nftIndex owner buyer))
-        (map-delete nft-market nftIndex)
+        (try! (payment-split id price contract-caller))
+        (try! (nft-transfer? crashpunks-v2 id owner buyer))
+        (map-delete nft-price id)
         (ok true)
     )
 )
 
-(define-public (burn (nftIndex uint))
-    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-COULDNT-GET-NFT-OWNER)))
+(define-public (burn (id uint))
+    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)))
         (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
-        (map-delete nft-market nftIndex)
-        (nft-burn? crashpunks-v2 nftIndex contract-caller)
+        (map-delete nft-price id)
+        (nft-burn? crashpunks-v2 id contract-caller)
     )
 )
 
@@ -258,8 +250,8 @@
 )
 
 ;; read only methods
-(define-read-only (get-token-market-by-index (nftIndex uint))
-    (map-get? nft-market nftIndex)
+(define-read-only (get-nft-price (id uint))
+    (map-get? nft-price id)
 )
 
 (define-read-only (get-mint-pass-balance (account principal))
@@ -270,67 +262,64 @@
 
 
 ;; private methods
-(define-private (is-owned-or-approved (nftIndex uint) (operator principal) (owner principal))
+(define-private (is-owned-or-approved (id uint) (operator principal) (owner principal))
     (default-to 
         (default-to
             (is-eq owner operator)
             (map-get? approvals-all {owner: owner, operator: operator})
         )
-        (map-get? approvals {owner: owner, operator: operator, nft-index: nftIndex})
+        (map-get? approvals {owner: owner, operator: operator, nft-index: id})
     )
 )
 
 (define-private (paymint-split (mintPrice uint) (payer principal)) 
     (let (
-            (split u0)
             (mintAddresses (var-get collection-mint-addresses))
             (mintShares (var-get collection-mint-shares))
         )
-        (+ split (unwrap! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u0) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u0) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u1) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u1) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u2) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u2) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u3) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u3) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (ok split)
+        (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u0) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u0) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u1) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u1) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u2) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u2) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u3) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u3) ERR-PAYMENT-ADDRESS)))
+        (ok true)
     )
 )
 
 ;; TODO: update this to use a list of {address, share}, and fold 
-(define-private (payment-split (nftIndex uint) (saleAmount uint) (payer principal)) 
+(define-private (payment-split (id uint) (saleAmount uint) (payer principal)) 
     (let (
             (addresses (var-get collection-royalty-addresses))
             (shares (var-get collection-royalty-shares))
             (split u0)
         )
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (nft-get-owner? crashpunks-v2 nftIndex) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u0) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u1) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u1) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u2) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u2) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u3) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u3) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u4) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u4) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u5) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u5) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u6) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u6) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u7) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u7) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u8) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u8) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (+ split (unwrap! (pay-royalty payer saleAmount (unwrap! (element-at addresses u9) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u9) ERR-PAYMENT-ADDRESS)) ERR-PAYMENT-ADDRESS))
-        (ok split)
+        (try! (pay-royalty payer saleAmount (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u0) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u1) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u1) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u2) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u2) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u3) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u3) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u4) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u4) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u5) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u5) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u6) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u6) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u7) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u7) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u8) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u8) ERR-PAYMENT-ADDRESS)))
+        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u9) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u9) ERR-PAYMENT-ADDRESS)))
+        (ok true)
     )
 )
 
 (define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
     (let ((split (/ (* saleAmount share) percentage-with-twodp)))
         ;; ignore royalty payment if its to the buyer / contract-caller.
-        (if (and 
+        (ok (and 
                 (> share u0)
                 (not (is-eq contract-caller payee)) 
                 (try! (stx-transfer? split payer payee))
             )
-            (ok split)
-            (ok u0)
         )
     )
 )
 
-(define-private (upgrade-v1-to-v2-helper (nftIndex uint) (initial-value bool))
-    (unwrap-panic (upgrade-v1-to-v2 nftIndex))
+(define-private (upgrade-v1-to-v2-helper (id uint) (initial-value bool))
+    (unwrap-panic (upgrade-v1-to-v2 id))
 )
 
 (define-private (mint-token-helper (entry uint) (initial-value bool))

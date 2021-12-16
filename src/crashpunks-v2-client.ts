@@ -20,8 +20,8 @@ export enum ErrCode {
 
   ERR_NOT_AUTHORIZED = 401,
   ERR_NOT_OWNER = 402,
-  ERR_NOT_V1_OWNER = 403,
-  ERR_NOT_ADMINISTRATOR = 404,
+  ERR_NOT_ADMINISTRATOR = 403,
+  ERR_NOT_FOUND = 404,
 }
 
 export class CrashPunksV2Client {
@@ -271,10 +271,8 @@ export class CrashPunksV2Client {
     return Tx.contractCall(this.contractName, "freeze-metadata", [], sender);
   }
 
-  getTokenMarketByIndex(nftIndex: number): ReadOnlyFn {
-    return this.callReadOnlyFn("get-token-market-by-index", [
-      types.uint(nftIndex),
-    ]);
+  getNftPrice(nftIndex: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-nft-price", [types.uint(nftIndex)]);
   }
 
   getMintPassBalance(account: string): ReadOnlyFn {

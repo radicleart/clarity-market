@@ -165,17 +165,16 @@ Clarinet.test({
     let block = chain.mineBlock([
       clientV2.upgradeV1ToV2(0, administrator.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_V1_OWNER);
+    block.receipts[0].result.expectErr().expectUint(401);
 
     block = chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     block.receipts[0].result.expectOk().expectBool(true);
 
-    // 1. Transfers v1 NFT to this contract
-    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+    // 1. Burns the original v1 NFT
+    block.receipts[0].events.expectNonFungibleTokenBurnEvent(
       types.uint(0),
       wallet1.address,
-      `${deployer.address}.crashpunks-v2`,
       `${deployer.address}.crashpunks-v1`,
       "crashpunks"
     );
@@ -186,14 +185,6 @@ Clarinet.test({
       wallet1.address,
       `${deployer.address}.crashpunks-v2`,
       "crashpunks-v2"
-    );
-
-    // 3. Burns the original v1 NFT
-    block.receipts[0].events.expectNonFungibleTokenBurnEvent(
-      types.uint(0),
-      `${deployer.address}.crashpunks-v2`,
-      `${deployer.address}.crashpunks-v1`,
-      "crashpunks"
     );
 
     // ensure can batch upgrade
@@ -225,31 +216,39 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - Ensure can list and unlist by owner",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { wallet1, clientV2 } = getWalletsAndClient(chain, accounts);
+    const { wallet1, administrator, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getTokenMarketByIndex(0).result.expectNone();
+    clientV2.getNftPrice(0).result.expectNone();
+
+    // check that it can't be listed by not the owner
+    let block = chain.mineBlock([
+      clientV2.listItem(0, 10000000, administrator.address),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_OWNER);
 
     // list for 100 stx
-    let block = chain.mineBlock([
-      clientV2.listItem(0, 100000000, wallet1.address),
-    ]);
+    block = chain.mineBlock([clientV2.listItem(0, 100000000, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
 
     // check is listed
-    assertEquals(
-      clientV2.getTokenMarketByIndex(0).result.expectSome().expectTuple(),
-      { price: types.uint(100000000) }
-    );
+    clientV2.getNftPrice(0).result.expectSome().expectUint(100000000);
+
+    // check that it can't be unlisted by not the owner
+    block = chain.mineBlock([clientV2.unlistItem(0, administrator.address)]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_OWNER);
 
     // unlist
     block = chain.mineBlock([clientV2.unlistItem(0, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getTokenMarketByIndex(0).result.expectNone();
+    clientV2.getNftPrice(0).result.expectNone();
   },
 });
 
@@ -264,17 +263,14 @@ Clarinet.test({
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getTokenMarketByIndex(0).result.expectNone();
+    clientV2.getNftPrice(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
       clientV2.listItem(0, 100000000, wallet1.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    assertEquals(
-      clientV2.getTokenMarketByIndex(0).result.expectSome().expectTuple(),
-      { price: types.uint(100000000) }
-    );
+    clientV2.getNftPrice(0).result.expectSome().expectUint(100000000);
 
     setCollectionRoyalties(chain, accounts, "V2");
     block = chain.mineBlock([clientV2.buyNow(0, wallet2.address)]);
@@ -324,22 +320,19 @@ Clarinet.test({
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getTokenMarketByIndex(0).result.expectNone();
+    clientV2.getNftPrice(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
       clientV2.listItem(0, 100000000, wallet1.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    assertEquals(
-      clientV2.getTokenMarketByIndex(0).result.expectSome().expectTuple(),
-      { price: types.uint(100000000) }
-    );
+    clientV2.getNftPrice(0).result.expectSome().expectUint(100000000);
 
     // unlist
     block = chain.mineBlock([clientV2.unlistItem(0, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getTokenMarketByIndex(0).result.expectNone();
+    clientV2.getNftPrice(0).result.expectNone();
 
     // wallet 2 trying to buy should fail
     block = chain.mineBlock([clientV2.buyNow(0, wallet2.address)]);
@@ -359,17 +352,14 @@ Clarinet.test({
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getTokenMarketByIndex(0).result.expectNone();
+    clientV2.getNftPrice(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
       clientV2.listItem(0, 100000000, wallet1.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    assertEquals(
-      clientV2.getTokenMarketByIndex(0).result.expectSome().expectTuple(),
-      { price: types.uint(100000000) }
-    );
+    clientV2.getNftPrice(0).result.expectSome().expectUint(100000000);
 
     // wallet 1 trying to transfer should fail
     block = chain.mineBlock([
