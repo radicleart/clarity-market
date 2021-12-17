@@ -18,12 +18,6 @@
 ;; percent mint fee each address receives
 (define-data-var collection-mint-shares (list 4 uint) (list))
 
-;; addresses to receive royalty fees
-;; first element at this list is ignored because the nft owner will be used
-(define-data-var collection-royalty-addresses (list 10 principal) (list))
-;; percent royalty fee each address receives
-(define-data-var collection-royalty-shares (list 10 uint) (list))
-
 ;; TODO: update this
 (define-data-var token-uri (string-ascii 246) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}.json")
 (define-data-var metadata-frozen bool false)
@@ -238,13 +232,11 @@
     )
 )
 
-(define-public (set-collection-royalties (new-mint-addresses (list 4 principal)) (new-mint-shares (list 4 uint)) (new-royalty-addresses (list 10 principal)) (new-royalty-shares (list 10 uint)))
+(define-public (set-collection-royalties (new-mint-addresses (list 4 principal)) (new-mint-shares (list 4 uint)))
     (begin
         (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
         (var-set collection-mint-addresses new-mint-addresses)
         (var-set collection-mint-shares new-mint-shares)
-        (var-set collection-royalty-addresses new-royalty-addresses)
-        (var-set collection-royalty-shares new-royalty-shares)
         (ok true)
     )
 )
@@ -275,7 +267,6 @@
         (map-get? mint-pass account)
     )
 )
-
 
 ;; private methods
 (define-private (is-owned-or-approved (id uint) (operator principal) (owner principal))

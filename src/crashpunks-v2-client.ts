@@ -220,8 +220,6 @@ export class CrashPunksV2Client {
   setCollectionRoyalties(
     newMintAddresses: string[],
     newMintShares: number[],
-    newRoyaltyAddresses: string[],
-    newRoyaltyShares: number[],
     sender: string
   ): Tx {
     return Tx.contractCall(
@@ -236,10 +234,6 @@ export class CrashPunksV2Client {
         types.list(
           newMintShares.map((newMintShare) => types.uint(newMintShare))
         ),
-        types.list(
-          newRoyaltyAddresses.map((newAddress) => types.principal(newAddress))
-        ),
-        types.list(newRoyaltyShares.map((newShare) => types.uint(newShare))),
       ],
       sender
     );

@@ -124,8 +124,6 @@ const setCollectionRoyalties = (
       : clientV2.setCollectionRoyalties(
           newMintAddresses,
           newMintShares,
-          newAddresses,
-          newShares,
           administrator.address
         ),
   ]);
