@@ -2,6 +2,9 @@
 (impl-trait .nft-trait.nft-trait)
 (impl-trait .operable.operable)
 
+;; TODO: either deploy it on admin address, or use an existing mainnet one
+(use-trait commission-trait .commission-trait.commission)
+
 ;; contract variables
 
 (define-data-var administrator principal 'SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6)
@@ -45,7 +48,7 @@
 (define-constant ERR-COLLECTION-LIMIT-REACHED (err u108))
 (define-constant ERR-MINT-PASS-LIMIT-REACHED (err u109))
 (define-constant ERR-ADD-MINT-PASS (err u110))
-
+(define-constant ERR-WRONG-COMMISSION (err u111))
 
 (define-constant ERR-NOT-AUTHORIZED (err u401))
 (define-constant ERR-NOT-OWNER (err u402))
@@ -61,9 +64,9 @@
 (define-map approvals {owner: principal, operator: principal, nft-index: uint} bool)
 (define-map approvals-all {owner: principal, operator: principal} bool)
 
-;; id -> price (in ustx)
+;; id -> {price (in ustx), commission trait}
 ;; if id is not in map, it is not listed for sale
-(define-map nft-price uint uint)
+(define-map market uint {price: uint, commission: principal})
 
 ;; whitelist address -> # they can mint
 (define-map mint-pass principal uint)
@@ -87,7 +90,7 @@
 (define-public (transfer (id uint) (owner principal) (recipient principal))
     (begin
         (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
-        (asserts! (is-none (map-get? nft-price id)) ERR-NFT-LISTED)
+        (asserts! (is-none (map-get? market id)) ERR-NFT-LISTED)
         (nft-transfer? crashpunks-v2 id owner recipient)
     )
 )
@@ -184,35 +187,37 @@
 )
 
 ;; marketplace function
-(define-public (list-item (id uint) (amount uint))
-    (begin 
-
+(define-public (list-in-ustx (id uint) (price uint) (comm <commission-trait>))
+    (let ((listing {price: price, commission: (contract-of comm)})) 
         ;; (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
-        (asserts! (> amount u0) ERR-PRICE-WAS-ZERO)
-        (ok (map-set nft-price id amount))
+        (asserts! (> price u0) ERR-PRICE-WAS-ZERO)
+        (ok (map-set market id listing))
     )
 )
 
 ;; marketplace function
-(define-public (unlist-item (id uint))
+(define-public (unlist-in-ustx (id uint))
     (begin 
         (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
-        (ok (map-delete nft-price id))
+        (ok (map-delete market id))
     )
 )
 
 ;; marketplace function
-(define-public (buy-now (id uint))
+(define-public (buy-in-ustx (id uint) (comm <commission-trait>))
     (let 
         (
-            (price (unwrap! (map-get? nft-price id) ERR-NFT-NOT-LISTED-FOR-SALE))
+            (listing (unwrap! (map-get? market id) ERR-NFT-NOT-LISTED-FOR-SALE))
             (owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
+            (price (get price listing))
         )
-        (try! (payment-split id price contract-caller))
+        (asserts! (is-eq (contract-of comm) (get commission listing)) ERR-WRONG-COMMISSION)
+        (try! (stx-transfer? price contract-caller owner))
+        (try! (contract-call? comm pay id price))
         (try! (nft-transfer? crashpunks-v2 id owner buyer))
-        (map-delete nft-price id)
+        (map-delete market id)
         (ok true)
     )
 )
@@ -220,7 +225,7 @@
 (define-public (burn (id uint))
     (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)))
         (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
-        (map-delete nft-price id)
+        (map-delete market id)
         (nft-burn? crashpunks-v2 id contract-caller)
     )
 )
@@ -261,8 +266,8 @@
 )
 
 ;; read only methods
-(define-read-only (get-nft-price (id uint))
-    (map-get? nft-price id)
+(define-read-only (get-listing-in-ustx (id uint))
+    (map-get? market id)
 )
 
 (define-read-only (get-mint-pass-balance (account principal))
@@ -292,27 +297,6 @@
         (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u1) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u1) ERR-PAYMENT-ADDRESS)))
         (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u2) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u2) ERR-PAYMENT-ADDRESS)))
         (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u3) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u3) ERR-PAYMENT-ADDRESS)))
-        (ok true)
-    )
-)
-
-;; TODO: update this to use a list of {address, share}, and fold 
-(define-private (payment-split (id uint) (saleAmount uint) (payer principal)) 
-    (let (
-            (addresses (var-get collection-royalty-addresses))
-            (shares (var-get collection-royalty-shares))
-            (split u0)
-        )
-        (try! (pay-royalty payer saleAmount (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u0) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u1) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u1) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u2) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u2) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u3) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u3) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u4) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u4) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u5) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u5) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u6) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u6) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u7) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u7) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u8) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u8) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer saleAmount (unwrap! (element-at addresses u9) ERR-PAYMENT-ADDRESS) (unwrap! (element-at shares u9) ERR-PAYMENT-ADDRESS)))
         (ok true)
     )
 )

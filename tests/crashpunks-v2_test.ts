@@ -22,6 +22,7 @@ const getWalletsAndClient = (
   wallet4: Account;
   wallet5: Account;
   newAdministrator: Account;
+  commissionRecipient: Account;
   clientV1: CrashPunksV1Client;
   clientV2: CrashPunksV2Client;
 } => {
@@ -39,6 +40,7 @@ const getWalletsAndClient = (
   const wallet4 = accounts.get("wallet_4")!;
   const wallet5 = accounts.get("wallet_5")!;
   const newAdministrator = accounts.get("wallet_6")!;
+  const commissionRecipient = accounts.get("wallet_9")!;
   const clientV1 = new CrashPunksV1Client(chain, deployer);
   const clientV2 = new CrashPunksV2Client(chain, deployer);
   return {
@@ -52,6 +54,7 @@ const getWalletsAndClient = (
     newAdministrator,
     clientV1,
     clientV2,
+    commissionRecipient,
   };
 };
 
@@ -83,7 +86,9 @@ const setCollectionRoyalties = (
     wallet4.address,
     wallet5.address,
   ];
+
   const newMintShares = [5000000000, 4000000000, 2000000000, 1000000000];
+
   const newAddresses = [
     wallet2.address,
     wallet3.address,
@@ -96,9 +101,11 @@ const setCollectionRoyalties = (
     wallet2.address,
     wallet3.address,
   ];
+
   const newShares = [
     5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
   ];
+
   const newSecondaries = [
     5000000000, 4000000000, 2000000000, 1000000000, 0, 0, 0, 0, 0, 0,
   ];
@@ -217,7 +224,7 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - Ensure can list and unlist by owner",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { wallet1, administrator, clientV2 } = getWalletsAndClient(
+    const { wallet1, administrator, deployer, clientV2 } = getWalletsAndClient(
       chain,
       accounts
     );
@@ -227,78 +234,107 @@ Clarinet.test({
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getNftPrice(0).result.expectNone();
+    clientV2.getListingInUStx(0).result.expectNone();
 
     // check that it can't be listed by not the owner
     let block = chain.mineBlock([
-      clientV2.listItem(0, 10000000, administrator.address),
+      clientV2.listInUStx(
+        0,
+        10000000,
+        `${deployer.address}.commission-fixed`,
+        administrator.address
+      ),
     ]);
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_OWNER);
 
     // list for 100 stx
-    block = chain.mineBlock([clientV2.listItem(0, 100000000, wallet1.address)]);
+    block = chain.mineBlock([
+      clientV2.listInUStx(
+        0,
+        100000000,
+        `${deployer.address}.commission-fixed`,
+        wallet1.address
+      ),
+    ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
     // check is listed
-    clientV2.getNftPrice(0).result.expectSome().expectUint(100000000);
+    assertEquals(
+      clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
+      {
+        price: types.uint(100000000),
+        commission: `${deployer.address}.commission-fixed`,
+      }
+    );
 
     // check that it can't be unlisted by not the owner
-    block = chain.mineBlock([clientV2.unlistItem(0, administrator.address)]);
+    block = chain.mineBlock([clientV2.unlistInUStx(0, administrator.address)]);
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_OWNER);
 
     // unlist
-    block = chain.mineBlock([clientV2.unlistItem(0, wallet1.address)]);
+    block = chain.mineBlock([clientV2.unlistInUStx(0, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getNftPrice(0).result.expectNone();
+    clientV2.getListingInUStx(0).result.expectNone();
   },
 });
 
 Clarinet.test({
   name: "CrashpunksV2 - Ensure can NFT be listed and bought",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, wallet1, wallet2, wallet3, wallet4, wallet5, clientV2 } =
-      getWalletsAndClient(chain, accounts);
+    const {
+      deployer,
+      wallet1,
+      wallet2,
+      wallet3,
+      commissionRecipient,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getNftPrice(0).result.expectNone();
+    clientV2.getListingInUStx(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
-      clientV2.listItem(0, 100000000, wallet1.address),
+      clientV2.listInUStx(
+        0,
+        100000000,
+        `${deployer.address}.commission-fixed`,
+        wallet1.address
+      ),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getNftPrice(0).result.expectSome().expectUint(100000000);
 
-    setCollectionRoyalties(chain, accounts, "V2");
-    block = chain.mineBlock([clientV2.buyNow(0, wallet2.address)]);
+    assertEquals(
+      clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
+      {
+        price: types.uint(100000000),
+        commission: `${deployer.address}.commission-fixed`,
+      }
+    );
+
+    block = chain.mineBlock([
+      clientV2.buyInUStx(
+        0,
+        `${deployer.address}.commission-fixed`,
+        wallet2.address
+      ),
+    ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
     block.receipts[0].events.expectSTXTransferEvent(
-      50000000,
+      100000000,
       wallet2.address,
       wallet1.address
     );
 
     block.receipts[0].events.expectSTXTransferEvent(
-      40000000,
+      2500000,
       wallet2.address,
-      wallet3.address
-    );
-
-    block.receipts[0].events.expectSTXTransferEvent(
-      20000000,
-      wallet2.address,
-      wallet4.address
-    );
-
-    block.receipts[0].events.expectSTXTransferEvent(
-      10000000,
-      wallet2.address,
-      wallet5.address
+      commissionRecipient.address
     );
 
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
@@ -312,31 +348,103 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "CrashpunksV2 - Ensure NFT can't be bought when unlisted",
+  name: "CrashpunksV2 - Ensure that NFT can't be bought with different commission trait",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { wallet1, wallet2, clientV2 } = getWalletsAndClient(chain, accounts);
+    const {
+      deployer,
+      wallet1,
+      wallet2,
+      wallet3,
+      commissionRecipient,
+      clientV2,
+    } = getWalletsAndClient(chain, accounts);
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getNftPrice(0).result.expectNone();
+    clientV2.getListingInUStx(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
-      clientV2.listItem(0, 100000000, wallet1.address),
+      clientV2.listInUStx(
+        0,
+        100000000,
+        `${deployer.address}.commission-fixed`,
+        wallet1.address
+      ),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getNftPrice(0).result.expectSome().expectUint(100000000);
+
+    assertEquals(
+      clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
+      {
+        price: types.uint(100000000),
+        commission: `${deployer.address}.commission-fixed`,
+      }
+    );
+
+    block = chain.mineBlock([
+      clientV2.buyInUStx(
+        0,
+        `${deployer.address}.commission-nop`,
+        wallet2.address
+      ),
+    ]);
+    block.receipts[0].result
+      .expectErr()
+      .expectUint(ErrCode.ERR_WRONG_COMMISSION);
+  },
+});
+
+Clarinet.test({
+  name: "CrashpunksV2 - Ensure NFT can't be bought when unlisted",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, wallet2, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+
+    // mint v1 and upgrade
+    mintV1Token(chain, accounts);
+    chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
+
+    // shouldn't be listed
+    clientV2.getListingInUStx(0).result.expectNone();
+
+    // list for 100 stx
+    let block = chain.mineBlock([
+      clientV2.listInUStx(
+        0,
+        100000000,
+        `${deployer.address}.commission-fixed`,
+        wallet1.address
+      ),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+
+    assertEquals(
+      clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
+      {
+        price: types.uint(100000000),
+        commission: `${deployer.address}.commission-fixed`,
+      }
+    );
 
     // unlist
-    block = chain.mineBlock([clientV2.unlistItem(0, wallet1.address)]);
+    block = chain.mineBlock([clientV2.unlistInUStx(0, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getNftPrice(0).result.expectNone();
+    clientV2.getListingInUStx(0).result.expectNone();
 
     // wallet 2 trying to buy should fail
-    block = chain.mineBlock([clientV2.buyNow(0, wallet2.address)]);
+    block = chain.mineBlock([
+      clientV2.buyInUStx(
+        0,
+        `${deployer.address}.commission-fixed`,
+        wallet2.address
+      ),
+    ]);
     block.receipts[0].result
       .expectErr()
       .expectUint(ErrCode.ERR_NFT_NOT_LISTED_FOR_SALE);
@@ -346,21 +454,36 @@ Clarinet.test({
 Clarinet.test({
   name: "CrashpunksV2 - Ensure NFT can't be transferred when listed",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { wallet1, wallet2, clientV2 } = getWalletsAndClient(chain, accounts);
+    const { deployer, wallet1, wallet2, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
 
     // mint v1 and upgrade
     mintV1Token(chain, accounts);
     chain.mineBlock([clientV2.upgradeV1ToV2(0, wallet1.address)]);
 
     // shouldn't be listed
-    clientV2.getNftPrice(0).result.expectNone();
+    clientV2.getListingInUStx(0).result.expectNone();
 
     // list for 100 stx
     let block = chain.mineBlock([
-      clientV2.listItem(0, 100000000, wallet1.address),
+      clientV2.listInUStx(
+        0,
+        100000000,
+        `${deployer.address}.commission-fixed`,
+        wallet1.address
+      ),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.getNftPrice(0).result.expectSome().expectUint(100000000);
+
+    assertEquals(
+      clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
+      {
+        price: types.uint(100000000),
+        commission: `${deployer.address}.commission-fixed`,
+      }
+    );
 
     // wallet 1 trying to transfer should fail
     block = chain.mineBlock([
@@ -536,7 +659,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Ensure can freeze metadata",
+  name: "CrashpunksV2 - Ensure can freeze metadata",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { administrator, wallet1, clientV2 } = getWalletsAndClient(
       chain,

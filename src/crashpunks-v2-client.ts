@@ -17,6 +17,7 @@ export enum ErrCode {
   ERR_COLLECTION_LIMIT_REACHED = 108,
   ERR_MINT_PASS_LIMIT_REACHED = 109,
   ERR_ADD_MINT_PASS = 110,
+  ERR_WRONG_COMMISSION = 111,
 
   ERR_NOT_AUTHORIZED = 401,
   ERR_NOT_OWNER = 402,
@@ -176,29 +177,29 @@ export class CrashPunksV2Client {
     );
   }
 
-  listItem(id: number, amount: number, sender: string): Tx {
+  listInUStx(id: number, price: number, comm: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
-      "list-item",
-      [types.uint(id), types.uint(amount)],
+      "list-in-ustx",
+      [types.uint(id), types.uint(price), types.principal(comm)],
       sender
     );
   }
 
-  unlistItem(id: number, sender: string): Tx {
+  unlistInUStx(id: number, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
-      "unlist-item",
+      "unlist-in-ustx",
       [types.uint(id)],
       sender
     );
   }
 
-  buyNow(id: number, sender: string): Tx {
+  buyInUStx(id: number, comm: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
-      "buy-now",
-      [types.uint(id)],
+      "buy-in-ustx",
+      [types.uint(id), types.principal(comm)],
       sender
     );
   }
@@ -257,8 +258,8 @@ export class CrashPunksV2Client {
     return Tx.contractCall(this.contractName, "freeze-metadata", [], sender);
   }
 
-  getNftPrice(id: number): ReadOnlyFn {
-    return this.callReadOnlyFn("get-nft-price", [types.uint(id)]);
+  getListingInUStx(id: number): ReadOnlyFn {
+    return this.callReadOnlyFn("get-listing-in-ustx", [types.uint(id)]);
   }
 
   getMintPassBalance(account: string): ReadOnlyFn {

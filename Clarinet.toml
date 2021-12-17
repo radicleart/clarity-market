@@ -8,7 +8,7 @@ depends_on = []
 
 [contracts.crashpunks-v2]
 path = "contracts/crashpunks-v2.clar"
-depends_on = ["nft-trait", "operable"]
+depends_on = ["nft-trait", "operable", "commission-trait"]
 
 [contracts.crashpunks-v1]
 path = "contracts/crashpunks-v1.clar"
@@ -28,4 +28,16 @@ depends_on = []
 
 [contracts.transferable]
 path = "contracts/transferable.clar"
+depends_on = []
+
+[contracts.commission-trait]
+path = "contracts/commission-trait.clar"
+depends_on = []
+
+[contracts.commission-nop]
+path = "contracts/commission-nop.clar"
+depends_on = []
+
+[contracts.commission-fixed]
+path = "contracts/commission-fixed.clar"
 depends_on = []
