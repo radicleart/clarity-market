@@ -25,7 +25,7 @@
 (define-data-var collection-royalty-shares (list 10 uint) (list))
 
 ;; TODO: update this
-(define-data-var token-uri (string-ascii 80) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}")
+(define-data-var token-uri (string-ascii 246) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
