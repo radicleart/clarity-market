@@ -154,7 +154,6 @@
 
 ;; only size of list matters, content of list doesn't matter
 (define-public (batch-mint-token (entries (list 20 uint)))
-    ;; (ok (map mint-token-helper entries))
     (fold check-err
         (map mint-token-helper entries)
         (ok true)
@@ -179,7 +178,6 @@
 )
 
 (define-public (batch-set-mint-pass (entries (list 200 {account: principal, limit: uint})))
-    ;; (ok (map set-mint-pass-helper entries))
     (fold check-err
         (map set-mint-pass-helper entries)
         (ok true)
@@ -189,7 +187,6 @@
 ;; marketplace function
 (define-public (list-in-ustx (id uint) (price uint) (comm <commission-trait>))
     (let ((listing {price: price, commission: (contract-of comm)})) 
-        ;; (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (asserts! (> price u0) ERR-PRICE-WAS-ZERO)
         (ok (map-set market id listing))
