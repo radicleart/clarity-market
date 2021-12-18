@@ -41,3 +41,7 @@ depends_on = []
 [contracts.commission-fixed]
 path = "contracts/commission-fixed.clar"
 depends_on = []
+
+[contracts.commission-thisisnumberone]
+path = "contracts/commission-thisisnumberone.clar"
+depends_on = []

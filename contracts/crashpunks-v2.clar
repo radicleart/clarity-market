@@ -49,6 +49,14 @@
 (define-constant ERR-NOT-ADMINISTRATOR (err u403))
 (define-constant ERR-NOT-FOUND (err u404))
 
+(define-constant wallet-1 'SP2CBFWG9AT8W4WSCSSJE1R42SDECK7K7W9VSEKD0)
+(define-constant wallet-2 'SPGAKH27HF1T170QET72C727873H911BKNMPF8YB)
+(define-constant wallet-3 'SP2S6MCR2K3TYAC02RSYQ74RE9RJ3Q0EV3FYFGKGB)
+(define-constant wallet-4 'SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N)
+(define-constant wallet-5 'SP2FTZQX1V9FPPNH485Z49JE914YNQYGT4XVGNR4S)
+(define-constant wallet-6 'SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW)
+(define-constant wallet-7 'SP1P89TEC03E29V5MYJBSCC8KWR1A243ZG2R8DYB1)
+
 (define-non-fungible-token crashpunks-v2 uint)
 
 ;; data structures
@@ -232,15 +240,6 @@
     )
 )
 
-(define-public (set-collection-royalties (new-mint-addresses (list 4 principal)) (new-mint-shares (list 4 uint)))
-    (begin
-        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
-        (var-set collection-mint-addresses new-mint-addresses)
-        (var-set collection-mint-shares new-mint-shares)
-        (ok true)
-    )
-)
-
 (define-public (set-token-uri (new-token-uri (string-ascii 80)))
     (begin
         (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
@@ -280,27 +279,15 @@
 )
 
 (define-private (paymint-split (mintPrice uint) (payer principal)) 
-    (let (
-            (mintAddresses (var-get collection-mint-addresses))
-            (mintShares (var-get collection-mint-shares))
-        )
-        (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u0) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u0) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u1) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u1) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u2) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u2) ERR-PAYMENT-ADDRESS)))
-        (try! (pay-royalty payer mintPrice (unwrap! (element-at mintAddresses u3) ERR-PAYMENT-ADDRESS) (unwrap! (element-at mintShares u3) ERR-PAYMENT-ADDRESS)))
+    (begin
+        (try! (stx-transfer? (/ (* mintPrice u95) u100) payer wallet-1))
+        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-2))
+        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-3))
+        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-4))
+        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-5))
+        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-6))
+        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-7))
         (ok true)
-    )
-)
-
-(define-private (pay-royalty (payer principal) (saleAmount uint) (payee principal) (share uint))
-    (let ((split (/ (* saleAmount share) percentage-with-twodp)))
-        ;; ignore royalty payment if its to the buyer / contract-caller.
-        (ok (and 
-                (> share u0)
-                (not (is-eq contract-caller payee)) 
-                (try! (stx-transfer? split payer payee))
-            )
-        )
     )
 )
 

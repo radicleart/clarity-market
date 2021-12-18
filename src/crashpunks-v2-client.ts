@@ -217,28 +217,6 @@ export class CrashPunksV2Client {
     );
   }
 
-  setCollectionRoyalties(
-    newMintAddresses: string[],
-    newMintShares: number[],
-    sender: string
-  ): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "set-collection-royalties",
-      [
-        types.list(
-          newMintAddresses.map((newMintAddress) =>
-            types.principal(newMintAddress)
-          )
-        ),
-        types.list(
-          newMintShares.map((newMintShare) => types.uint(newMintShare))
-        ),
-      ],
-      sender
-    );
-  }
-
   setTokenUri(newTokenUri: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
