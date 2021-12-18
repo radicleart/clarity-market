@@ -12,11 +12,11 @@ import { CrashPunksV2Client, ErrCode } from "../src/crashpunks-v2-client.ts";
 
 const commissionAddress1 = "SP2CBFWG9AT8W4WSCSSJE1R42SDECK7K7W9VSEKD0";
 const commissionAddress2 = "SPGAKH27HF1T170QET72C727873H911BKNMPF8YB";
-const commissionAddress3 = "SP2S6MCR2K3TYAC02RSYQ74RE9RJ3Q0EV3FYFGKGB";
-const commissionAddress4 = "SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N";
-const commissionAddress5 = "SP2FTZQX1V9FPPNH485Z49JE914YNQYGT4XVGNR4S";
-const commissionAddress6 = "SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW";
-const commissionAddress7 = "SP1P89TEC03E29V5MYJBSCC8KWR1A243ZG2R8DYB1";
+const commissionAddress3 = "SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N";
+const commissionAddress4 = "SP2FTZQX1V9FPPNH485Z49JE914YNQYGT4XVGNR4S";
+const commissionAddress5 = "SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW";
+const commissionAddress6 = "SP1P89TEC03E29V5MYJBSCC8KWR1A243ZG2R8DYB1";
+const commissionAddress7 = "SP2S6MCR2K3TYAC02RSYQ74RE9RJ3Q0EV3FYFGKGB";
 
 const getWalletsAndClient = (
   chain: Chain,
@@ -326,32 +326,32 @@ Clarinet.test({
       commissionAddress1
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      333333,
+      360000,
       wallet2.address,
       commissionAddress2
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      333333,
+      360000,
       wallet2.address,
       commissionAddress3
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      333333,
+      360000,
       wallet2.address,
       commissionAddress4
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      333333,
+      360000,
       wallet2.address,
       commissionAddress5
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      333333,
+      360000,
       wallet2.address,
       commissionAddress6
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      333333,
+      200000,
       wallet2.address,
       commissionAddress7
     );
@@ -551,32 +551,32 @@ Clarinet.test({
       commissionAddress1
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      416666,
+      475000,
       wallet1.address,
       commissionAddress2
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      416666,
+      475000,
       wallet1.address,
       commissionAddress3
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      416666,
+      475000,
       wallet1.address,
       commissionAddress4
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      416666,
+      475000,
       wallet1.address,
       commissionAddress5
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      416666,
+      475000,
       wallet1.address,
       commissionAddress6
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      416666,
+      125000,
       wallet1.address,
       commissionAddress7
     );

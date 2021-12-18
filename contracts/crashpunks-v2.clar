@@ -23,8 +23,6 @@
 (define-data-var metadata-frozen bool false)
 
 ;; constants
-(define-constant percentage-with-twodp u10000000000)
-
 ;; 50 stx
 (define-constant MINT-PRICE u50000000)
 
@@ -51,11 +49,11 @@
 
 (define-constant wallet-1 'SP2CBFWG9AT8W4WSCSSJE1R42SDECK7K7W9VSEKD0)
 (define-constant wallet-2 'SPGAKH27HF1T170QET72C727873H911BKNMPF8YB)
-(define-constant wallet-3 'SP2S6MCR2K3TYAC02RSYQ74RE9RJ3Q0EV3FYFGKGB)
-(define-constant wallet-4 'SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N)
-(define-constant wallet-5 'SP2FTZQX1V9FPPNH485Z49JE914YNQYGT4XVGNR4S)
-(define-constant wallet-6 'SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW)
-(define-constant wallet-7 'SP1P89TEC03E29V5MYJBSCC8KWR1A243ZG2R8DYB1)
+(define-constant wallet-3 'SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N)
+(define-constant wallet-4 'SP2FTZQX1V9FPPNH485Z49JE914YNQYGT4XVGNR4S)
+(define-constant wallet-5 'SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW)
+(define-constant wallet-6 'SP1P89TEC03E29V5MYJBSCC8KWR1A243ZG2R8DYB1)
+(define-constant wallet-7 'SP2S6MCR2K3TYAC02RSYQ74RE9RJ3Q0EV3FYFGKGB)
 
 (define-non-fungible-token crashpunks-v2 uint)
 
@@ -281,12 +279,12 @@
 (define-private (paymint-split (mintPrice uint) (payer principal)) 
     (begin
         (try! (stx-transfer? (/ (* mintPrice u95) u100) payer wallet-1))
-        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-2))
-        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-3))
-        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-4))
-        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-5))
-        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-6))
-        (try! (stx-transfer? (/ (/ (* mintPrice u5) u6) u100) payer wallet-7))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-2))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-3))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-4))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-5))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-6))
+        (try! (stx-transfer? (/ (* mintPrice u25) u10000) payer wallet-7))
         (ok true)
     )
 )
