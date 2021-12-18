@@ -61,7 +61,7 @@
 
 ;; {owner, operator, id} -> boolean
 ;; if {owner, operator, id}->true in map, then operator can perform actions on behalf of owner for this id
-(define-map approvals {owner: principal, operator: principal, nft-index: uint} bool)
+(define-map approvals {owner: principal, operator: principal, id: uint} bool)
 (define-map approvals-all {owner: principal, operator: principal} bool)
 
 ;; id -> {price (in ustx), commission trait}
@@ -104,7 +104,7 @@
 
 ;; operable
 (define-public (set-approved (id uint) (operator principal) (approved bool))
-    (ok (map-set approvals {owner: contract-caller, operator: operator, nft-index: id} approved))
+    (ok (map-set approvals {owner: contract-caller, operator: operator, id: id} approved))
 )
 
 (define-public (set-approved-all (operator principal) (approved bool))
@@ -269,7 +269,7 @@
             (is-eq owner operator)
             (map-get? approvals-all {owner: owner, operator: operator})
         )
-        (map-get? approvals {owner: owner, operator: operator, nft-index: id})
+        (map-get? approvals {owner: owner, operator: operator, id: id})
     )
 )
 
