@@ -7,7 +7,7 @@
 
 ;; contract variables
 
-(define-data-var administrator principal 'SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6)
+(define-data-var administrator principal 'SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ)
 
 
 ;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK IF OFF BY 1 ERROR
@@ -19,7 +19,7 @@
 (define-data-var collection-mint-shares (list 4 uint) (list))
 
 ;; TODO: update this
-(define-data-var token-uri (string-ascii 246) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}.json")
+(define-data-var token-uri (string-ascii 246) "ipfs://QmW8t9sUaB7LdBRsa4FW6p9m25bXhcM9Uk23qmH5ivwBBh/crashpunks-0.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
