@@ -13,11 +13,6 @@
 ;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK IF OFF BY 1 ERROR
 (define-data-var mint-counter uint u5721)
 
-;; addresses to receive mint fee
-(define-data-var collection-mint-addresses (list 4 principal) (list))
-;; percent mint fee each address receives
-(define-data-var collection-mint-shares (list 4 uint) (list))
-
 ;; TODO: update this
 (define-data-var token-uri (string-ascii 246) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}.json")
 (define-data-var metadata-frozen bool false)
