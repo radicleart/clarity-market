@@ -1,31 +1,29 @@
 ;; Interface definitions
-;;(impl-trait .nft-trait.nft-trait)
-;;(impl-trait .operable.operable)
-(impl-trait 'params.nfttrait)
-(impl-trait 'params.operabletrait)
+(impl-trait .nft-trait.nft-trait)
+(impl-trait .operable.operable)
 
 ;; TODO: either deploy it on admin address, or use an existing mainnet one
-(use-trait commission-trait .commission-trait.commission)
+(use-trait commission-trait 'SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ.commission-trait.commission)
 
 ;; contract variables
 
-(define-data-var administrator principal 'params.administrator)
+(define-data-var administrator principal 'SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ)
 
 
 ;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK IF OFF BY 1 ERROR
 (define-data-var mint-counter uint u0)
 
 ;; TODO: update this
-(define-data-var token-uri (string-ascii 246) "ipfs://QmW8t9sUaB7LdBRsa4FW6p9m25bXhcM9Uk23qmH5ivwBBh/params.tokenName-{id}.json")
+(define-data-var token-uri (string-ascii 246) "ipfs://QmW8t9sUaB7LdBRsa4FW6p9m25bXhcM9Uk23qmH5ivwBBh/crashpunks-0.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
 ;; 50 stx
-(define-constant MINT-PRICE uparams.mintPrice)
+(define-constant MINT-PRICE u1000000)
 
-(define-constant token-name "params.tokenName")
-(define-constant token-symbol "params.tokenSymbol")
-(define-constant COLLECTION-MAX-SUPPLY uparams.collectionLimit)
+(define-constant token-name "genesis-v1")
+(define-constant token-symbol "#1")
+(define-constant COLLECTION-MAX-SUPPLY u5)
 
 (define-constant ERR-METADATA-FROZEN (err u101))
 (define-constant ERR-COULDNT-GET-V1-DATA (err u102))
@@ -44,10 +42,10 @@
 (define-constant ERR-NOT-ADMINISTRATOR (err u403))
 (define-constant ERR-NOT-FOUND (err u404))
 
-(define-constant wallet-1 'params.wallet1)
-(define-constant wallet-2 'params.wallet2)
+(define-constant wallet-1 'ST1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28G8HXK9G5)
+(define-constant wallet-2 'SP2S6MCR2K3TYAC02RSYQ74RE9RJ3Q0EV3FYFGKGB)
 
-(define-non-fungible-token params.tokenName uint)
+(define-non-fungible-token genesis-v1 uint)
 
 ;; data structures
 
@@ -75,7 +73,7 @@
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
 (define-read-only (get-owner (id uint))
-  (ok (nft-get-owner? params.tokenName id))
+  (ok (nft-get-owner? genesis-v1 id))
 )
 
 ;; SIP-09: Transfer
@@ -83,13 +81,13 @@
     (begin
         (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (asserts! (is-none (map-get? market id)) ERR-NFT-LISTED)
-        (nft-transfer? params.tokenName id owner recipient)
+        (nft-transfer? genesis-v1 id owner recipient)
     )
 )
 
 ;; operable
 (define-read-only (is-approved (id uint) (operator principal))
-    (let ((owner (unwrap! (nft-get-owner? params.tokenName id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? genesis-v1 id) ERR-COULDNT-GET-NFT-OWNER)))
         (ok (is-owned-or-approved id operator owner))
     )
 )
@@ -114,7 +112,7 @@
         (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
 
         (try! (paymint-split MINT-PRICE contract-caller))
-        (try! (nft-mint? params.tokenName mintCounter contract-caller))
+        (try! (nft-mint? genesis-v1 mintCounter contract-caller))
         (var-set mint-counter (+ mintCounter u1))
         (map-set mint-pass contract-caller (- mintPassBalance u1))
         (ok true)
@@ -134,7 +132,7 @@
     (begin
         (asserts! (< id COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
         (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
-        (try! (nft-mint? params.tokenName id recipient))
+        (try! (nft-mint? genesis-v1 id recipient))
         (ok true)
     )
 )
@@ -156,7 +154,7 @@
 ;; marketplace function
 (define-public (list-in-ustx (id uint) (price uint) (comm <commission-trait>))
     (let ((listing {price: price, commission: (contract-of comm)})) 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? params.tokenName id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? genesis-v1 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (asserts! (> price u0) ERR-PRICE-WAS-ZERO)
         (ok (map-set market id listing))
     )
@@ -165,7 +163,7 @@
 ;; marketplace function
 (define-public (unlist-in-ustx (id uint))
     (begin 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? params.tokenName id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? genesis-v1 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (ok (map-delete market id))
     )
 )
@@ -175,24 +173,24 @@
     (let 
         (
             (listing (unwrap! (map-get? market id) ERR-NFT-NOT-LISTED-FOR-SALE))
-            (owner (unwrap! (nft-get-owner? params.tokenName id) ERR-COULDNT-GET-NFT-OWNER))
+            (owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
             (price (get price listing))
         )
         (asserts! (is-eq (contract-of comm) (get commission listing)) ERR-WRONG-COMMISSION)
         (try! (stx-transfer? price contract-caller owner))
         (try! (contract-call? comm pay id price))
-        (try! (nft-transfer? params.tokenName id owner buyer))
+        (try! (nft-transfer? crashpunks-v2 id owner buyer))
         (map-delete market id)
         (ok true)
     )
 )
 
 (define-public (burn (id uint))
-    (let ((owner (unwrap! (nft-get-owner? params.tokenName id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)))
         (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
         (map-delete market id)
-        (nft-burn? params.tokenName id contract-caller)
+        (nft-burn? crashpunks-v2 id contract-caller)
     )
 )
 
@@ -267,4 +265,4 @@
 )
 
 ;; TODO: add all whitelists
-(map-set mint-pass 'params.administrator u5)
+(map-set mint-pass 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT u5)
