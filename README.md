@@ -1,5 +1,9 @@
 # Clarity Market 1 2020
 
+## Clarinet Commands
+
+> clarinet new crashpunks-v2
+> clarinet contract new crashpunks-v2
 ## Non Fungible Tokens / Digital Collectibles
 
 Project spec can be found here: [Risidio Auctions](https://github.com/stacksgov/Stacks-Grants/issues/12)
