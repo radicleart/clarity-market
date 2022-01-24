@@ -321,7 +321,7 @@ Clarinet.test({
       wallet1.address
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      8000000,
+      6000000,
       wallet2.address,
       commissionAddress1
     );
