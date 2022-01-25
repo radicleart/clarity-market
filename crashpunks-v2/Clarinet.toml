@@ -1,7 +1,0 @@
-
-[project]
-name = "crashpunks-v2"
-
-# [contracts.counter]
-# path = "contracts/counter.clar"
-# depends_on = []

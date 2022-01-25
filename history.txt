@@ -1,3 +1,0 @@
-#V2
-clarinet deploy --mocknet
-exit

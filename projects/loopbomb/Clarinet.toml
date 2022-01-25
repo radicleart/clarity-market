@@ -1,0 +1,21 @@
+
+[project]
+name = "loopbomb"
+requirements = []
+costs_version = 1
+
+[contracts.loopbomb]
+path = "contracts/loopbomb.clar"
+depends_on = ["nft-trait", "operable", "transferable"]
+
+[contracts.nft-trait]
+path = "../../contracts/traits/nft-trait.clar"
+depends_on = []
+
+[contracts.operable]
+path = "../../contracts/traits/operable.clar"
+depends_on = []
+
+[contracts.transferable]
+path = "../../contracts/traits/transferable.clar"
+depends_on = []
