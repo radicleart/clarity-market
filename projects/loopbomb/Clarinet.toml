@@ -20,8 +20,8 @@ depends_on = []
 path = "../../contracts/commission-nop.clar"
 depends_on = []
 
-[contracts.commission-thisisnumberone]
-path = "../../contracts/commission-thisisnumberone.clar"
+[contracts.commission-loopbomb]
+path = "../../contracts/commission-loopbomb.clar"
 depends_on = []
 
 [contracts.commission-trait]

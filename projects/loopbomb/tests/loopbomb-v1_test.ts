@@ -27,7 +27,7 @@ const getWalletsAndClient = (
   client: LoopbombV1Client;
 } => {
   const administrator = {
-    address: "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+    address: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM",
     balance: 1000000,
     name: "administrator",
     mnemonic: "asdf",
@@ -185,7 +185,7 @@ Clarinet.test({
 
     // should not be able to transfer balance if sender not current administrator
     let block = chain.mineBlock([
-      client.transferBalance(wallet1.address, deployer.address),
+      client.transferBalance(wallet1.address, wallet1.address),
     ]);
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ALLOWED);
 

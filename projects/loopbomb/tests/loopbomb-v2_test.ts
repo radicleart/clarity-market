@@ -10,13 +10,9 @@ import { hexStringToArrayBuffer } from "../../../src/utils.ts";
 import { LoopbombV1Client } from "../../../src/loopbomb-v1-client.ts";
 import { LoopbombV2Client, ErrCode } from "../../../src/loopbomb-v2-client.ts";
 
-const commissionAddress1 = "SP2CBFWG9AT8W4WSCSSJE1R42SDECK7K7W9VSEKD0";
-const commissionAddress2 = "SPGAKH27HF1T170QET72C727873H911BKNMPF8YB";
-const commissionAddress3 = "SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N";
-const commissionAddress4 = "SP2FTZQX1V9FPPNH485Z49JE914YNQYGT4XVGNR4S";
-const commissionAddress5 = "SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW";
-const commissionAddress6 = "SP1P89TEC03E29V5MYJBSCC8KWR1A243ZG2R8DYB1";
-const commissionAddress7 = "SP2S6MCR2K3TYAC02RSYQ74RE9RJ3Q0EV3FYFGKGB";
+const commissionAddress1 = "SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14";
+const commissionAddress2 = "SP3BTM84FYABJGJ83519GG5NSV0A6A13D4NHJSS32";
+const commissionAddress3 = "SP120HPHF8AZXS2SCXMXAX3XF4XT35C0HCHMAVMAJ";
 
 const getWalletsAndClient = (
   chain: Chain,
@@ -34,7 +30,7 @@ const getWalletsAndClient = (
   clientV2: LoopbombV2Client;
 } => {
   const administrator = {
-    address: "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
+    address: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM",
     balance: 1000000,
     name: "administrator",
     mnemonic: "asdf",
@@ -188,7 +184,7 @@ Clarinet.test({
       types.uint(0),
       wallet1.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
 
     // ensure can batch upgrade
@@ -237,7 +233,7 @@ Clarinet.test({
       clientV2.listInUStx(
         0,
         10000000,
-        `${deployer.address}.commission-thisisnumberone`,
+        `${deployer.address}.commission-loopbomb`,
         administrator.address
       ),
     ]);
@@ -248,7 +244,7 @@ Clarinet.test({
       clientV2.listInUStx(
         0,
         100000000,
-        `${deployer.address}.commission-thisisnumberone`,
+        `${deployer.address}.commission-loopbomb`,
         wallet1.address
       ),
     ]);
@@ -259,7 +255,7 @@ Clarinet.test({
       clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
       {
         price: types.uint(100000000),
-        commission: `${deployer.address}.commission-thisisnumberone`,
+        commission: `${deployer.address}.commission-loopbomb`,
       }
     );
 
@@ -292,7 +288,7 @@ Clarinet.test({
       clientV2.listInUStx(
         0,
         100000000,
-        `${deployer.address}.commission-thisisnumberone`,
+        `${deployer.address}.commission-loopbomb`,
         wallet1.address
       ),
     ]);
@@ -302,14 +298,14 @@ Clarinet.test({
       clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
       {
         price: types.uint(100000000),
-        commission: `${deployer.address}.commission-thisisnumberone`,
+        commission: `${deployer.address}.commission-loopbomb`,
       }
     );
 
     block = chain.mineBlock([
       clientV2.buyInUStx(
         0,
-        `${deployer.address}.commission-thisisnumberone`,
+        `${deployer.address}.commission-loopbomb`,
         wallet2.address
       ),
     ]);
@@ -321,39 +317,19 @@ Clarinet.test({
       wallet1.address
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      6000000,
+      3000000,
       wallet2.address,
       commissionAddress1
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      360000,
+      3000000,
       wallet2.address,
       commissionAddress2
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      360000,
+      2000000,
       wallet2.address,
       commissionAddress3
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      360000,
-      wallet2.address,
-      commissionAddress4
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      360000,
-      wallet2.address,
-      commissionAddress5
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      360000,
-      wallet2.address,
-      commissionAddress6
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      200000,
-      wallet2.address,
-      commissionAddress7
     );
 
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
@@ -361,7 +337,7 @@ Clarinet.test({
       wallet1.address,
       wallet2.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
   },
 });
@@ -384,7 +360,7 @@ Clarinet.test({
       clientV2.listInUStx(
         0,
         100000000,
-        `${deployer.address}.commission-thisisnumberone`,
+        `${deployer.address}.commission-loopbomb`,
         wallet1.address
       ),
     ]);
@@ -394,7 +370,7 @@ Clarinet.test({
       clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
       {
         price: types.uint(100000000),
-        commission: `${deployer.address}.commission-thisisnumberone`,
+        commission: `${deployer.address}.commission-loopbomb`,
       }
     );
 
@@ -431,7 +407,7 @@ Clarinet.test({
       clientV2.listInUStx(
         0,
         100000000,
-        `${deployer.address}.commission-thisisnumberone`,
+        `${deployer.address}.commission-loopbomb`,
         wallet1.address
       ),
     ]);
@@ -441,7 +417,7 @@ Clarinet.test({
       clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
       {
         price: types.uint(100000000),
-        commission: `${deployer.address}.commission-thisisnumberone`,
+        commission: `${deployer.address}.commission-loopbomb`,
       }
     );
 
@@ -454,7 +430,7 @@ Clarinet.test({
     block = chain.mineBlock([
       clientV2.buyInUStx(
         0,
-        `${deployer.address}.commission-thisisnumberone`,
+        `${deployer.address}.commission-loopbomb`,
         wallet2.address
       ),
     ]);
@@ -484,7 +460,7 @@ Clarinet.test({
       clientV2.listInUStx(
         0,
         100000000,
-        `${deployer.address}.commission-thisisnumberone`,
+        `${deployer.address}.commission-loopbomb`,
         wallet1.address
       ),
     ]);
@@ -494,7 +470,7 @@ Clarinet.test({
       clientV2.getListingInUStx(0).result.expectSome().expectTuple(),
       {
         price: types.uint(100000000),
-        commission: `${deployer.address}.commission-thisisnumberone`,
+        commission: `${deployer.address}.commission-loopbomb`,
       }
     );
 
@@ -507,7 +483,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "LoopbombV2 - ensure can mint v2",
+  name: "LoopbombV2 - ensure cannot mint v2",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const {
       administrator,
@@ -524,133 +500,7 @@ Clarinet.test({
     let block = chain.mineBlock([clientV2.mintToken(wallet1.address)]);
     block.receipts[0].result
       .expectErr()
-      .expectUint(ErrCode.ERR_MINT_PASS_LIMIT_REACHED);
-
-    // wallet 1 try to add mint pass, should fail since only admin can
-    block = chain.mineBlock([
-      clientV2.setMintPass(wallet1.address, 5, wallet1.address),
-    ]);
-    block.receipts[0].result
-      .expectErr()
-      .expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
-
-    // admin add mint pass for wallet 1
-    block = chain.mineBlock([
-      clientV2.setMintPass(wallet1.address, 1, administrator.address),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    clientV2.getMintPassBalance(wallet1.address).result.expectUint(1);
-
-    // wallet 1 can now mint
-    block = chain.mineBlock([clientV2.mintToken(wallet1.address)]);
-    block.receipts[0].result.expectOk().expectBool(true);
-    block.receipts[0].events.expectSTXTransferEvent(
-      47500000,
-      wallet1.address,
-      commissionAddress1
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      475000,
-      wallet1.address,
-      commissionAddress2
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      475000,
-      wallet1.address,
-      commissionAddress3
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      475000,
-      wallet1.address,
-      commissionAddress4
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      475000,
-      wallet1.address,
-      commissionAddress5
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      475000,
-      wallet1.address,
-      commissionAddress6
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      125000,
-      wallet1.address,
-      commissionAddress7
-    );
-
-    block.receipts[0].events.expectNonFungibleTokenMintEvent(
-      types.uint(5721),
-      wallet1.address,
-      `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
-    );
-
-    // check that wallet 1 mint pass decreased to 0
-    clientV2.getMintPassBalance(wallet1.address).result.expectUint(0);
-
-    // check that wallet 1 owns 5721
-    clientV2
-      .getOwner(5721)
-      .result.expectOk()
-      .expectSome()
-      .expectPrincipal(wallet1.address);
-
-    // check that wallet 1 can't mint again
-    block = chain.mineBlock([clientV2.mintToken(wallet1.address)]);
-    block.receipts[0].result
-      .expectErr()
-      .expectUint(ErrCode.ERR_MINT_PASS_LIMIT_REACHED);
-
-    // replenish 20 mint pass for wallet 1
-    // test batch set mint pass at the same time
-    block = chain.mineBlock([
-      // clientV2.setMintPass(wallet1.address, 20, administrator.address),
-      clientV2.batchSetMintPass(
-        [
-          { account: wallet1.address, limit: 20 },
-          { account: wallet2.address, limit: 1 },
-        ],
-        administrator.address
-      ),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    // mint 20
-    block = chain.mineBlock([
-      clientV2.batchMintToken(
-        Array.from({ length: 20 }).map((k, index) => index),
-        wallet1.address
-      ),
-    ]);
-
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    for (let i = 5722; i < 5722 + 20; i++) {
-      clientV2
-        .getOwner(i)
-        .result.expectOk()
-        .expectSome()
-        .expectPrincipal(wallet1.address);
-    }
-
-    // expect nft id 5722+21 to not exist
-    clientV2
-      .getOwner(5722 + 21)
-      .result.expectOk()
-      .expectNone();
-
-    // expect last token id = 5722 + 19
-    clientV2
-      .getLastTokenId()
-      .result.expectOk()
-      .expectUint(5722 + 19);
-
-    // make sure wallet2 can use its mint pass as well
-    block = chain.mineBlock([clientV2.mintToken(wallet2.address)]);
-    block.receipts[0].result.expectOk().expectBool(true);
+      .expectUint(ErrCode.ERR_COLLECTION_LIMIT_REACHED);
   },
 });
 
@@ -763,7 +613,7 @@ Clarinet.test({
       types.uint(0),
       wallet1.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
   },
 });
@@ -858,7 +708,7 @@ Clarinet.test({
       wallet1.address,
       wallet2.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
 
     // admin should be able to transfer on behalf of wallet 2
@@ -876,7 +726,7 @@ Clarinet.test({
       wallet2.address,
       wallet3.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
   },
 });
@@ -912,7 +762,7 @@ Clarinet.test({
       wallet1.address,
       wallet2.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
 
     // transfer nft back to wallet1
@@ -925,7 +775,7 @@ Clarinet.test({
       wallet2.address,
       wallet1.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
 
     // remove approval
@@ -980,7 +830,7 @@ Clarinet.test({
       wallet1.address,
       wallet2.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
 
     // admin should be able to transfer nft 1 on behalf of wallet 1
@@ -998,7 +848,7 @@ Clarinet.test({
       wallet1.address,
       wallet2.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
   },
 });
@@ -1036,7 +886,7 @@ Clarinet.test({
       wallet1.address,
       wallet2.address,
       `${deployer.address}.loopbomb-v2`,
-      "loopbomb-v2"
+      "loopbomb"
     );
 
     // block from transfering nft id 1

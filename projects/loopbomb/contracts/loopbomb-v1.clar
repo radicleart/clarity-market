@@ -7,7 +7,7 @@
 
 
 ;; contract variables
-(define-data-var administrator principal 'ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW)
+(define-data-var administrator principal tx-sender)
 (define-data-var mint-price uint u1000000)
 (define-data-var mint-counter uint u0)
 (define-data-var signer (buff 33) 0x02815c03f6d7181332afb1b0114f5a1c97286b6092957910ae3fab4006598aee1b)
