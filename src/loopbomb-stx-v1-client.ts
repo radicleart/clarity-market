@@ -41,7 +41,7 @@ export enum ErrCode {
 }
 
 export class LoopbombV1Client {
-  contractName: string = "loopbomb-v1";
+  contractName: string = "loopbomb-stx-v1";
   chain: Chain;
   deployer: Account;
 

@@ -107,7 +107,7 @@
     ;; TODO: MAKE SURE THESE CONTRACT CALLS WORK, MAKE SURE THE CONRACT ADDRESSES WORKS FOR MAINNET
     (begin 
         ;; 1. Burn the v1 NFT
-        (try! (contract-call? .loopbomb-v1 burn id contract-caller))
+        (try! (contract-call? .loopbomb-stx-v1 burn id contract-caller))
 
         ;; 2. Mint the v2 NFT with the same id for contract-caller
         (try! (nft-mint? loopbomb id contract-caller))

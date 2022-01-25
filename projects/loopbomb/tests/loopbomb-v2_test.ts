@@ -7,7 +7,7 @@ import {
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
 import { hexStringToArrayBuffer } from "../../../src/utils.ts";
-import { LoopbombV1Client } from "../../../src/loopbomb-v1-client.ts";
+import { LoopbombV1Client } from "../../../src/loopbomb-stx-v1-client.ts";
 import { LoopbombV2Client, ErrCode } from "../../../src/loopbomb-v2-client.ts";
 
 const commissionAddress1 = "SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14";
@@ -175,7 +175,7 @@ Clarinet.test({
     block.receipts[0].events.expectNonFungibleTokenBurnEvent(
       types.uint(0),
       wallet1.address,
-      `${deployer.address}.loopbomb-v1`,
+      `${deployer.address}.loopbomb-stx-v1`,
       "loopbomb"
     );
 

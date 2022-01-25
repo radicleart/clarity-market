@@ -4,8 +4,8 @@ name = "loopbomb"
 requirements = []
 costs_version = 1
 
-[contracts.loopbomb-v1]
-path = "contracts/loopbomb-v1.clar"
+[contracts.loopbomb-stx-v1]
+path = "contracts/loopbomb-stx-v1.clar"
 depends_on = ["nft-trait", "operable", "transferable"]
 
 [contracts.loopbomb-v2]
