@@ -5,7 +5,7 @@ import {
   Account,
   types,
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
-import { LoopbombClient, ErrCode } from "../../../src/loopbomb-client.ts";
+import { LoopbombV1Client, ErrCode } from "../../../src/loopbomb-v1-client.ts";
 import { formatBuffString, hexStringToArrayBuffer } from "../../../src/utils.ts";
 import {
   assertEquals,
@@ -24,7 +24,7 @@ const getWalletsAndClient = (
   wallet4: Account;
   wallet5: Account;
   newAdministrator: Account;
-  client: LoopbombClient;
+  client: LoopbombV1Client;
 } => {
   const administrator = {
     address: "ST1ESYCGJB5Z5NBHS39XPC70PGC14WAQK5XXNQYDW",
@@ -40,7 +40,7 @@ const getWalletsAndClient = (
   const wallet4 = accounts.get("wallet_4")!;
   const wallet5 = accounts.get("wallet_5")!;
   const newAdministrator = accounts.get("wallet_6")!;
-  const client = new LoopbombClient(chain, deployer);
+  const client = new LoopbombV1Client(chain, deployer);
   return {
     administrator,
     deployer,
@@ -302,7 +302,7 @@ Clarinet.test({
     block.receipts[1].result.expectOk().expectUint(0);
 
     block.receipts[1].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{evt: "collection-mint-token", meta-data-url: "https://gaia.blockstack.org/hub/1MNnYMskXjRmQU6m6sFMBe6a7xVdMvH9dp/to_the_machine_eternal/bob_jaroc/72ba02ef43182ddcb5ccb385b36001e4b41051d50e84d21435d494a732715181.json", sender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
     block.receipts[1].events.expectSTXTransferEvent(
@@ -311,7 +311,7 @@ Clarinet.test({
       wallet2.address
     );
     block.receipts[1].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{evt: "pay-royalty-primary", payee: ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG, payer: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, saleAmount: u100000000, share: u9000000000, split: u90000000, txSender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
     block.receipts[1].events.expectSTXTransferEvent(
@@ -320,17 +320,17 @@ Clarinet.test({
       wallet3.address
     );
     block.receipts[1].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{evt: "pay-royalty-primary", payee: ST2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1HR05NNC, payer: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, saleAmount: u100000000, share: u1000000000, split: u10000000, txSender: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
     block.receipts[1].events.expectNonFungibleTokenMintEvent(
       "u0",
       wallet1.address,
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       "loopbomb"
     );
     block.receipts[1].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{amount: u100000000, evt: "mint-token", nftIndex: u0, owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5}`
     );
 
@@ -541,7 +541,7 @@ Clarinet.test({
       "u0",
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       "loopbomb"
     );
 
@@ -587,7 +587,7 @@ Clarinet.test({
       "u0",
       wallet2.address,
       wallet4.address,
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       "loopbomb"
     );
 
@@ -704,7 +704,7 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[0].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{amount: u2000000000, biddingEndTime: u10000, evt: "set-sale-data", increment: u0, nftIndex: u0, reserve: u0, saleType: u1}`
     );
 
@@ -725,7 +725,7 @@ Clarinet.test({
       wallet1.address
     );
     block.receipts[0].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{evt: "pay-royalty-primary", payee: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u5000000000, split: u1000000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectSTXTransferEvent(
@@ -734,7 +734,7 @@ Clarinet.test({
       wallet3.address
     );
     block.receipts[0].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{evt: "pay-royalty-primary", payee: ST2JHG361ZXG51QTKY2NQCVBPPRRE2KZB1HR05NNC, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u4000000000, split: u800000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectSTXTransferEvent(
@@ -743,7 +743,7 @@ Clarinet.test({
       wallet4.address
     );
     block.receipts[0].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{evt: "pay-royalty-primary", payee: ST2NEB84ASENDXKYGJPQW86YXQCEFEX2ZQPG87ND, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u2000000000, split: u400000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectSTXTransferEvent(
@@ -752,22 +752,22 @@ Clarinet.test({
       wallet5.address
     );
     block.receipts[0].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{evt: "pay-royalty-primary", payee: ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u1000000000, split: u200000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{evt: "pay-royalty-primary", payee: ST2REHHS5J3CERCRBEPMGH7921Q6PYKAADT7JP2VB, payer: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0, saleAmount: u2000000000, share: u1000000000, split: u200000000, txSender: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectPrintEvent(
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       `{amount: u2000000000, evt: "buy-now", nftIndex: u0, owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, recipient: ST3AM1A56AK2C1XAFJ4115ZSV26EB49BVQ10MGCS0}`
     );
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
       "u0",
       wallet1.address,
       newAdministrator.address,
-      `${deployer.address}.loopbomb`,
+      `${deployer.address}.loopbomb-v1`,
       "loopbomb"
     );
   },

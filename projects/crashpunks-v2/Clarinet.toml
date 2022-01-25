@@ -9,7 +9,7 @@ depends_on = ["nft-trait", "operable", "transferable"]
 
 [contracts.crashpunks-v2]
 path = "contracts/crashpunks-v2.clar"
-depends_on = []
+depends_on = ["nft-trait", "operable", "transferable"]
 
 [contracts.commission-fixed]
 path = "../../contracts/commission-fixed.clar"

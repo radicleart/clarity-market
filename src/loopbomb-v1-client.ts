@@ -40,8 +40,8 @@ export enum ErrCode {
   ERR_SENDER_EQUALS_RECIPIENT_ERR = 405,
 }
 
-export class LoopbombClient {
-  contractName: string = "loopbomb";
+export class LoopbombV1Client {
+  contractName: string = "loopbomb-v1";
   chain: Chain;
   deployer: Account;
 
