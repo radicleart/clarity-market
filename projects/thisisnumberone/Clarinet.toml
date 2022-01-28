@@ -1,0 +1,31 @@
+
+[project]
+name = "thisisnumberone"
+
+[contracts.thisisnumberone-genesis]
+path = "contracts/thisisnumberone-genesis.clar"
+depends_on = ["nft-trait", "operable", "commission-trait"]
+
+[contracts.commission-fixed]
+path = "../../contracts/commission-fixed.clar"
+depends_on = []
+
+[contracts.commission-nop]
+path = "../../contracts/commission-nop.clar"
+depends_on = []
+
+[contracts.commission-thisisgenesis]
+path = "../../contracts/commission-thisisgenesis.clar"
+depends_on = []
+
+[contracts.commission-trait]
+path = "../../contracts/traits/commission-trait.clar"
+depends_on = []
+
+[contracts.nft-trait]
+path = "../../contracts/traits/nft-trait.clar"
+depends_on = []
+
+[contracts.operable]
+path = "../../contracts/traits/operable.clar"
+depends_on = []

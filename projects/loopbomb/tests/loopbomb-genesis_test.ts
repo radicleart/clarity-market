@@ -8,7 +8,7 @@ import {
 import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
 import { hexStringToArrayBuffer } from "../../../src/utils.ts";
 import { LoopbombV1Client } from "../../../src/loopbomb-stx-v1-client.ts";
-import { LoopbombV2Client, ErrCode } from "../../../src/loopbomb-v2-client.ts";
+import { LoopbombV2Client, ErrCode } from "../../../src/loopbomb-genesis-client.ts";
 
 const commissionAddress1 = "SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14";
 const commissionAddress2 = "SP3BTM84FYABJGJ83519GG5NSV0A6A13D4NHJSS32";
@@ -183,7 +183,7 @@ Clarinet.test({
     block.receipts[0].events.expectNonFungibleTokenMintEvent(
       types.uint(0),
       wallet1.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
 
@@ -336,7 +336,7 @@ Clarinet.test({
       types.uint(0),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
   },
@@ -612,7 +612,7 @@ Clarinet.test({
     block.receipts[0].events.expectNonFungibleTokenBurnEvent(
       types.uint(0),
       wallet1.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
   },
@@ -707,7 +707,7 @@ Clarinet.test({
       types.uint(0),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
 
@@ -725,7 +725,7 @@ Clarinet.test({
       types.uint(0),
       wallet2.address,
       wallet3.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
   },
@@ -761,7 +761,7 @@ Clarinet.test({
       types.uint(0),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
 
@@ -774,7 +774,7 @@ Clarinet.test({
       types.uint(0),
       wallet2.address,
       wallet1.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
 
@@ -829,7 +829,7 @@ Clarinet.test({
       types.uint(0),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
 
@@ -847,7 +847,7 @@ Clarinet.test({
       types.uint(1),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
   },
@@ -885,7 +885,7 @@ Clarinet.test({
       types.uint(0),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.loopbomb-v2`,
+      `${deployer.address}.loopbomb-genesis`,
       "loopbomb"
     );
 

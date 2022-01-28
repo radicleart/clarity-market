@@ -25,8 +25,8 @@ export enum ErrCode {
   ERR_NOT_FOUND = 404,
 }
 
-export class LoopbombV2Client {
-  contractName: string = "loopbomb-v2";
+export class GenesisClient {
+  contractName: string = "thisisnumberone-genesis";
   chain: Chain;
   deployer: Account;
 
@@ -103,24 +103,6 @@ export class LoopbombV2Client {
       this.contractName,
       "set-approved-all",
       [types.principal(operator), types.bool(approved)],
-      sender
-    );
-  }
-
-  upgradeV1ToV2(id: number, sender: string): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "upgrade-v1-to-v2",
-      [types.uint(id)],
-      sender
-    );
-  }
-
-  batchUpgradeV1ToV2(entries: number[], sender: string): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "batch-upgrade-v1-to-v2",
-      [types.list(entries.map((id) => types.uint(id)))],
       sender
     );
   }

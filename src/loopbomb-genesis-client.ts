@@ -25,8 +25,8 @@ export enum ErrCode {
   ERR_NOT_FOUND = 404,
 }
 
-export class GenesisClient {
-  contractName: string = "genesis";
+export class LoopbombV2Client {
+  contractName: string = "loopbomb-genesis";
   chain: Chain;
   deployer: Account;
 

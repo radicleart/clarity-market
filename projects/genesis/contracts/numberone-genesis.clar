@@ -1,5 +1,5 @@
 ;; Interface definitions
-(impl-trait .nft-trait.nft-trait)
+(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 (impl-trait .operable.operable)
 
 ;; TODO: either deploy it on admin address, or use an existing mainnet one
@@ -8,17 +8,17 @@
 ;; contract variables
 (define-data-var administrator principal tx-sender)
 
-(define-data-var mint-counter uint u121)
+(define-data-var mint-counter uint u0)
 
 (define-data-var token-uri (string-ascii 246) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
-(define-constant MINT-PRICE u48000000)
+(define-constant MINT-PRICE u1000000)
 
-(define-constant token-name "loopbomb")
-(define-constant token-symbol "LPB")
-(define-constant COLLECTION-MAX-SUPPLY u121)
+(define-constant token-name "thisisnumberone")
+(define-constant token-symbol "#1")
+(define-constant COLLECTION-MAX-SUPPLY u5)
 
 (define-constant ERR-METADATA-FROZEN (err u101))
 (define-constant ERR-COULDNT-GET-V1-DATA (err u102))
@@ -38,10 +38,8 @@
 (define-constant ERR-NOT-FOUND (err u404))
 
 (define-constant wallet-1 'SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14)
-(define-constant wallet-2 'SP3BTM84FYABJGJ83519GG5NSV0A6A13D4NHJSS32)
-(define-constant wallet-3 'SP120HPHF8AZXS2SCXMXAX3XF4XT35C0HCHMAVMAJ)
 
-(define-non-fungible-token loopbomb uint)
+(define-non-fungible-token thisisnumberone uint)
 
 ;; data structures
 
@@ -69,7 +67,7 @@
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
 (define-read-only (get-owner (id uint))
-  (ok (nft-get-owner? loopbomb id))
+  (ok (nft-get-owner? thisisnumberone id))
 )
 
 ;; SIP-09: Transfer
@@ -77,13 +75,13 @@
     (begin
         (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (asserts! (is-none (map-get? market id)) ERR-NFT-LISTED)
-        (nft-transfer? loopbomb id owner recipient)
+        (nft-transfer? thisisnumberone id owner recipient)
     )
 )
 
 ;; operable
 (define-read-only (is-approved (id uint) (operator principal))
-    (let ((owner (unwrap! (nft-get-owner? loopbomb id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER)))
         (ok (is-owned-or-approved id operator owner))
     )
 )
@@ -98,30 +96,6 @@
 )
 
 ;; public methods
-
-;; upgrade from v1 to v2
-;; Owner of loopbomb v1 calls this upgrade function
-;; 1. This contract burns the v1 NFT
-;; 2. This contract mints the v2 NFT with the same id for contract-caller
-(define-public (upgrade-v1-to-v2 (id uint))
-    ;; TODO: MAKE SURE THESE CONTRACT CALLS WORK, MAKE SURE THE CONRACT ADDRESSES WORKS FOR MAINNET
-    (begin 
-        ;; 1. Burn the v1 NFT
-        (try! (contract-call? .loopbomb-stx-v1 burn id contract-caller))
-
-        ;; 2. Mint the v2 NFT with the same id for contract-caller
-        (try! (nft-mint? loopbomb id contract-caller))
-        (ok true)
-    )
-)
-
-(define-public (batch-upgrade-v1-to-v2 (entries (list 200 uint)))
-    (fold check-err
-        (map upgrade-v1-to-v2 entries)
-        (ok true)
-    )
-)
-
 (define-public (mint-token)
     (let (
             (mintCounter (var-get mint-counter))
@@ -131,7 +105,7 @@
         (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
 
         (try! (paymint-split MINT-PRICE contract-caller))
-        (try! (nft-mint? loopbomb mintCounter contract-caller))
+        (try! (nft-mint? thisisnumberone mintCounter contract-caller))
         (var-set mint-counter (+ mintCounter u1))
         (map-set mint-pass contract-caller (- mintPassBalance u1))
         (ok true)
@@ -142,16 +116,6 @@
 (define-public (batch-mint-token (entries (list 20 uint)))
     (fold check-err
         (map mint-token-helper entries)
-        (ok true)
-    )
-)
-
-;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
-(define-public (admin-mint-airdrop (recipient principal) (id uint))
-    (begin
-        (asserts! (< id COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
-        (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
-        (try! (nft-mint? loopbomb id recipient))
         (ok true)
     )
 )
@@ -173,7 +137,7 @@
 ;; marketplace function
 (define-public (list-in-ustx (id uint) (price uint) (comm <commission-trait>))
     (let ((listing {price: price, commission: (contract-of comm)})) 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? loopbomb id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (asserts! (> price u0) ERR-PRICE-WAS-ZERO)
         (ok (map-set market id listing))
     )
@@ -182,7 +146,7 @@
 ;; marketplace function
 (define-public (unlist-in-ustx (id uint))
     (begin 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? loopbomb id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (ok (map-delete market id))
     )
 )
@@ -192,24 +156,24 @@
     (let 
         (
             (listing (unwrap! (map-get? market id) ERR-NFT-NOT-LISTED-FOR-SALE))
-            (owner (unwrap! (nft-get-owner? loopbomb id) ERR-COULDNT-GET-NFT-OWNER))
+            (owner (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
             (price (get price listing))
         )
         (asserts! (is-eq (contract-of comm) (get commission listing)) ERR-WRONG-COMMISSION)
         (try! (stx-transfer? price contract-caller owner))
         (try! (contract-call? comm pay id price))
-        (try! (nft-transfer? loopbomb id owner buyer))
+        (try! (nft-transfer? thisisnumberone id owner buyer))
         (map-delete market id)
         (ok true)
     )
 )
 
 (define-public (burn (id uint))
-    (let ((owner (unwrap! (nft-get-owner? loopbomb id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER)))
         (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
         (map-delete market id)
-        (nft-burn? loopbomb id contract-caller)
+        (nft-burn? thisisnumberone id contract-caller)
     )
 )
 
@@ -261,9 +225,7 @@
 
 (define-private (paymint-split (mintPrice uint) (payer principal)) 
     (begin
-        (try! (stx-transfer? (/ (* mintPrice u35) u100) payer wallet-1))
-        (try! (stx-transfer? (/ (* mintPrice u55) u100) payer wallet-2))
-        (try! (stx-transfer? (/ (* mintPrice u10) u100) payer wallet-3))
+        (try! (stx-transfer? mintPrice payer wallet-1))
         (ok true)
     )
 )
@@ -285,4 +247,4 @@
 )
 
 ;; TODO: add all whitelists
-;; (map-set mint-pass 'SP3BPB30CSNHF29C1SEZZV3ADWWS6131V6TFYAPG1 u5)
+(map-set mint-pass 'SP1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28GBQA1W0F u5)
