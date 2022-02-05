@@ -1,8 +1,7 @@
 (define-public (pay (id uint) (price uint))
     (begin
-        (try! (stx-transfer? (/ (* price u3) u100) tx-sender 'SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14))
-        (try! (stx-transfer? (/ (* price u3) u100) tx-sender 'SP3BTM84FYABJGJ83519GG5NSV0A6A13D4NHJSS32))
-        (try! (stx-transfer? (/ (* price u2) u100) tx-sender 'SP120HPHF8AZXS2SCXMXAX3XF4XT35C0HCHMAVMAJ))
+        (try! (stx-transfer? (/ (* price u5) u100) tx-sender 'SP1WJY09D3DEE45B1PY8TAV838VCH9HNEJW0QPFND))
+        (try! (stx-transfer? (/ (* price u5) u100) tx-sender 'SP2BSD6FH7B641G5QC95M5V3ACB76CDE125FF2CD2))
         (ok true)
     )
 )

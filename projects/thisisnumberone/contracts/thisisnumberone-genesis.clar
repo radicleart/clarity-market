@@ -1,5 +1,5 @@
 ;; Interface definitions
-(impl-trait .nft-trait.nft-trait)
+(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 (impl-trait .operable.operable)
 
 ;; TODO: either deploy it on admin address, or use an existing mainnet one
@@ -10,7 +10,7 @@
 
 (define-data-var mint-counter uint u0)
 
-(define-data-var token-uri (string-ascii 246) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}.json")
+(define-data-var token-uri (string-ascii 246) "ipfs://QmaAEbacfobkuEUFvxRX88a7dS4xMu9bVaMiuC5pj5xze2/genesis-{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
@@ -37,7 +37,7 @@
 (define-constant ERR-NOT-ADMINISTRATOR (err u403))
 (define-constant ERR-NOT-FOUND (err u404))
 
-(define-constant wallet-1 'SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14)
+(define-constant wallet-1 'SP1WJY09D3DEE45B1PY8TAV838VCH9HNEJW0QPFND)
 
 (define-non-fungible-token thisisnumberone uint)
 

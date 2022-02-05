@@ -1,24 +1,29 @@
 ;; Interface definitions
-(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
+(impl-trait .nft-trait.nft-trait)
 (impl-trait .operable.operable)
 
 ;; TODO: either deploy it on admin address, or use an existing mainnet one
 (use-trait commission-trait .commission-trait.commission)
 
 ;; contract variables
-(define-data-var administrator principal tx-sender)
 
-(define-data-var mint-counter uint u0)
+(define-data-var administrator principal 'SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6)
 
+
+;; TODO: MAKE SURE THIS MINT COUNTER IS CORRECT. SHOULD BE THE MINT-COUNTER FROM V1. DOUBLE CHECK IF OFF BY 1 ERROR
+(define-data-var mint-counter uint u5721)
+
+;; TODO: update this
 (define-data-var token-uri (string-ascii 246) "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
-(define-constant MINT-PRICE u1000000)
+;; 50 stx
+(define-constant MINT-PRICE u50000000)
 
-(define-constant token-name "thisisnumberone")
-(define-constant token-symbol "#1")
-(define-constant COLLECTION-MAX-SUPPLY u5)
+(define-constant token-name "crashpunks-v2")
+(define-constant token-symbol "CPS-v2")
+(define-constant COLLECTION-MAX-SUPPLY u9216)
 
 (define-constant ERR-METADATA-FROZEN (err u101))
 (define-constant ERR-COULDNT-GET-V1-DATA (err u102))
@@ -37,9 +42,15 @@
 (define-constant ERR-NOT-ADMINISTRATOR (err u403))
 (define-constant ERR-NOT-FOUND (err u404))
 
-(define-constant wallet-1 'SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14)
+(define-constant wallet-1 'SP2CBFWG9AT8W4WSCSSJE1R42SDECK7K7W9VSEKD0)
+(define-constant wallet-2 'SPGAKH27HF1T170QET72C727873H911BKNMPF8YB)
+(define-constant wallet-3 'SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N)
+(define-constant wallet-4 'SP2FTZQX1V9FPPNH485Z49JE914YNQYGT4XVGNR4S)
+(define-constant wallet-5 'SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW)
+(define-constant wallet-6 'SP1P89TEC03E29V5MYJBSCC8KWR1A243ZG2R8DYB1)
+(define-constant wallet-7 'SP2S6MCR2K3TYAC02RSYQ74RE9RJ3Q0EV3FYFGKGB)
 
-(define-non-fungible-token thisisnumberone uint)
+(define-non-fungible-token crashpunks-v2 uint)
 
 ;; data structures
 
@@ -67,7 +78,7 @@
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
 (define-read-only (get-owner (id uint))
-  (ok (nft-get-owner? thisisnumberone id))
+  (ok (nft-get-owner? crashpunks-v2 id))
 )
 
 ;; SIP-09: Transfer
@@ -75,13 +86,13 @@
     (begin
         (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (asserts! (is-none (map-get? market id)) ERR-NFT-LISTED)
-        (nft-transfer? thisisnumberone id owner recipient)
+        (nft-transfer? crashpunks-v2 id owner recipient)
     )
 )
 
 ;; operable
 (define-read-only (is-approved (id uint) (operator principal))
-    (let ((owner (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)))
         (ok (is-owned-or-approved id operator owner))
     )
 )
@@ -96,6 +107,30 @@
 )
 
 ;; public methods
+
+;; upgrade from v1 to v2
+;; Owner of crashpunks v1 calls this upgrade function
+;; 1. This contract burns the v1 NFT
+;; 2. This contract mints the v2 NFT with the same id for contract-caller
+(define-public (upgrade-v1-to-v2 (id uint))
+    ;; TODO: MAKE SURE THESE CONTRACT CALLS WORK, MAKE SURE THE CONRACT ADDRESSES WORKS FOR MAINNET
+    (begin 
+        ;; 1. Burn the v1 NFT
+        (try! (contract-call? .crashpunks-v1 burn id contract-caller))
+
+        ;; 2. Mint the v2 NFT with the same id for contract-caller
+        (try! (nft-mint? crashpunks-v2 id contract-caller))
+        (ok true)
+    )
+)
+
+(define-public (batch-upgrade-v1-to-v2 (entries (list 200 uint)))
+    (fold check-err
+        (map upgrade-v1-to-v2 entries)
+        (ok true)
+    )
+)
+
 (define-public (mint-token)
     (let (
             (mintCounter (var-get mint-counter))
@@ -105,7 +140,7 @@
         (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
 
         (try! (paymint-split MINT-PRICE contract-caller))
-        (try! (nft-mint? thisisnumberone mintCounter contract-caller))
+        (try! (nft-mint? crashpunks-v2 mintCounter contract-caller))
         (var-set mint-counter (+ mintCounter u1))
         (map-set mint-pass contract-caller (- mintPassBalance u1))
         (ok true)
@@ -116,6 +151,16 @@
 (define-public (batch-mint-token (entries (list 20 uint)))
     (fold check-err
         (map mint-token-helper entries)
+        (ok true)
+    )
+)
+
+;; fail-safe: allow admin to airdrop to recipient, hopefully will never be used
+(define-public (admin-mint-airdrop (recipient principal) (id uint))
+    (begin
+        (asserts! (< id COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
+        (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
+        (try! (nft-mint? crashpunks-v2 id recipient))
         (ok true)
     )
 )
@@ -137,7 +182,7 @@
 ;; marketplace function
 (define-public (list-in-ustx (id uint) (price uint) (comm <commission-trait>))
     (let ((listing {price: price, commission: (contract-of comm)})) 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (asserts! (> price u0) ERR-PRICE-WAS-ZERO)
         (ok (map-set market id listing))
     )
@@ -146,7 +191,7 @@
 ;; marketplace function
 (define-public (unlist-in-ustx (id uint))
     (begin 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (ok (map-delete market id))
     )
 )
@@ -156,24 +201,24 @@
     (let 
         (
             (listing (unwrap! (map-get? market id) ERR-NFT-NOT-LISTED-FOR-SALE))
-            (owner (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER))
+            (owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
             (price (get price listing))
         )
         (asserts! (is-eq (contract-of comm) (get commission listing)) ERR-WRONG-COMMISSION)
         (try! (stx-transfer? price contract-caller owner))
         (try! (contract-call? comm pay id price))
-        (try! (nft-transfer? thisisnumberone id owner buyer))
+        (try! (nft-transfer? crashpunks-v2 id owner buyer))
         (map-delete market id)
         (ok true)
     )
 )
 
 (define-public (burn (id uint))
-    (let ((owner (unwrap! (nft-get-owner? thisisnumberone id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? crashpunks-v2 id) ERR-COULDNT-GET-NFT-OWNER)))
         (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
         (map-delete market id)
-        (nft-burn? thisisnumberone id contract-caller)
+        (nft-burn? crashpunks-v2 id contract-caller)
     )
 )
 
@@ -225,7 +270,13 @@
 
 (define-private (paymint-split (mintPrice uint) (payer principal)) 
     (begin
-        (try! (stx-transfer? mintPrice payer wallet-1))
+        (try! (stx-transfer? (/ (* mintPrice u95) u100) payer wallet-1))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-2))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-3))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-4))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-5))
+        (try! (stx-transfer? (/ (* mintPrice u95) u10000) payer wallet-6))
+        (try! (stx-transfer? (/ (* mintPrice u25) u10000) payer wallet-7))
         (ok true)
     )
 )
@@ -247,4 +298,4 @@
 )
 
 ;; TODO: add all whitelists
-(map-set mint-pass 'SP1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28GBQA1W0F u5)
+;; (map-set mint-pass 'SP3BPB30CSNHF29C1SEZZV3ADWWS6131V6TFYAPG1 u5)

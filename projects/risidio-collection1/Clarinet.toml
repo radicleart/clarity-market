@@ -1,0 +1,7 @@
+
+[project]
+name = "risidio-collection1"
+
+# [contracts.counter]
+# path = "contracts/counter.clar"
+# depends_on = []
