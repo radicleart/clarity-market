@@ -1,6 +1,0 @@
-[network]
-name = "testnet"
-node_rpc_address = "https://stacks-node-api.testnet.stacks.co"
-
-[accounts.deployer]
-mnemonic = "<YOUR PRIVATE TESTNET MNEMONIC HERE>"

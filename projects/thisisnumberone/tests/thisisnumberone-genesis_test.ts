@@ -10,6 +10,8 @@ import { hexStringToArrayBuffer } from "../../../src/utils.ts";
 import { CrashPunksV1Client } from "../../../src/crashpunks-v1-client.ts";
 import { GenesisClient, ErrCode } from "../../../src/thisisnumberone-genesis-client.ts";
 
+const walletAddress1 = "SP1WJY09D3DEE45B1PY8TAV838VCH9HNEJW0QPFND";
+
 const commissionAddress1 = "SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14";
 const commissionAddress2 = "SPGAKH27HF1T170QET72C727873H911BKNMPF8YB";
 const commissionAddress3 = "SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N";
@@ -75,7 +77,7 @@ const mintV2Token = (chain: Chain, accounts: Map<string, Account>) => {
   block.receipts[0].events.expectSTXTransferEvent(
     1000000,
     wallet1.address,
-    commissionAddress1
+    walletAddress1
   );
 
 };
@@ -403,7 +405,7 @@ Clarinet.test({
     block.receipts[0].events.expectSTXTransferEvent(
       1000000,
       wallet1.address,
-      commissionAddress1
+      walletAddress1
     );
 
     block.receipts[0].events.expectNonFungibleTokenMintEvent(
@@ -513,7 +515,7 @@ Clarinet.test({
     );
 
     const firstUri =
-      "ipfs://Qmad43sssgNbG9TpC6NfeiTi9X6f9vPYuzgW2S19BEi49m/{id}.json";
+      "ipfs://QmaAEbacfobkuEUFvxRX88a7dS4xMu9bVaMiuC5pj5xze2/genesis-{id}.json";
     const nextUri = "ipfs/QmdcBZnzSUwAKQdnVMKSkbVYoDD6DBkghPPUAwtVQjpwgq/{id}";
     clientV2
       .getTokenUri(0)

@@ -10,9 +10,8 @@ import { hexStringToArrayBuffer } from "../../../src/utils.ts";
 import { LoopbombV1Client } from "../../../src/loopbomb-stx-v1-client.ts";
 import { LoopbombV2Client, ErrCode } from "../../../src/loopbomb-genesis-client.ts";
 
-const commissionAddress1 = "SP29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSE6NH14";
-const commissionAddress2 = "SP3BTM84FYABJGJ83519GG5NSV0A6A13D4NHJSS32";
-const commissionAddress3 = "SP120HPHF8AZXS2SCXMXAX3XF4XT35C0HCHMAVMAJ";
+const commissionAddress1 = "SP1WJY09D3DEE45B1PY8TAV838VCH9HNEJW0QPFND";
+const commissionAddress2 = "SP2BSD6FH7B641G5QC95M5V3ACB76CDE125FF2CD2";
 
 const getWalletsAndClient = (
   chain: Chain,
@@ -317,19 +316,14 @@ Clarinet.test({
       wallet1.address
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      3000000,
+      5000000,
       wallet2.address,
       commissionAddress1
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      3000000,
+      5000000,
       wallet2.address,
       commissionAddress2
-    );
-    block.receipts[0].events.expectSTXTransferEvent(
-      2000000,
-      wallet2.address,
-      commissionAddress3
     );
 
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
