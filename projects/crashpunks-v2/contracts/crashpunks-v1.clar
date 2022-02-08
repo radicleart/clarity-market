@@ -693,7 +693,7 @@
                     (begin
                         ;; WINNING BID - is the FIRST bid after bidding close.
                         (unwrap! (payment-split nftIndex nextBidAmount tx-sender seriesOriginal) payment-error)
-                        (unwrap! (record-bid nftIndex nextBidAmount currentBidIndex  block-height saleCycle) failed-to-stx-transfer)
+                        (unwrap! (record-bid nftIndex nextBidAmount currentBidIndex saleCycle) failed-to-stx-transfer)
                         (map-set nft-sale-data { nft-index: nftIndex } { sale-cycle-index: (+ saleCycle u1), sale-type: u0, increment-stx: u0, reserve-stx: u0, amount-stx: u0, bidding-end-time: u0})
                         ;; finally transfer ownership to the buyer (note: via the buyers transaction!)
                         (unwrap! (nft-transfer? crashpunks nftIndex owner tx-sender) failed-to-stx-transfer)
