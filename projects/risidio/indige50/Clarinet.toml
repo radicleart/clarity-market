@@ -1,0 +1,10 @@
+
+[project]
+name = "indige50"
+authors = []
+telemetry = true
+analysis = ["check_checker"]
+
+# [contracts.counter]
+# path = "contracts/counter.clar"
+# depends_on = []

@@ -1,0 +1,27 @@
+
+[project]
+name = "indige5"
+
+[contracts.indige5]
+path = "contracts/indige5.clar"
+depends_on = ["nft-trait", "operable", "commission-trait"]
+
+[contracts.commission-indige5]
+path = "contracts/commission-indige5.clar"
+depends_on = []
+
+[contracts.commission-trait]
+path = "../../../contracts/traits/commission-trait.clar"
+depends_on = []
+
+[contracts.nft-trait]
+path = "../../../contracts/traits/nft-trait.clar"
+depends_on = []
+
+[contracts.commission-nop]
+path = "../../../contracts/commission-nop.clar"
+depends_on = []
+
+[contracts.operable]
+path = "../../../contracts/traits/operable.clar"
+depends_on = []
