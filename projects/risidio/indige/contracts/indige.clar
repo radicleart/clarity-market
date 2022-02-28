@@ -4,20 +4,21 @@
 (impl-trait .operable.operable)
 
 ;; TODO: either deploy it on admin address, or use an existing mainnet one
-(use-trait commission-trait .commission-trait.commission)
+(use-trait com10 .commission-trait-sip10.commission)
+(use-trait sip10 .sip-010-trait-ft-standard.sip-010-trait)
 
 ;; contract variables
 (define-data-var administrator principal tx-sender)
 
 (define-data-var mint-counter uint u0)
 
-(define-data-var token-uri (string-ascii 246) "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/indige5-{id}.json")
+(define-data-var token-uri (string-ascii 246) "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/indige-{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
 (define-constant MINT-PRICE u1000000)
 
-(define-constant COLLECTION-MAX-SUPPLY u5)
+(define-constant COLLECTION-MAX-SUPPLY u100)
 
 (define-constant ERR-METADATA-FROZEN (err u101))
 (define-constant ERR-COULDNT-GET-V1-DATA (err u102))
@@ -38,7 +39,7 @@
 
 (define-constant wallet-1 'ST3BTM84FYABJGJ83519GG5NSV0A6A13D4N25KH1K)
 
-(define-non-fungible-token indige5 uint)
+(define-non-fungible-token indige uint)
 
 ;; data structures
 
@@ -66,7 +67,7 @@
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
 (define-read-only (get-owner (id uint))
-  (ok (nft-get-owner? indige5 id))
+  (ok (nft-get-owner? indige id))
 )
 
 ;; SIP-09: Transfer
@@ -74,13 +75,13 @@
     (begin
         (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
         (asserts! (is-none (map-get? market id)) ERR-NFT-LISTED)
-        (nft-transfer? indige5 id owner recipient)
+        (nft-transfer? indige id owner recipient)
     )
 )
 
 ;; operable
 (define-read-only (is-approved (id uint) (operator principal))
-    (let ((owner (unwrap! (nft-get-owner? indige5 id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER)))
         (ok (is-owned-or-approved id operator owner))
     )
 )
@@ -97,15 +98,15 @@
 ;; public methods
 (define-public (mint-token)
     (let (
-            (mintCounter (var-get mint-counter))
+            (newMintCounter (+ (var-get mint-counter) u1))
             (mintPassBalance (get-mint-pass-balance contract-caller))
         )
-        (asserts! (< mintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
+        (asserts! (< newMintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
         (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
 
         (try! (paymint-split MINT-PRICE contract-caller))
-        (try! (nft-mint? indige5 mintCounter contract-caller))
-        (var-set mint-counter (+ mintCounter u1))
+        (try! (nft-mint? indige newMintCounter contract-caller))
+        (var-set mint-counter newMintCounter)
         (map-set mint-pass contract-caller (- mintPassBalance u1))
         (ok true)
     )
@@ -134,45 +135,46 @@
 )
 
 ;; marketplace function
-(define-public (list-in-ustx (id uint) (price uint) (comm <commission-trait>))
+(define-public (list-in-token (id uint) (price uint) (comm <com10>))
     (let ((listing {price: price, commission: (contract-of comm)})) 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige5 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (asserts! (> price u0) ERR-PRICE-WAS-ZERO)
         (ok (map-set market id listing))
     )
 )
 
 ;; marketplace function
-(define-public (unlist-in-ustx (id uint))
-    (begin 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige5 id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+(define-public (unlist-in-token (id uint))
+    (begin
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
         (ok (map-delete market id))
     )
 )
 
 ;; marketplace function
-(define-public (buy-in-ustx (id uint) (comm <commission-trait>))
+(define-public (buy-in-token (token <sip10>) (id uint) (comm <com10>))
     (let 
         (
             (listing (unwrap! (map-get? market id) ERR-NFT-NOT-LISTED-FOR-SALE))
-            (owner (unwrap! (nft-get-owner? indige5 id) ERR-COULDNT-GET-NFT-OWNER))
+            (owner (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER))
             (buyer contract-caller)
             (price (get price listing))
         )
         (asserts! (is-eq (contract-of comm) (get commission listing)) ERR-WRONG-COMMISSION)
-        (try! (stx-transfer? price contract-caller owner))
-        (try! (contract-call? comm pay id price))
-        (try! (nft-transfer? indige5 id owner buyer))
+        ;; (try! (stx-transfer? price contract-caller owner))
+        (try! (contract-call? token transfer price contract-caller owner none))
+        (try! (contract-call? comm pay token id price))
+        (try! (nft-transfer? indige id owner buyer))
         (map-delete market id)
         (ok true)
     )
 )
 
 (define-public (burn (id uint))
-    (let ((owner (unwrap! (nft-get-owner? indige5 id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER)))
         (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
         (map-delete market id)
-        (nft-burn? indige5 id contract-caller)
+        (nft-burn? indige id contract-caller)
     )
 )
 
@@ -201,7 +203,7 @@
 )
 
 ;; read only methods
-(define-read-only (get-listing-in-ustx (id uint))
+(define-read-only (get-listing-in-token (id uint))
     (map-get? market id)
 )
 

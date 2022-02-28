@@ -11,7 +11,7 @@
 
 (define-data-var mint-counter uint u0)
 
-(define-data-var token-uri (string-ascii 246) "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/indige5-{id}.json")
+(define-data-var token-uri (string-ascii 246) "ipfs://QmRZA25mjkVBK6mXQVZeubAi9LmupYBWvS2oJCVPmbuw29/indige5-{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants

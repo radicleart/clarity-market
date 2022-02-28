@@ -1,5 +1,26 @@
 # Clarity Market 1 2020
 
+# Contracts
+
+[Arkadiko](https://app.arkadiko.finance/)
+
+```
+SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-dao-token-trait-v1
+SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-token
+SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-dao
+```
+
+Token Pair and Swap Contract
+```
+SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.wrapped-stx-token
+SP3DX3H4FEYZJZ586MFBS25ZW3HZDMEW92260R2PR.Wrapped-Bitcoin
+SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-swap-token-wstx-xbtc
+```
+
+```
+get-pair-details (YZR.wrapped-stx-token, YZR.Wrapped-Bitcoin)
+(ok (some (tuple (balance-x u153799683635) (balance-y u440698629) (enabled true) (fee-balance-x u332732249) (fee-balance-y u1323023) (fee-to-address (some SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR)) (name "wSTX-xBTC") (shares-total u8127104822) (swap-token SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-swap-token-wstx-xbtc))))
+```
 ## Clarinet Repo Structure
 
 Adding a new project..
@@ -61,40 +82,3 @@ $ tree -L 2 -I node_modules
 * [Stacks Blockchain Sidecar](https://github.com/blockstack/stacks-blockchain-sidecar)
 * [Clarity JS SDK](https://github.com/blockstack/clarity-js-sdk)
 * [Clarity VSCode](https://github.com/blockstack/clarity-vscode)
-
-Kenny - resources for developer advocate, educational, making stuff more accessible
-    acadamy.stacks.co
-    he wants to turn it into what we are providing.
-
-blockchain tracks in C.U. area of collaboration.
-
-Clarity book.
-
-Jonathon - docs residency - collaboration
-
-reference implementations - e.g. which are interesting from canonical point of view
-                              (wants to pass on that hat)
-clarity educator - first cohort clarity camp
- made schedule
- sent out the email
-second camp (shannon + mitchell)
-
-recurring cohort 2 ends mid march.
-
-clarity educators - some on line get to meet your peers -
-ongoing
-
-Define a course - work towards a project
-
-Clarity Universe
-
-Before focus on successfull solidity developers...
-
-Next steps -
-
-Apply for a 6 months residency - we say what renumeration.
-
-repurposing of SM work on a A portal. Bring in Clarity Universe. Reference implementation.
-
-
-
