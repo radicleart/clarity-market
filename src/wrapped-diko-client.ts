@@ -13,8 +13,8 @@ export enum ErrCode {
   ERR_NOT_FOUND = 404,
 }
 
-export class WrappedBitcoin {
-  contractName: string = "Wrapped-Bitcoin";
+export class WrappedDiko {
+  contractName: string = "arkadiko-token";
   chain: Chain;
   deployer: Account;
 
@@ -37,10 +37,10 @@ export class WrappedBitcoin {
     return result;
   }
   
-  mintWrappedBitcoin(amount: number, address: string, sender: string): Tx {
+  mintWrappedDiko(amount: number, address: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
-      "mint-tokens",
+      "mint-for-dao",
       [types.uint(amount), types.principal(address)],
       sender
     );

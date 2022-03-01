@@ -10,6 +10,10 @@ depends_on = ["arkadiko-dao", "nft-trait", "operable", "sip-010-trait-ft-standar
 path = "../../../contracts/traits/commission-trait-sip10.clar"
 depends_on = ["sip-010-trait-ft-standard"]
 
+[contracts.commission-mint-indige]
+path = "contracts/commission-mint-indige.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
 [contracts.commission-indige]
 path = "contracts/commission-indige.clar"
 depends_on = ["sip-010-trait-ft-standard"]

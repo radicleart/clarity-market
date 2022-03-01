@@ -5,10 +5,11 @@
 
 ;; TODO: either deploy it on admin address, or use an existing mainnet one
 (use-trait com10 .commission-trait-sip10.commission)
-(use-trait sip10 .sip-010-trait-ft-standard.sip-010-trait)
+(use-trait ft-trait .sip-010-trait-ft-standard.sip-010-trait)
 
 ;; contract variables
-(define-data-var administrator principal tx-sender)
+(define-data-var CONTRACT_OWNER principal tx-sender)
+(define-data-var current-token principal .stx-token)
 
 (define-data-var mint-counter uint u0)
 
@@ -16,33 +17,43 @@
 (define-data-var metadata-frozen bool false)
 
 ;; constants
-(define-constant MINT-PRICE u1000000)
+(define-constant MINT-PRICE u100000000)
 
-(define-constant COLLECTION-MAX-SUPPLY u100)
+(define-constant COLLECTION_MAX_SUPPLY u100)
 
-(define-constant ERR-METADATA-FROZEN (err u101))
-(define-constant ERR-COULDNT-GET-V1-DATA (err u102))
-(define-constant ERR-COULDNT-GET-NFT-OWNER (err u103))
-(define-constant ERR-PRICE-WAS-ZERO (err u104))
-(define-constant ERR-NFT-NOT-LISTED-FOR-SALE (err u105))
-(define-constant ERR-PAYMENT-ADDRESS (err u106))
-(define-constant ERR-NFT-LISTED (err u107))
-(define-constant ERR-COLLECTION-LIMIT-REACHED (err u108))
-(define-constant ERR-MINT-PASS-LIMIT-REACHED (err u109))
-(define-constant ERR-ADD-MINT-PASS (err u110))
-(define-constant ERR-WRONG-COMMISSION (err u111))
+(define-constant ERR_METADATA_FROZEN (err u101))
+(define-constant ERR_COULDNT_GET_NFT_OWNER (err u103))
+(define-constant ERR_PRICE_WAS_ZERO (err u104))
+(define-constant ERR_NFT_NOT_LISTED_FOR_SALE (err u105))
+(define-constant ERR_NFT_LISTED (err u107))
+(define-constant ERR_COLLECTION_LIMIT_REACHED (err u108))
+(define-constant ERR_MINT_PASS_LIMIT_REACHED (err u109))
+(define-constant ERR_WRONG_COMMISSION (err u111))
+(define-constant ERR_WRONG_TOKEN (err u112))
+(define-constant ERR_NOT_IMPLEMENTED (err u113))
+(define-constant ERR_UNKNOWN_TENDER (err u113))
 
-(define-constant ERR-NOT-AUTHORIZED (err u401))
-(define-constant ERR-NOT-OWNER (err u402))
-(define-constant ERR-NOT-ADMINISTRATOR (err u403))
-(define-constant ERR-NOT-FOUND (err u404))
+(define-constant ERR_NOT_AUTHORIZED (err u401))
+(define-constant ERR_NOT_OWNER (err u402))
+(define-constant ERR_NOT_ADMINISTRATOR (err u403))
+(define-constant ERR_NOT_FOUND (err u404))
 
-(define-constant wallet-1 'ST3BTM84FYABJGJ83519GG5NSV0A6A13D4N25KH1K)
+(define-constant wallet-1 'SP2M92VAE2YJ1P5VZ1Q4AFKWZFEKDS8CDA1KVFJ21)
+(define-constant wallet-2 'SP132K8CVJ9B2GEDHTQS5MH3N7BR5QDMN1PXVS8MY)
 
 (define-non-fungible-token indige uint)
 
 ;; data structures
 
+(define-map mint-commission 
+    principal ;; tender
+    {
+        price: uint,
+        address: principal,
+        commissionAddress: principal,
+        commissionRate: uint
+    }
+)
 ;; {owner, operator, id} -> boolean
 ;; if {owner, operator, id}->true in map, then operator can perform actions on behalf of owner for this id
 (define-map approvals {owner: principal, operator: principal, id: uint} bool)
@@ -50,7 +61,7 @@
 
 ;; id -> {price (in ustx), commission trait}
 ;; if id is not in map, it is not listed for sale
-(define-map market uint {price: uint, commission: principal})
+(define-map market uint {price: uint, commission: principal, token: principal})
 
 ;; whitelist address -> # they can mint
 (define-map mint-pass principal uint)
@@ -73,15 +84,15 @@
 ;; SIP-09: Transfer
 (define-public (transfer (id uint) (owner principal) (recipient principal))
     (begin
-        (asserts! (unwrap! (is-approved id contract-caller) ERR-NOT-AUTHORIZED) ERR-NOT-AUTHORIZED)
-        (asserts! (is-none (map-get? market id)) ERR-NFT-LISTED)
+        (asserts! (unwrap! (is-approved id contract-caller) ERR_NOT_AUTHORIZED) ERR_NOT_AUTHORIZED)
+        (asserts! (is-none (map-get? market id)) ERR_NFT_LISTED)
         (nft-transfer? indige id owner recipient)
     )
 )
 
 ;; operable
 (define-read-only (is-approved (id uint) (operator principal))
-    (let ((owner (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)))
         (ok (is-owned-or-approved id operator owner))
     )
 )
@@ -96,33 +107,89 @@
 )
 
 ;; public methods
-(define-public (mint-token)
+(define-public (set-mint-commission (tender <ft-trait>) (price uint) (address principal) (commissionAddress principal) (commissionRate uint))
+    (begin
+        (asserts! (is-eq contract-caller (var-get CONTRACT_OWNER)) ERR_NOT_AUTHORIZED)
+        (ok (map-set mint-commission
+            (contract-of tender)
+            {
+                price: price,
+                address: address,
+                commissionAddress: commissionAddress,
+                commissionRate: commissionRate,
+            }
+        ))
+    )
+)
+
+(define-public (mint-with (token <ft-trait>))
     (let (
+            (pricing (unwrap! (map-get? mint-commission (contract-of token)) ERR_UNKNOWN_TENDER))
+            (price (get price pricing))
+            (artistAddress (get address pricing))
+            (commissionAddress (get commissionAddress pricing))
+            (commissionAmount (/ (* price (get commissionRate pricing)) u10000))
+            (artistAmount (- price commissionAmount))
             (newMintCounter (+ (var-get mint-counter) u1))
             (mintPassBalance (get-mint-pass-balance contract-caller))
         )
-        (asserts! (< newMintCounter COLLECTION-MAX-SUPPLY) ERR-COLLECTION-LIMIT-REACHED)
-        (asserts! (> mintPassBalance u0) ERR-MINT-PASS-LIMIT-REACHED)
+        (asserts! (< newMintCounter COLLECTION_MAX_SUPPLY) ERR_COLLECTION_LIMIT_REACHED)
+        (asserts! (> mintPassBalance u0) ERR_MINT_PASS_LIMIT_REACHED)
+        
+        (and (> artistAmount u0) (try! (contract-call? token transfer artistAmount tx-sender artistAddress none)))
+        (and (> commissionAmount u0) (try! (contract-call? token transfer commissionAmount tx-sender commissionAddress none)))
 
-        (try! (paymint-split MINT-PRICE contract-caller))
         (try! (nft-mint? indige newMintCounter contract-caller))
         (var-set mint-counter newMintCounter)
         (map-set mint-pass contract-caller (- mintPassBalance u1))
-        (ok true)
+        (ok newMintCounter)
     )
 )
 
 ;; only size of list matters, content of list doesn't matter
-(define-public (batch-mint-token (entries (list 20 uint)))
-    (fold check-err
-        (map mint-token-helper entries)
+(define-public (mint-with-many (entries (list 20 uint)) (token <ft-trait>))
+    ;; trying to get nicer implementation but failing
+    ;;(begin
+    ;;    (var-set current-token (contract-of token))
+    ;;    (fold check-err
+    ;;        (map mint-token-helper entries)
+    ;;        (ok true)
+    ;;    )
+    ;;)
+    ;; resorting to previous clunky approach
+    (begin
+        (try! (if (is-some (element-at entries u0)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u1)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u2)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u3)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u4)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u5)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u6)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u7)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u8)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u9)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u10)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u11)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u12)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u13)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u14)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u15)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u16)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u17)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u18)) (mint-with token) (ok u0)))
+        (try! (if (is-some (element-at entries u19)) (mint-with token) (ok u0)))
         (ok true)
     )
 )
 
+;; unused param on purpose
+;; (define-private (mint-token-helper (entry uint))
+;;    (ERR_NOT_IMPLEMENTED)
+;; )
+
 (define-public (set-mint-pass (account principal) (limit uint))
     (begin
-        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
+        (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
         (ok (map-set mint-pass account limit))
     )
 )
@@ -135,10 +202,10 @@
 )
 
 ;; marketplace function
-(define-public (list-in-token (id uint) (price uint) (comm <com10>))
-    (let ((listing {price: price, commission: (contract-of comm)})) 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
-        (asserts! (> price u0) ERR-PRICE-WAS-ZERO)
+(define-public (list-in-token (id uint) (price uint) (comm <com10>) (token <ft-trait>))
+    (let ((listing {price: price, commission: (contract-of comm), token: (contract-of token)})) 
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)) ERR_NOT_OWNER)
+        (asserts! (> price u0) ERR_PRICE_WAS_ZERO)
         (ok (map-set market id listing))
     )
 )
@@ -146,22 +213,22 @@
 ;; marketplace function
 (define-public (unlist-in-token (id uint))
     (begin
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER)) ERR-NOT-OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)) ERR_NOT_OWNER)
         (ok (map-delete market id))
     )
 )
 
 ;; marketplace function
-(define-public (buy-in-token (token <sip10>) (id uint) (comm <com10>))
+(define-public (buy-in-token (id uint) (comm <com10>) (token <ft-trait>))
     (let 
         (
-            (listing (unwrap! (map-get? market id) ERR-NFT-NOT-LISTED-FOR-SALE))
-            (owner (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER))
+            (listing (unwrap! (map-get? market id) ERR_NFT_NOT_LISTED_FOR_SALE))
+            (owner (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER))
             (buyer contract-caller)
             (price (get price listing))
         )
-        (asserts! (is-eq (contract-of comm) (get commission listing)) ERR-WRONG-COMMISSION)
-        ;; (try! (stx-transfer? price contract-caller owner))
+        (asserts! (is-eq (contract-of token) (get token listing)) ERR_WRONG_TOKEN)
+        (asserts! (is-eq (contract-of comm) (get commission listing)) ERR_WRONG_COMMISSION)
         (try! (contract-call? token transfer price contract-caller owner none))
         (try! (contract-call? comm pay token id price))
         (try! (nft-transfer? indige id owner buyer))
@@ -171,32 +238,32 @@
 )
 
 (define-public (burn (id uint))
-    (let ((owner (unwrap! (nft-get-owner? indige id) ERR-COULDNT-GET-NFT-OWNER)))
-        (asserts! (is-eq owner contract-caller) ERR-NOT-OWNER)
+    (let ((owner (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)))
+        (asserts! (is-eq owner contract-caller) ERR_NOT_OWNER)
         (map-delete market id)
         (nft-burn? indige id contract-caller)
     )
 )
 
-;; the contract administrator can change the contract administrator
+;; the contract CONTRACT_OWNER can change the contract CONTRACT_OWNER
 (define-public (set-administrator (new-administrator principal))
     (begin
-        (asserts! (is-eq (var-get administrator) contract-caller) ERR-NOT-ADMINISTRATOR)
-        (ok (var-set administrator new-administrator))
+        (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
+        (ok (var-set CONTRACT_OWNER new-administrator))
     )
 )
 
 (define-public (set-token-uri (new-token-uri (string-ascii 80)))
     (begin
-        (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
-        (asserts! (not (var-get metadata-frozen)) ERR-METADATA-FROZEN)
+        (asserts! (is-eq contract-caller (var-get CONTRACT_OWNER)) ERR_NOT_ADMINISTRATOR)
+        (asserts! (not (var-get metadata-frozen)) ERR_METADATA_FROZEN)
         (var-set token-uri new-token-uri)
         (ok true))
 )
 
 (define-public (freeze-metadata)
     (begin
-        (asserts! (is-eq contract-caller (var-get administrator)) ERR-NOT-ADMINISTRATOR)
+        (asserts! (is-eq contract-caller (var-get CONTRACT_OWNER)) ERR_NOT_ADMINISTRATOR)
         (var-set metadata-frozen true)
         (ok true)
     )
@@ -224,23 +291,11 @@
     )
 )
 
-(define-private (paymint-split (mintPrice uint) (payer principal)) 
-    (begin
-        (try! (stx-transfer? mintPrice payer wallet-1))
-        (ok true)
-    )
-)
-
 (define-private (check-err (result (response bool uint)) (prior (response bool uint)))
     (match prior 
         ok-value result
         err-value (err err-value)
     )
-)
-
-;; unused param on purpose
-(define-private (mint-token-helper (entry uint))
-    (mint-token)
 )
 
 (define-private (set-mint-pass-helper (entry {account: principal, limit: uint}))

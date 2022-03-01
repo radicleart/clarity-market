@@ -7,6 +7,8 @@ import {
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 
 export enum ErrCode {
+  ERR_INSUFFICIENT_TOKENS = 1,
+  ERR_SENDER_IS_RECIPIENT = 2,
   ERR_METADATA_FROZEN = 101,
   ERR_COULDNT_GET_V1_DATA = 102,
   ERR_COULDNT_GET_NFT_OWNER = 103,
@@ -107,15 +109,15 @@ export class IndigeClient {
     );
   }
 
-  mintToken(sender: string): Tx {
-    return Tx.contractCall(this.contractName, "mint-token", [], sender);
+  mintWith(token: string, sender: string): Tx {
+    return Tx.contractCall(this.contractName, "mint-with", [types.principal(token)], sender);
   }
 
-  batchMintToken(entries: number[], sender: string): Tx {
+  mintWithMany(entries: number[], token: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
-      "batch-mint-token",
-      [types.list(entries.map((entry) => types.uint(entry)))],
+      "mint-with-many",
+      [types.list(entries.map((entry) => types.uint(entry))), types.principal(token)],
       sender
     );
   }
@@ -159,11 +161,11 @@ export class IndigeClient {
     );
   }
 
-  listInToken(id: number, price: number, comm: string, sender: string): Tx {
+  listInToken(id: number, price: number, comm: string, token: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "list-in-token",
-      [types.uint(id), types.uint(price), types.principal(comm)],
+      [types.uint(id), types.uint(price), types.principal(comm), types.principal(token)],
       sender
     );
   }
@@ -177,11 +179,11 @@ export class IndigeClient {
     );
   }
 
-  buyInToken(token: string, id: number, comm: string, sender: string): Tx {
+  buyInToken(id: number, comm: string, token: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "buy-in-token",
-      [types.principal(token), types.uint(id), types.principal(comm)],
+      [types.uint(id), types.principal(comm), types.principal(token)],
       sender
     );
   }
@@ -221,4 +223,14 @@ export class IndigeClient {
       types.principal(account),
     ]);
   }
+
+  setMintCommission(tender: string, price: number, address: string, commissionAddress: string, commissionRate: number, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "set-mint-commission",
+      [types.principal(tender), types.uint(price), types.principal(address), types.principal(commissionAddress), types.uint(commissionRate)],
+      sender
+    );
+  }
+
 }

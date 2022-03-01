@@ -1,5 +1,5 @@
-(use-trait sip10 .sip-010-trait-ft-standard.sip-010-trait)
+(use-trait ft-trait .sip-010-trait-ft-standard.sip-010-trait)
 
 (define-trait commission
-    ((pay (<sip10> uint uint) (response bool uint)))
+    ((pay (<ft-trait> uint uint) (response bool uint)))
 )
