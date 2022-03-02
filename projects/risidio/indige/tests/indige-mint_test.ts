@@ -83,7 +83,7 @@ Clarinet.test({
     block = chain.mineBlock([
       clientV2.setMintCommission(tokenStacks, 1000000, mintAddress1, mintAddress2, 40, wallet1.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(401);
+    block.receipts[0].result.expectErr().expectUint(403);
 
     // third time lucky
     block = chain.mineBlock([

@@ -109,7 +109,7 @@
 ;; public methods
 (define-public (set-mint-commission (tender <ft-trait>) (price uint) (address principal) (commissionAddress principal) (commissionRate uint))
     (begin
-        (asserts! (is-eq contract-caller (var-get CONTRACT_OWNER)) ERR_NOT_AUTHORIZED)
+        (asserts! (is-eq contract-caller (var-get CONTRACT_OWNER)) ERR_NOT_ADMINISTRATOR)
         (ok (map-set mint-commission
             (contract-of tender)
             {
