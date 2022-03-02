@@ -346,7 +346,7 @@ Clarinet.test({
 Clarinet.test({
   name: "Market Test - Ensure that NFT can't be bought with different commission trait",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, commission1, tokenStacks, wallet1, wallet2, wallet3, clientV2 } =
+    const { deployer, commission1, tokenStacks, wallet1, wallet2, clientV2 } =
       getWalletsAndClient(chain, accounts);
 
     mintV2Token(1, chain, accounts);

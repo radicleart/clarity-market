@@ -124,7 +124,7 @@ Clarinet.test({
 Clarinet.test({
   name: "Mint Many Test - Ensure can mint many in Stacks for fixed price",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, wallet1, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
+    const { deployer, wallet1, tokenStacks, clientV2 } = getWalletsAndClient(
       chain,
       accounts
     );
