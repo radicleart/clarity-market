@@ -70,7 +70,7 @@ const getWalletsAndClient = (
 };
 
 Clarinet.test({
-  name: "Mint Test - wallet2 cannot self approve to transfer wallet1 asset",
+  name: "Approvals Test - wallet2 cannot self approve to transfer wallet1 asset",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, wallet2, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
       chain,
@@ -106,7 +106,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Mint Test - wallet1 can approve wallet2 to transfer",
+  name: "Approvals Test - wallet1 can approve wallet2 to transfer",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, wallet2, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
       chain,
@@ -142,7 +142,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Mint Test - wallet1 can approve wallet2 to transfer all assets",
+  name: "Approvals Test - wallet1 can approve wallet2 to transfer all assets",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, wallet2, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
       chain,
@@ -207,6 +207,83 @@ Clarinet.test({
     clientV2.getOwner(3).result.expectOk().expectSome().expectPrincipal(wallet2.address);
     clientV2.getOwner(4).result.expectOk().expectSome().expectPrincipal(wallet2.address);
     clientV2.getOwner(5).result.expectOk().expectSome().expectPrincipal(wallet2.address);
+  }
+});
+
+Clarinet.test({
+  name: "Approvals Test - approved operator is unable to list",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, wallet2, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+    let block = chain.mineBlock([
+      clientV2.setMintCommission(tokenStacks, 100000000, mintAddress1, mintAddress2, 4, deployer.address),
+      clientV2.setMintPass(wallet1.address, 5, deployer.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectOk();
+    block = chain.mineBlock([
+      clientV2.mintWith(tokenStacks, wallet1.address),
+      clientV2.mintWith(tokenStacks, wallet1.address),
+      clientV2.mintWith(tokenStacks, wallet1.address),
+      clientV2.mintWith(tokenStacks, wallet1.address),
+      clientV2.mintWith(tokenStacks, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectUint(1);
+    block.receipts[1].result.expectOk().expectUint(2);
+    block.receipts[2].result.expectOk().expectUint(3);
+    block.receipts[3].result.expectOk().expectUint(4);
+    block.receipts[4].result.expectOk().expectUint(5);
+    // console.log(block.receipts[2].events)
+    // check if approved for 1 can't transfer 2
+    block = chain.mineBlock([
+      clientV2.setApproved(5, wallet2.address, true, wallet1.address)
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block = chain.mineBlock([
+      clientV2.listInToken(1, 100000000, commission1, tokenStacks, wallet2.address)
+    ]);
+    block.receipts[0].result.expectErr().expectUint(402);
+  }
+});
+
+Clarinet.test({
+  name: "Approvals Test - when approved operator transfers the listing in stacks is reset",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, wallet2, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+    let block = chain.mineBlock([
+      clientV2.setMintCommission(tokenStacks, 100000000, mintAddress1, mintAddress2, 4, deployer.address),
+      clientV2.setMintPass(wallet1.address, 5, deployer.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectOk();
+    block = chain.mineBlock([
+      clientV2.mintWith(tokenStacks, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectUint(1);
+    // console.log(block.receipts[2].events)
+    // check if approved for 1 can't transfer 2
+    block = chain.mineBlock([
+      clientV2.setApproved(1, wallet2.address, true, wallet1.address),
+      clientV2.listInToken(1, 100000000, commission1, tokenStacks, wallet2.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectErr().expectUint(402);
+    clientV2.getListingInToken(1).result.expectNone();
+    block = chain.mineBlock([
+      clientV2.listInToken(1, 100000000, commission1, tokenStacks, wallet1.address),
+    ]);
+    assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(100000000), commission: commission1, token: tokenStacks });
+    block = chain.mineBlock([
+      clientV2.transfer(1, wallet1.address, wallet2.address, wallet2.address),
+    ]);
+    // owner cant transfer if listed internally
+    block.receipts[0].result.expectErr().expectUint(107);
+    assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(100000000), commission: commission1, token: tokenStacks });
   }
 });
 
