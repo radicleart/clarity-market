@@ -1,0 +1,64 @@
+(ok (some (tuple (addresses (list SPVS357X140DGZFB2M2RP4WH26SA418ZNN78KFBS SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW SP1CS4FVXC59S65C3X1J3XRNZGWTG212JT7CG73AG SP4DYYK99BZS7S95KYYEJAJE5VJ21F57M4NS0Q5F SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ)) (shares (list u1000000000 u6300000000 u463000000 u463000000 u1774000000 u0 u0 u0 u0 u0)))))
+
+[
+  {
+    "type": "contract_event",
+    "contract_event": {
+      "contract_identifier": "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.Wrapped-Bitcoin",
+      "topic": "print",
+      "value": "0x"
+    }
+  },
+  {
+    "type": "contract_event",
+    "contract_event": {
+      "contract_identifier": "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.Wrapped-Bitcoin",
+      "topic": "print",
+      "value": "0x"
+    }
+  },
+  {
+    "type": "contract_event",
+    "contract_event": {
+      "contract_identifier": "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.Wrapped-Bitcoin",
+      "topic": "print",
+      "value": "0x"
+    }
+  },
+  {
+    "type": "ft_transfer_event",
+    "ft_transfer_event": {
+      "asset_identifier": "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.Wrapped-Bitcoin::wrapped-bitcoin",
+      "sender": "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG",
+      "recipient": "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5",
+      "amount": "100"
+    }
+  },
+  {
+    "type": "ft_transfer_event",
+    "ft_transfer_event": {
+      "asset_identifier": "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.Wrapped-Bitcoin::wrapped-bitcoin",
+      "sender": "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG",
+      "recipient": "ST1P89TEC03E29V5MYJBSCC8KWR1A243ZG382B1X5",
+      "amount": "5"
+    }
+  },
+  {
+    "type": "ft_transfer_event",
+    "ft_transfer_event": {
+      "asset_identifier": "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.Wrapped-Bitcoin::wrapped-bitcoin",
+      "sender": "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG",
+      "recipient": "ST1WJY09D3DEE45B1PY8TAV838VCH9HNEJXB2ZBPQ",
+      "amount": "5"
+    }
+  },
+  {
+    "type": "nft_transfer_event",
+    "nft_transfer_event": {
+      "asset_identifier": "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.indige::indige",
+      "sender": "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5",
+      "recipient": "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG",
+      "value": "u1"
+    }
+  }
+]

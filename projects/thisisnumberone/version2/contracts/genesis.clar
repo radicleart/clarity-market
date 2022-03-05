@@ -9,17 +9,16 @@
 
 ;; contract variables
 (define-data-var CONTRACT_OWNER principal tx-sender)
-(define-data-var current-token principal .stx-token)
 
 (define-data-var mint-counter uint u0)
 
-(define-data-var token-uri (string-ascii 246) "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/indige-{id}.json")
+(define-data-var token-uri (string-ascii 246) "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/genesis-{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
-(define-constant MINT-PRICE u100000000)
+(define-constant MINT-PRICE u100000)
 
-(define-constant COLLECTION_MAX_SUPPLY u50)
+(define-constant COLLECTION_MAX_SUPPLY u5)
 
 (define-constant ERR_METADATA_FROZEN (err u101))
 (define-constant ERR_COULDNT_GET_NFT_OWNER (err u103))
@@ -38,10 +37,7 @@
 (define-constant ERR_NOT_ADMINISTRATOR (err u403))
 (define-constant ERR_NOT_FOUND (err u404))
 
-(define-constant wallet-1 'SP2M92VAE2YJ1P5VZ1Q4AFKWZFEKDS8CDA1KVFJ21)
-(define-constant wallet-2 'SP132K8CVJ9B2GEDHTQS5MH3N7BR5QDMN1PXVS8MY)
-
-(define-non-fungible-token indige uint)
+(define-non-fungible-token genesis uint)
 
 ;; data structures
 
@@ -67,7 +63,7 @@
 
 ;; SIP-09: get last token id
 (define-read-only (get-last-token-id)
-  (ok (- (var-get mint-counter) u1))
+  (ok (var-get mint-counter))
 )
 
 ;; SIP-09: URI for metadata associated with the token
@@ -77,7 +73,7 @@
 
 ;; SIP-09: Gets the owner of the 'Specified token ID.
 (define-read-only (get-owner (id uint))
-  (ok (nft-get-owner? indige id))
+  (ok (nft-get-owner? genesis id))
 )
 
 ;; SIP-09: Transfer
@@ -86,13 +82,13 @@
         (asserts! (unwrap! (is-approved id contract-caller) ERR_NOT_AUTHORIZED) ERR_NOT_AUTHORIZED)
         (asserts! (is-none (map-get? market id)) ERR_NFT_LISTED)
         (map-delete approvals {owner: contract-caller, operator: owner, id: id})
-        (nft-transfer? indige id owner recipient)
+        (nft-transfer? genesis id owner recipient)
     )
 )
 
 ;; operable
 (define-read-only (is-approved (id uint) (operator principal))
-    (let ((owner (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? genesis id) ERR_COULDNT_GET_NFT_OWNER)))
         (ok (is-owned-or-approved id operator owner))
     )
 )
@@ -135,13 +131,13 @@
             (newMintCounter (+ (var-get mint-counter) u1))
             (mintPassBalance (get-mint-pass-balance contract-caller))
         )
-        (asserts! (< newMintCounter COLLECTION_MAX_SUPPLY) ERR_COLLECTION_LIMIT_REACHED)
+        (asserts! (<= newMintCounter COLLECTION_MAX_SUPPLY) ERR_COLLECTION_LIMIT_REACHED)
         (asserts! (> mintPassBalance u0) ERR_MINT_PASS_LIMIT_REACHED)
         
         (and (> artistAmount u0) (try! (contract-call? token transfer artistAmount contract-caller artistAddress none)))
         (and (> commissionAmount u0) (try! (contract-call? token transfer commissionAmount contract-caller commissionAddress none)))
 
-        (try! (nft-mint? indige newMintCounter contract-caller))
+        (try! (nft-mint? genesis newMintCounter contract-caller))
         (var-set mint-counter newMintCounter)
         (map-set mint-pass contract-caller (- mintPassBalance u1))
         (ok newMintCounter)
@@ -149,37 +145,13 @@
 )
 
 ;; only size of list matters, content of list doesn't matter
-(define-public (mint-with-many (entries (list 20 uint)) (token <ft-trait>))
-    ;; trying to get nicer implementation but failing
-    ;;(begin
-    ;;    (var-set current-token (contract-of token))
-    ;;    (fold check-err
-    ;;        (map mint-token-helper entries)
-    ;;        (ok true)
-    ;;    )
-    ;;)
-    ;; resorting to previous clunky approach
+(define-public (mint-with-many (entries (list 5 uint)) (token <ft-trait>))
     (begin
         (try! (if (is-some (element-at entries u0)) (mint-with token) (ok u0)))
         (try! (if (is-some (element-at entries u1)) (mint-with token) (ok u0)))
         (try! (if (is-some (element-at entries u2)) (mint-with token) (ok u0)))
         (try! (if (is-some (element-at entries u3)) (mint-with token) (ok u0)))
         (try! (if (is-some (element-at entries u4)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u5)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u6)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u7)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u8)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u9)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u10)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u11)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u12)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u13)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u14)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u15)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u16)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u17)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u18)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u19)) (mint-with token) (ok u0)))
         (ok true)
     )
 )
@@ -211,7 +183,7 @@
 ;; marketplace function
 (define-public (list-in-token (id uint) (price uint) (comm <com10>) (token <ft-trait>))
     (let ((listing {price: price, commission: (contract-of comm), token: (contract-of token)})) 
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)) ERR_NOT_OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? genesis id) ERR_COULDNT_GET_NFT_OWNER)) ERR_NOT_OWNER)
         (asserts! (> price u0) ERR_PRICE_WAS_ZERO)
         (ok (map-set market id listing))
     )
@@ -220,7 +192,7 @@
 ;; marketplace function
 (define-public (unlist-in-token (id uint))
     (begin
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)) ERR_NOT_OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? genesis id) ERR_COULDNT_GET_NFT_OWNER)) ERR_NOT_OWNER)
         (ok (map-delete market id))
     )
 )
@@ -230,7 +202,7 @@
     (let 
         (
             (listing (unwrap! (map-get? market id) ERR_NFT_NOT_LISTED_FOR_SALE))
-            (owner (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER))
+            (owner (unwrap! (nft-get-owner? genesis id) ERR_COULDNT_GET_NFT_OWNER))
             (buyer contract-caller)
             (price (get price listing))
         )
@@ -238,17 +210,17 @@
         (asserts! (is-eq (contract-of comm) (get commission listing)) ERR_WRONG_COMMISSION)
         (try! (contract-call? token transfer price contract-caller owner none))
         (try! (contract-call? comm pay token id price))
-        (try! (nft-transfer? indige id owner buyer))
+        (try! (nft-transfer? genesis id owner buyer))
         (map-delete market id)
         (ok true)
     )
 )
 
 (define-public (burn (id uint))
-    (let ((owner (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? genesis id) ERR_COULDNT_GET_NFT_OWNER)))
         (asserts! (is-eq owner contract-caller) ERR_NOT_OWNER)
         (map-delete market id)
-        (nft-burn? indige id contract-caller)
+        (nft-burn? genesis id contract-caller)
     )
 )
 
@@ -303,4 +275,4 @@
 )
 
 ;; TODO: add all whitelists
-(map-set mint-pass 'ST29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSC03Y0G u5)
+(map-set mint-pass 'SP1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28GBQA1W0F u5)

@@ -1,0 +1,76 @@
+
+[project]
+name = "genesis"
+
+[contracts.genesis]
+path = "contracts/genesis.clar"
+depends_on = ["arkadiko-dao", "nft-trait", "operable", "sip-010-trait-ft-standard", "commission-trait-sip10"]
+
+[contracts.commission-trait-sip10]
+path = "../../../contracts/traits/commission-trait-sip10.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.commission-genesis]
+path = "contracts/commission-genesis.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.commission-nop]
+path = "contracts/commission-nop.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.nft-trait]
+path = "../../../contracts/traits/nft-trait.clar"
+depends_on = []
+
+[contracts.operable]
+path = "../../../contracts/traits/operable.clar"
+depends_on = []
+
+# EXTERNAL CONTRACTS
+[contracts.sip-010-trait-ft-standard]
+path = "../../../contracts/external/sip-010-trait-ft-standard.clar"
+depends_on = []
+
+[contracts.arkadiko-dao-token-trait-v1]
+path = "../../../contracts/external/arkadiko-dao-token-trait-v1.clar"
+depends_on = []
+
+[contracts.arkadiko-dao]
+path = "../../../contracts/external/arkadiko-dao.clar"
+depends_on = ["sip-010-trait-ft-standard", "arkadiko-dao-token-trait-v1", "arkadiko-token"]
+
+[contracts.arkadiko-token]
+path = "../../../contracts/external/arkadiko-token.clar"
+depends_on = ["sip-010-trait-ft-standard", "arkadiko-dao-token-trait-v1"]
+
+[contracts.wrapped-stx-token]
+path = "../../../contracts/external/wrapped-stx-token.clar"
+depends_on = ["sip-010-trait-ft-standard", "arkadiko-dao-token-trait-v1"]
+
+[contracts.Wrapped-Bitcoin]
+path = "../../../contracts/external/Wrapped-Bitcoin.clar"
+depends_on = ["ft-trait", "restricted-token-trait"]
+
+[contracts.ft-trait]
+path = "../../../contracts/external/ft-trait.clar"
+depends_on = []
+
+[contracts.restricted-token-trait]
+path = "../../../contracts/external/restricted-token-trait.clar"
+depends_on = []
+
+[contracts.stx-token]
+path = "../../../contracts/external/stx-token.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.arkadiko-swap-trait-v1]
+path = "../../../contracts/external/arkadiko-swap-trait-v1.clar"
+depends_on = []
+
+[contracts.arkadiko-swap-v2-1]
+path = "../../../contracts/external/arkadiko-swap-v2-1.clar"
+depends_on = ["sip-010-trait-ft-standard", "arkadiko-swap-trait-v1", "arkadiko-dao", "wrapped-stx-token"]
+
+[contracts.arkadiko-swap-token-wstx-xbtc]
+path = "../../../contracts/external/arkadiko-swap-token-wstx-xbtc.clar"
+depends_on = ["arkadiko-swap-trait-v1"]
