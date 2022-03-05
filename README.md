@@ -7,6 +7,9 @@ Structure of this repo is as follows.
 ./contracts - external contracts and common traits
 ./projects - individual projects and version thereof e.g.
 ./projects/thisisnumberone/version1 
+./projects/thisisnumberone/version1/Clarinet.toml
+./projects/thisisnumberone/version1/contracts - project contracts
+./projects/thisisnumberone/version1/tests - clarinet tests
 ```
 
 To run Clarinet tests for version 2 (generalise FT marketplace) of thisisumberone contract

@@ -12,8 +12,12 @@ import { WrappedBitcoin } from "../../../../src/wrapped-bitcoin-client.ts";
 const mintAddress1 = "SP2M92VAE2YJ1P5VZ1Q4AFKWZFEKDS8CDA1KVFJ21";
 const mintAddress2 = "SP132K8CVJ9B2GEDHTQS5MH3N7BR5QDMN1PXVS8MY";
 
-const commissionAddress1 = "ST1P89TEC03E29V5MYJBSCC8KWR1A243ZG382B1X5";
-const commissionAddress2 = "ST1WJY09D3DEE45B1PY8TAV838VCH9HNEJXB2ZBPQ";
+const commissionAddress1 = "SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N";
+const commissionAddress2 = "SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW";
+const commissionAddress3 = "SP1CS4FVXC59S65C3X1J3XRNZGWTG212JT7CG73AG";
+const commissionAddress4 = "SPZRAE52H2NC2MDBEV8W99RFVPK8Q9BW8H88XV9N";
+const commissionAddress5 = "SP2M92VAE2YJ1P5VZ1Q4AFKWZFEKDS8CDA1KVFJ21";
+const commissionAddress6 = "SP3N4AJFZZYC4BK99H53XP8KDGXFGQ2PRSQP2HGT6";
 
 const getWalletsAndClient = (
   chain: Chain,
@@ -182,7 +186,7 @@ Clarinet.test({
     block = chain.mineBlock([
       clientV2.buyInToken(1, commission1, tokenStacks, wallet2.address),
     ]);
-    // console.log(block)
+    console.log(block.receipts[0].events)
     block.receipts[0].result.expectOk().expectBool(true);
 
     block.receipts[0].events.expectSTXTransferEvent(
@@ -191,14 +195,34 @@ Clarinet.test({
       wallet1.address
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      5000000,
+      8000000,
       wallet2.address,
       commissionAddress1
     );
     block.receipts[0].events.expectSTXTransferEvent(
-      5000000,
+      400000,
       wallet2.address,
       commissionAddress2
+    );
+    block.receipts[0].events.expectSTXTransferEvent(
+      400000,
+      wallet2.address,
+      commissionAddress3
+    );
+    block.receipts[0].events.expectSTXTransferEvent(
+      400000,
+      wallet2.address,
+      commissionAddress4
+    );
+    block.receipts[0].events.expectSTXTransferEvent(
+      400000,
+      wallet2.address,
+      commissionAddress5
+    );
+    block.receipts[0].events.expectSTXTransferEvent(
+      400000,
+      wallet2.address,
+      commissionAddress6
     );
 
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(
@@ -224,10 +248,9 @@ Clarinet.test({
       clientWrappedBitcoin.getBalance(wallet1.address, wallet1).result.expectOk().expectUint(0);
 
       // list for 100 stx
-      let block = chain.mineBlock([clientV2.listInToken(1, 100, commission1, tokenBitcoin, wallet1.address )]);
+      let block = chain.mineBlock([clientV2.listInToken(1, 1000, commission1, tokenBitcoin, wallet1.address )]);
       block.receipts[0].result.expectOk().expectBool(true);
 
-      assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(100), commission: commission1, token: tokenBitcoin });
       block = chain.mineBlock([
         clientWrappedBitcoin.mintWrappedBitcoin(100000000, wallet1.address, deployer.address),
         clientV2.buyInToken(1, commission1, tokenBitcoin, wallet2.address)
@@ -239,29 +262,33 @@ Clarinet.test({
         clientV2.buyInToken(1, commission1, tokenBitcoin, wallet1.address),
       ]);
       block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_SENDER_IS_RECIPIENT);
+      assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(1000), commission: commission1, token: tokenBitcoin });
 
       block = chain.mineBlock([
         clientWrappedBitcoin.mintWrappedBitcoin(1000000, wallet2.address, wallet2.address),
         clientV2.buyInToken(1, commission1, tokenBitcoin, wallet2.address)
       ]);
-      clientWrappedBitcoin.getBalance(wallet2.address, wallet2).result.expectOk().expectUint(999890);
+      clientV2.getListingInToken(1).result.expectNone();
+      // assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(1000), commission: commission1, token: tokenBitcoin });
+      console.log('balance: ', clientWrappedBitcoin.getBalance(wallet2.address, wallet2))
       block.receipts[0].result.expectOk().expectBool(true);
       block.receipts[1].result.expectOk().expectBool(true);
+      clientWrappedBitcoin.getBalance(wallet2.address, wallet2).result.expectOk().expectUint(998900);
 
       block.receipts[1].events.expectFungibleTokenTransferEvent(
-        100,
+        1000,
         wallet2.address,
         wallet1.address,
         `${deployer.address}.Wrapped-Bitcoin::wrapped-bitcoin`
       );
       block.receipts[1].events.expectFungibleTokenTransferEvent(
-        5,
+        80,
         wallet2.address,
         commissionAddress1,
         `${deployer.address}.Wrapped-Bitcoin::wrapped-bitcoin`
       );
       block.receipts[1].events.expectFungibleTokenTransferEvent(
-        5,
+        4,
         wallet2.address,
         commissionAddress2,
         `${deployer.address}.Wrapped-Bitcoin::wrapped-bitcoin`
@@ -290,10 +317,10 @@ Clarinet.test({
       clientWrappedBitcoin.getBalance(wallet1.address, wallet1).result.expectOk().expectUint(0);
 
       // list for 100 stx
-      let block = chain.mineBlock([clientV2.listInToken(1, 100, commission1, tokenBitcoin, wallet1.address )]);
+      let block = chain.mineBlock([clientV2.listInToken(1, 1000, commission1, tokenBitcoin, wallet1.address )]);
       block.receipts[0].result.expectOk().expectBool(true);
 
-      assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(100), commission: commission1, token: tokenBitcoin });
+      assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(1000), commission: commission1, token: tokenBitcoin });
       block = chain.mineBlock([
         clientWrappedBitcoin.mintWrappedBitcoin(100000000, wallet1.address, deployer.address),
         clientV2.buyInToken(1, commission1, tokenBitcoin, wallet2.address)
@@ -310,24 +337,24 @@ Clarinet.test({
         clientWrappedBitcoin.mintWrappedBitcoin(1000000, wallet2.address, wallet2.address),
         clientV2.buyInToken(1, commission1, tokenBitcoin, wallet2.address)
       ]);
-      clientWrappedBitcoin.getBalance(wallet2.address, wallet2).result.expectOk().expectUint(999890);
+      clientWrappedBitcoin.getBalance(wallet2.address, wallet2).result.expectOk().expectUint(998900);
       block.receipts[0].result.expectOk().expectBool(true);
       block.receipts[1].result.expectOk().expectBool(true);
 
       block.receipts[1].events.expectFungibleTokenTransferEvent(
-        100,
+        1000,
         wallet2.address,
         wallet1.address,
         `${deployer.address}.Wrapped-Bitcoin::wrapped-bitcoin`
       );
       block.receipts[1].events.expectFungibleTokenTransferEvent(
-        5,
+        80,
         wallet2.address,
         commissionAddress1,
         `${deployer.address}.Wrapped-Bitcoin::wrapped-bitcoin`
       );
       block.receipts[1].events.expectFungibleTokenTransferEvent(
-        5,
+        4,
         wallet2.address,
         commissionAddress2,
         `${deployer.address}.Wrapped-Bitcoin::wrapped-bitcoin`
