@@ -54,7 +54,7 @@
 ;; if {owner, operator, id}->true in map, then operator can perform actions on behalf of owner for this id
 (define-map approvals {owner: principal, operator: principal, id: uint} bool)
 
-;; id -> {price (in ustx), commission trait}
+;; id -> {price (in token), commission trait}
 ;; if id is not in map, it is not listed for sale
 (define-map market uint {price: uint, commission: principal, token: principal})
 
