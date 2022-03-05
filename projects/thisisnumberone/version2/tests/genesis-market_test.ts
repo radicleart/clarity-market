@@ -87,8 +87,8 @@ const mintV2Token = (tokenId: number, chain: Chain, accounts: Map<string, Accoun
   block.receipts[2].events.expectNonFungibleTokenMintEvent(
     types.uint(tokenId),
     wallet1.address,
-    `${deployer.address}.genesis`,
-    "genesis"
+    `${deployer.address}.thisisnumberone-roots`,
+    "thisisnumberone"
   );
 
 };
@@ -229,8 +229,8 @@ Clarinet.test({
       types.uint(1),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.genesis`,
-      "genesis"
+      `${deployer.address}.thisisnumberone-roots`,
+      "thisisnumberone"
     );
   },
 });
@@ -298,8 +298,8 @@ Clarinet.test({
         types.uint(1),
         wallet1.address,
         wallet2.address,
-        `${deployer.address}.genesis`,
-        "genesis"
+        `${deployer.address}.thisisnumberone-roots`,
+        "thisisnumberone"
       );
     },
 });
@@ -364,8 +364,8 @@ Clarinet.test({
         types.uint(1),
         wallet1.address,
         wallet2.address,
-        `${deployer.address}.genesis`,
-        "genesis"
+        `${deployer.address}.thisisnumberone-roots`,
+        "thisisnumberone"
       );
     },
 });
@@ -523,7 +523,7 @@ Clarinet.test({
     );
 
     const firstUri =
-      "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/genesis-{id}.json";
+      "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/thisisnumberone-{id}.json";
     const nextUri = "ipfs/QmdcBZnzSUwAKQdnVMKSkbVYoDD6DBkghPPUAwtVQjpwgq/{id}";
     clientV2
       .getTokenUri(0)
@@ -589,8 +589,8 @@ Clarinet.test({
     block.receipts[0].events.expectNonFungibleTokenBurnEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.genesis`,
-      "genesis"
+      `${deployer.address}.thisisnumberone-roots`,
+      "thisisnumberone"
     );
   },
 });
@@ -682,8 +682,8 @@ Clarinet.test({
       types.uint(1),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.genesis`,
-      "genesis"
+      `${deployer.address}.thisisnumberone-roots`,
+      "thisisnumberone"
     );
 
     // admin should be able to transfer on behalf of wallet 2
@@ -700,8 +700,8 @@ Clarinet.test({
       types.uint(1),
       wallet2.address,
       wallet3.address,
-      `${deployer.address}.genesis`,
-      "genesis"
+      `${deployer.address}.thisisnumberone-roots`,
+      "thisisnumberone"
     );
   },
 });
@@ -734,8 +734,8 @@ Clarinet.test({
       types.uint(1),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.genesis`,
-      "genesis"
+      `${deployer.address}.thisisnumberone-roots`,
+      "thisisnumberone"
     );
 
     // transfer nft back to wallet1
@@ -747,8 +747,8 @@ Clarinet.test({
       types.uint(1),
       wallet2.address,
       wallet1.address,
-      `${deployer.address}.genesis`,
-      "genesis"
+      `${deployer.address}.thisisnumberone-roots`,
+      "thisisnumberone"
     );
 
     // remove approval
