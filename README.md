@@ -1,6 +1,23 @@
 # Clarity Market 1 2020
 
-# Contracts
+Structure of this repo is as follows.
+
+```#javascript
+./src - common test helpers typescript classes
+./contracts - external contracts and common traits
+./projects - individual projects and version thereof e.g.
+./projects/thisisnumberone/version1 
+```
+
+To run Clarinet tests for version 2 (generalise FT marketplace) of thisisumberone contract
+
+```
+> cd ./projects/thisisnumberone/version2
+> clarinet test
+```
+# External Contracts
+
+Contracts pulled in to explore DAO concepts and mint fungible tokens via a DAO>
 
 [Arkadiko](https://app.arkadiko.finance/)
 
