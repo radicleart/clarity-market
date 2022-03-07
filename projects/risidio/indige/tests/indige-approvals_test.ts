@@ -142,7 +142,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Approvals Test - wallet1 can approve wallet2 to transfer all assets",
+  name: "Approvals Test - wallet1 can approve wallet2 to transfer assets but approval is reset after first transfer",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, wallet2, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
       chain,
@@ -179,7 +179,6 @@ Clarinet.test({
     // wallet1 is no longer the owner
     block = chain.mineBlock([
       clientV2.setApproved(1, wallet2.address, false, wallet1.address),
-      clientV2.setApprovedAll(wallet2.address, false, wallet1.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     // check no longer approved to transfer 1
@@ -189,24 +188,23 @@ Clarinet.test({
     block.receipts[0].result.expectErr().expectUint(401);
     // approve all doesnt impact approve single - see line 181 wallet2 is NOT approved for asset 1
     block = chain.mineBlock([
-      clientV2.setApprovedAll(wallet2.address, true, wallet1.address),
       clientV2.transfer(1, wallet1.address, wallet2.address, wallet2.address),
       clientV2.transfer(2, wallet1.address, wallet2.address, wallet2.address),
       clientV2.transfer(3, wallet1.address, wallet2.address, wallet2.address),
       clientV2.transfer(4, wallet1.address, wallet2.address, wallet2.address),
       clientV2.transfer(5, wallet1.address, wallet2.address, wallet2.address),
     ]);
-    block.receipts[0].result.expectOk().expectBool(true);
+    // second attempt to transfer fails
+    block.receipts[0].result.expectErr().expectUint(401);
     block.receipts[1].result.expectErr().expectUint(401);
-    block.receipts[2].result.expectOk().expectBool(true);
-    block.receipts[3].result.expectOk().expectBool(true);
-    block.receipts[4].result.expectOk().expectBool(true);
-    block.receipts[5].result.expectOk().expectBool(true);
+    block.receipts[2].result.expectErr().expectUint(401);
+    block.receipts[3].result.expectErr().expectUint(401);
+    block.receipts[4].result.expectErr().expectUint(401);
     clientV2.getOwner(1).result.expectOk().expectSome().expectPrincipal(wallet1.address);
-    clientV2.getOwner(2).result.expectOk().expectSome().expectPrincipal(wallet2.address);
-    clientV2.getOwner(3).result.expectOk().expectSome().expectPrincipal(wallet2.address);
-    clientV2.getOwner(4).result.expectOk().expectSome().expectPrincipal(wallet2.address);
-    clientV2.getOwner(5).result.expectOk().expectSome().expectPrincipal(wallet2.address);
+    clientV2.getOwner(2).result.expectOk().expectSome().expectPrincipal(wallet1.address);
+    clientV2.getOwner(3).result.expectOk().expectSome().expectPrincipal(wallet1.address);
+    clientV2.getOwner(4).result.expectOk().expectSome().expectPrincipal(wallet1.address);
+    clientV2.getOwner(5).result.expectOk().expectSome().expectPrincipal(wallet1.address);
   }
 });
 

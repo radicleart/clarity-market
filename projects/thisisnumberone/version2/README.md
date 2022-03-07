@@ -190,8 +190,9 @@ to ensure the lifespan of the approval is limited to 1 sale cycle.
 
 ### Questions
 
-1 un/list-in-token - should these functions allow the operator to list / unlist within the new
-reduced scope.
+1 un/list-in-token - should these functions allow the operator to list / unlist within the new reduced scope.
+
+2 need get-mint-commission or use the api?
 
 # Commission Address
 

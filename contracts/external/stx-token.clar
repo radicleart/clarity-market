@@ -5,7 +5,7 @@
 (define-data-var token-uri (string-utf8 256) u"")
 
 ;; errors
-(define-constant ERR-NOT-AUTHORIZED u14401)
+(define-constant ERR_NOT_AUTHORIZED u14401)
 
 ;; ---------------------------------------------------------
 ;; SIP-10 Functions
@@ -20,7 +20,7 @@
 )
 
 (define-read-only (get-symbol)
-  (ok "uSTX")
+  (ok "unwSTX")
 )
 
 (define-read-only (get-decimals)
@@ -37,7 +37,7 @@
 
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
   (begin
-    (asserts! (is-eq tx-sender sender) (err ERR-NOT-AUTHORIZED))
+    (asserts! (is-eq tx-sender sender) (err ERR_NOT_AUTHORIZED))
 
     (match (stx-transfer? amount sender recipient)
       response (begin

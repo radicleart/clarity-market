@@ -9,7 +9,6 @@
 
 ;; contract variables
 (define-data-var CONTRACT_OWNER principal tx-sender)
-(define-data-var current-token principal .stx-token)
 
 (define-data-var mint-counter uint u0)
 
@@ -38,9 +37,6 @@
 (define-constant ERR_NOT_ADMINISTRATOR (err u403))
 (define-constant ERR_NOT_FOUND (err u404))
 
-(define-constant wallet-1 'SP2M92VAE2YJ1P5VZ1Q4AFKWZFEKDS8CDA1KVFJ21)
-(define-constant wallet-2 'SP132K8CVJ9B2GEDHTQS5MH3N7BR5QDMN1PXVS8MY)
-
 (define-non-fungible-token indige uint)
 
 ;; data structures
@@ -58,7 +54,7 @@
 ;; if {owner, operator, id}->true in map, then operator can perform actions on behalf of owner for this id
 (define-map approvals {owner: principal, operator: principal, id: uint} bool)
 
-;; id -> {price (in ustx), commission trait}
+;; id -> {price (in token), commission trait}
 ;; if id is not in map, it is not listed for sale
 (define-map market uint {price: uint, commission: principal, token: principal})
 
@@ -67,7 +63,7 @@
 
 ;; SIP-09: get last token id
 (define-read-only (get-last-token-id)
-  (ok (- (var-get mint-counter) u1))
+  (ok (var-get mint-counter))
 )
 
 ;; SIP-09: URI for metadata associated with the token
@@ -112,7 +108,7 @@
                 price: price,
                 address: address,
                 commissionAddress: commissionAddress,
-                commissionRate: commissionRate,
+                commissionRate: commissionRate
             }
         ))
     )
@@ -135,7 +131,7 @@
             (newMintCounter (+ (var-get mint-counter) u1))
             (mintPassBalance (get-mint-pass-balance contract-caller))
         )
-        (asserts! (< newMintCounter COLLECTION_MAX_SUPPLY) ERR_COLLECTION_LIMIT_REACHED)
+        (asserts! (<= newMintCounter COLLECTION_MAX_SUPPLY) ERR_COLLECTION_LIMIT_REACHED)
         (asserts! (> mintPassBalance u0) ERR_MINT_PASS_LIMIT_REACHED)
         
         (and (> artistAmount u0) (try! (contract-call? token transfer artistAmount contract-caller artistAddress none)))
@@ -150,15 +146,6 @@
 
 ;; only size of list matters, content of list doesn't matter
 (define-public (mint-with-many (entries (list 20 uint)) (token <ft-trait>))
-    ;; trying to get nicer implementation but failing
-    ;;(begin
-    ;;    (var-set current-token (contract-of token))
-    ;;    (fold check-err
-    ;;        (map mint-token-helper entries)
-    ;;        (ok true)
-    ;;    )
-    ;;)
-    ;; resorting to previous clunky approach
     (begin
         (try! (if (is-some (element-at entries u0)) (mint-with token) (ok u0)))
         (try! (if (is-some (element-at entries u1)) (mint-with token) (ok u0)))
@@ -303,4 +290,4 @@
 )
 
 ;; TODO: add all whitelists
-(map-set mint-pass 'ST29N24XJPW2WRVF6S2JWBC3TJBGBA5EXPSC03Y0G u5)
+(map-set mint-pass 'SP1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28GBQA1W0F u5)

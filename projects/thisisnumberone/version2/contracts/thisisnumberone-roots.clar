@@ -108,7 +108,7 @@
                 price: price,
                 address: address,
                 commissionAddress: commissionAddress,
-                commissionRate: commissionRate,
+                commissionRate: commissionRate
             }
         ))
     )

@@ -744,74 +744,20 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Market Test - ensure can approve all",
-  async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, wallet1, wallet2, clientV2 } = getWalletsAndClient(chain, accounts);
-
-    mintV2Token(1, chain, accounts);
-    mintV2Token(2, chain, accounts);
-      // check wallet1 can give admin approval to its NFT 0
-    let block = chain.mineBlock([
-      clientV2.setApprovedAll(deployer.address, true, wallet1.address),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-
-    // admin should be able to transfer nft 0 on behalf of wallet 1
-    block = chain.mineBlock([
-      clientV2.transfer(
-        1,
-        wallet1.address,
-        wallet2.address,
-        deployer.address
-      ),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
-      types.uint(1),
-      wallet1.address,
-      wallet2.address,
-      `${deployer.address}.indige`,
-      "indige"
-    );
-
-    // admin should be able to transfer nft 1 on behalf of wallet 1
-    block = chain.mineBlock([
-      clientV2.transfer(
-        2,
-        wallet1.address,
-        wallet2.address,
-        deployer.address
-      ),
-    ]);
-    block.receipts[0].result.expectOk().expectBool(true);
-    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
-      types.uint(2),
-      wallet1.address,
-      wallet2.address,
-      `${deployer.address}.indige`,
-      "indige"
-    );
-  },
-});
-
-Clarinet.test({
-  name: "Market Test - ensure can approve all but block specified nft",
+  name: "Market Test - ensure can give and remove approval",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { administrator, deployer, wallet1, wallet2, clientV2 } =
       getWalletsAndClient(chain, accounts);
 
-    // mint v1 and upgrade
     mintV2Token(1, chain, accounts);
-    mintV2Token(2, chain, accounts);
 
-
-    // check wallet1 can give admin approval to its NFT 0
+    // check wallet1 can give admin approval to its NFT
     let block = chain.mineBlock([
-      clientV2.setApprovedAll(deployer.address, true, wallet1.address),
+      clientV2.setApproved(1, deployer.address, true, wallet1.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
-    // admin should be able to transfer nft 0 on behalf of wallet 1
+    // admin should be able to transfer on behalf of wallet 1
     block = chain.mineBlock([
       clientV2.transfer(
         1,
@@ -829,13 +775,26 @@ Clarinet.test({
       "indige"
     );
 
-    // block from transfering nft id 1
+    // transfer nft back to wallet1
     block = chain.mineBlock([
+      clientV2.transfer(1, wallet2.address, wallet1.address, wallet2.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenTransferEvent(
+      types.uint(1),
+      wallet2.address,
+      wallet1.address,
+      `${deployer.address}.indige`,
+      "indige"
+    );
+
+    // remove approval
+    chain.mineBlock([
       clientV2.setApproved(1, deployer.address, false, wallet1.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
-    // admin should not be able to transfer nft 1 on behalf of wallet 1 because blocked
+    // admin should no longer be able to transfer on behalf of wallet 1
     block = chain.mineBlock([
       clientV2.transfer(
         1,
@@ -847,29 +806,3 @@ Clarinet.test({
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
   },
 });
-
-
-      /**
-      block = chain.mineBlock([
-        clientSwap.createPair(
-          `${deployer.address}.arkadiko-token`,
-          `${deployer.address}.wrapped-stx-token`,
-          `${deployer.address}.arkadiko-swap-token-wstx-diko`,
-          "wstx-diko",
-          1000000,
-          100000,
-          `${deployer.address}`
-        ),
-      ]);
-      block.receipts[0].result.expectOk().expectBool(true);
-      block = chain.mineBlock([
-        clientSwap.swapXForY(
-          `${deployer.address}.wrapped-stx-token`,
-          `${deployer.address}.arkadiko-token`,
-          1000000,
-          100000,
-          wallet2.address
-        ),
-      ]);
-      block.receipts[0].result.expectOk().expectBool(true);
-      **/
