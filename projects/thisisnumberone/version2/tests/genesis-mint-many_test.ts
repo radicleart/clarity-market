@@ -76,20 +76,39 @@ Clarinet.test({
       chain,
       accounts
     );
-    const entries = Array.from({ length: 5 }).map((_, index) => index + 1);
     let block = chain.mineBlock([
       clientV2.setMintCommission(tokenStacks, 0, mintAddress1, mintAddress2, 40, deployer.address),
       clientV2.setMintPass(wallet1.address, 5, deployer.address),
-      clientV2.mintWithMany(entries, tokenStacks, wallet1.address)
+      clientV2.mintWithMany(6, tokenStacks, wallet1.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    block.receipts[1].result.expectOk().expectBool(true);
-    block.receipts[2].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectOk();
+    block.receipts[2].result.expectOk().expectBool(true); // reached mint pass limit
     clientV2.getLastTokenId().result.expectOk().expectUint(5);
-    block = chain.mineBlock([
-      clientV2.mintWithMany(entries, tokenStacks, wallet1.address)
+  }
+});
+
+Clarinet.test({
+  name: "Mint Many Test - Ensure cant mint more than max collection",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+    let block = chain.mineBlock([
+      clientV2.setMintCommission(tokenStacks, 0, mintAddress1, mintAddress2, 40, deployer.address),
+      clientV2.setMintPass(wallet1.address, 50, deployer.address),
+      clientV2.mintWithMany(20, tokenStacks, wallet1.address)
     ]);
-    block.receipts[0].result.expectErr().expectUint(108); // reached mint pass limit
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectOk();
+    clientV2.getLastTokenId().result.expectOk().expectUint(5);
+    block.receipts[2].result.expectOk().expectBool(true);
+    block = chain.mineBlock([
+      clientV2.mintWithMany(5, tokenStacks, wallet1.address)
+    ]);
+    clientV2.getLastTokenId().result.expectOk().expectUint(5);
+    block.receipts[0].result.expectErr().expectUint(108);
   }
 });
 
@@ -100,17 +119,17 @@ Clarinet.test({
       chain,
       accounts
     );
-    const entries = Array.from({ length: 5 }).map((_, index) => index + 1);
     let block = chain.mineBlock([
       clientV2.setMintCommission(tokenStacks, 0, mintAddress1, mintAddress2, 40, deployer.address),
       clientV2.setMintPass(wallet1.address, 15, deployer.address),
-      clientV2.mintWithMany(entries, tokenStacks, wallet1.address)
+      clientV2.mintWithMany(10, tokenStacks, wallet1.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk();
     block.receipts[2].result.expectOk().expectBool(true);
     // console.log(block.receipts[2])
     assertEquals(block.receipts[2].events.length, 5);
+    clientV2.getLastTokenId().result.expectOk().expectUint(5);
     block.receipts[2].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
@@ -133,11 +152,10 @@ Clarinet.test({
       chain,
       accounts
     );
-    const entries = Array.from({ length: 5 }).map((_, index) => index + 1);
     let block = chain.mineBlock([
       clientV2.setMintCommission(tokenStacks, 100000000, mintAddress1, mintAddress2, 50, deployer.address),
       clientV2.setMintPass(wallet1.address, 20, deployer.address),
-      clientV2.mintWithMany(entries, tokenStacks, wallet1.address)
+      clientV2.mintWithMany(20, tokenStacks, wallet1.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk();
@@ -160,13 +178,7 @@ Clarinet.test({
       mintAddress2
     );
     block.receipts[2].events.expectNonFungibleTokenMintEvent(
-      types.uint(1),
-      wallet1.address,
-      `${deployer.address}.thisisnumberone-roots`,
-      "thisisnumberone"
-    );
-    block.receipts[2].events.expectNonFungibleTokenMintEvent(
-      types.uint(5),
+      types.uint(3),
       wallet1.address,
       `${deployer.address}.thisisnumberone-roots`,
       "thisisnumberone"
@@ -190,13 +202,11 @@ Clarinet.test({
     clientWrappedBitcoin.getBalance(wallet1.address, wallet1).result.expectOk().expectUint(1000);
     clientWrappedDiko.getBalance(wallet2.address, wallet2).result.expectOk().expectUint(200000000);
 
-    const entries1 = Array.from({ length: 2 }).map((_, index) => index + 1);
-    const entries2 = Array.from({ length: 2 }).map((_, index) => index + 1);
     block = chain.mineBlock([
       clientV2.setMintCommission(tokenStacks, 100000000, mintAddress1, mintAddress2, 50, deployer.address),
       clientV2.setMintCommission(tokenDiko, 100000000, mintAddress1, mintAddress2, 1000, deployer.address),
-      clientV2.setMintPass(wallet1.address, 2, deployer.address),
-      clientV2.setMintPass(wallet2.address, 2, deployer.address),
+      clientV2.setMintPass(wallet1.address, 10, deployer.address),
+      clientV2.setMintPass(wallet2.address, 10, deployer.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk().expectBool(true);
@@ -204,15 +214,12 @@ Clarinet.test({
     block.receipts[3].result.expectOk().expectBool(true);
 
     block = chain.mineBlock([
-      clientV2.mintWithMany(entries1, tokenStacks, wallet1.address),
-      clientV2.mintWithMany(entries2, tokenDiko, wallet2.address)
+      clientV2.mintWithMany(2, tokenStacks, wallet1.address),
+      clientV2.mintWithMany(2, tokenDiko, wallet2.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk().expectBool(true);
     // console.log(block.receipts[1])
-    assertEquals(block.receipts[0].events.length, 10);
-    assertEquals(block.receipts[1].events.length, 10);
-
     block.receipts[0].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,

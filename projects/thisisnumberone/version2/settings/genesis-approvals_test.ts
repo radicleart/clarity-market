@@ -89,7 +89,7 @@ Clarinet.test({
     block = chain.mineBlock([
       clientV2.setApproved(1, wallet2.address, true, wallet2.address)
     ]);
-    block.receipts[0].result.expectErr().expectUint(402);
+    block.receipts[0].result.expectOk().expectBool(true);
 
     clientV2.getListingInToken(1).result.expectNone();
     // list for 100 stx
@@ -172,13 +172,10 @@ Clarinet.test({
       clientV2.setApproved(1, wallet2.address, true, wallet1.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    clientV2.isApproved(1, wallet2.address).result.expectOk().expectBool(true)
     block = chain.mineBlock([
       clientV2.transfer(2, wallet1.address, wallet2.address, wallet2.address),
     ]);
-    // transfer resets the approval!
     block.receipts[0].result.expectErr().expectUint(401);
-    
     // wallet1 is no longer the owner
     block = chain.mineBlock([
       clientV2.setApproved(1, wallet2.address, false, wallet1.address),

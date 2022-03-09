@@ -60,3 +60,30 @@
     }
   }
 ]
+
+
+(define-public (mint-with-many (entries (list 20 bool)) (token <ft-trait>))
+    (begin
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (try! (if (<= (len entries) u20) (mint-with token) (err ERR_BATCH_LIMIT_EXCEEDED)))
+        (ok true)
+    )
+)

@@ -8,6 +8,7 @@ import {
 import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
 import { IndigeClient, ErrCode } from "../../../../src/risidio-indige-client.ts";
 import { WrappedBitcoin } from "../../../../src/wrapped-bitcoin-client.ts";
+import { WrappedDiko } from "../../../../src/wrapped-diko-client.ts";
 
 const mintAddress1 = "SP2M92VAE2YJ1P5VZ1Q4AFKWZFEKDS8CDA1KVFJ21";
 const mintAddress2 = "SP132K8CVJ9B2GEDHTQS5MH3N7BR5QDMN1PXVS8MY";
@@ -34,6 +35,7 @@ const getWalletsAndClient = (
   newAdministrator: Account;
   clientV2: IndigeClient;
   clientWrappedBitcoin: WrappedBitcoin;
+  clientWrappedDiko: WrappedDiko;
 } => {
   const administrator = accounts.get("deployer")!;
   const deployer = accounts.get("deployer")!;
@@ -50,6 +52,7 @@ const getWalletsAndClient = (
   const newAdministrator = accounts.get("wallet_6")!;
   const clientV2 = new IndigeClient(chain, deployer);
   const clientWrappedBitcoin = new WrappedBitcoin(chain, deployer);
+  const clientWrappedDiko = new WrappedDiko(chain, deployer);
   return {
     administrator,
     deployer,
@@ -65,7 +68,8 @@ const getWalletsAndClient = (
     wallet5,
     newAdministrator,
     clientV2,
-    clientWrappedBitcoin
+    clientWrappedBitcoin,
+    clientWrappedDiko
   };
 };
 
@@ -90,7 +94,7 @@ const mintV2Token = (tokenId: number, chain: Chain, accounts: Map<string, Accoun
 };
 
 Clarinet.test({
-  name: "Market Test - Ensure can list and unlist by owner",
+  name: "Market Test - Ensure can list and unlist by owner and that unlist again return false",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { wallet1, commission1, tokenStacks, deployer, clientV2 } = getWalletsAndClient(
       chain,
@@ -116,12 +120,7 @@ Clarinet.test({
 
     // list for 100 stx
     block = chain.mineBlock([
-      clientV2.listInToken(
-        1,
-        100000000,
-        commission1,
-        tokenStacks,
-        wallet1.address
+      clientV2.listInToken(1, 100000000, commission1, tokenStacks, wallet1.address
       ),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
@@ -129,11 +128,7 @@ Clarinet.test({
     // check is listed
     assertEquals(
       clientV2.getListingInToken(1).result.expectSome().expectTuple(),
-      {
-        price: types.uint(100000000),
-        commission: commission1,
-        token: tokenStacks
-      }
+      { price: types.uint(100000000), commission: commission1, token: tokenStacks }
     );
 
     // check that it can't be unlisted by not the owner
@@ -143,6 +138,8 @@ Clarinet.test({
     // unlist
     block = chain.mineBlock([clientV2.unlistInToken(1, wallet1.address)]);
     block.receipts[0].result.expectOk().expectBool(true);
+    block = chain.mineBlock([clientV2.unlistInToken(1, wallet1.address)]);
+    block.receipts[0].result.expectOk().expectBool(false);
     clientV2.getListingInToken(1).result.expectNone();
   },
 });
@@ -278,9 +275,9 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Market Test - Ensure that NFT can't be bought with different sip10 token to listing",
+  name: "Market Test - Ensure ERR_WRONG_TOKEN when NFT is listed in wBTC and relisted in Diko and then attempt made to buy in wBTC",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const { deployer, tokenBitcoin, commission1, wallet1, wallet2, clientWrappedBitcoin, clientV2 } =
+    const { deployer, tokenBitcoin, tokenDiko, commission1, wallet1, wallet2, clientWrappedBitcoin, clientWrappedDiko, clientV2 } =
       getWalletsAndClient(chain, accounts);
 
       mintV2Token(1, chain, accounts);
@@ -288,12 +285,52 @@ Clarinet.test({
       // shouldn't be listed
       clientV2.getListingInToken(1).result.expectNone();
       clientWrappedBitcoin.getBalance(wallet1.address, wallet1).result.expectOk().expectUint(0);
+      clientWrappedDiko.getBalance(wallet1.address, wallet1).result.expectOk().expectUint(0);
+
+      // list for 100 wBTC
+      let block = chain.mineBlock([clientV2.listInToken(1, 100, commission1, tokenBitcoin, wallet1.address )]);
+      block.receipts[0].result.expectOk().expectBool(true);
+
+      // overwrites previous listing
+      block = chain.mineBlock([clientV2.listInToken(1, 100, commission1, tokenDiko, wallet1.address )]);
+      block.receipts[0].result.expectOk().expectBool(true);
+
+      assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(100), commission: commission1, token: tokenDiko });
+      block = chain.mineBlock([
+        clientWrappedBitcoin.mintWrappedBitcoin(100000000, wallet2.address, deployer.address),
+        clientV2.buyInToken(1, commission1, tokenBitcoin, wallet2.address)
+      ]);
+      block.receipts[0].result.expectOk().expectBool(true);
+      block.receipts[1].result.expectErr().expectUint(ErrCode.ERR_WRONG_TOKEN);
+    }
+});
+
+Clarinet.test({
+  name: "Market Test - Ensure that NFT can't be bought with different sip10 token to listing or with insufficient funds",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, tokenBitcoin, tokenDiko, commission1, wallet1, wallet2, clientWrappedBitcoin, clientWrappedDiko, clientV2 } =
+      getWalletsAndClient(chain, accounts);
+
+      mintV2Token(1, chain, accounts);
+
+      // shouldn't be listed
+      clientV2.getListingInToken(1).result.expectNone();
+      clientWrappedBitcoin.getBalance(wallet1.address, wallet1).result.expectOk().expectUint(0);
+      clientWrappedDiko.getBalance(wallet1.address, wallet1).result.expectOk().expectUint(0);
 
       // list for 100 stx
       let block = chain.mineBlock([clientV2.listInToken(1, 100, commission1, tokenBitcoin, wallet1.address )]);
       block.receipts[0].result.expectOk().expectBool(true);
-
       assertEquals(clientV2.getListingInToken(1).result.expectSome().expectTuple(), { price: types.uint(100), commission: commission1, token: tokenBitcoin });
+      
+      // check it can't be bought for diko
+      block = chain.mineBlock([
+        clientWrappedDiko.mintWrappedDiko(100000000, wallet1.address, deployer.address),
+        clientV2.buyInToken(1, commission1, tokenDiko, wallet2.address)
+      ]);
+      block.receipts[0].result.expectOk().expectBool(true);
+      block.receipts[1].result.expectErr().expectUint(ErrCode.ERR_WRONG_TOKEN);
+
       block = chain.mineBlock([
         clientWrappedBitcoin.mintWrappedBitcoin(100000000, wallet1.address, deployer.address),
         clientV2.buyInToken(1, commission1, tokenBitcoin, wallet2.address)
@@ -357,13 +394,7 @@ Clarinet.test({
 
     // list for 100 stx
     let block = chain.mineBlock([
-      clientV2.listInToken(
-        1,
-        100000000,
-        commission1,
-        tokenStacks,
-        wallet1.address
-      ),
+      clientV2.listInToken(1, 100000000, commission1, tokenStacks, wallet1.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
 
@@ -472,11 +503,7 @@ Clarinet.test({
 
     assertEquals(
       clientV2.getListingInToken(1).result.expectSome().expectTuple(),
-      {
-        price: types.uint(100000000),
-        commission: commission1,
-        token: tokenStacks
-      }
+      { price: types.uint(100000000), commission: commission1, token: tokenStacks }
     );
 
     // wallet 1 trying to transfer should fail
@@ -540,6 +567,40 @@ Clarinet.test({
 
     clientV2.getTokenUri(0).result.expectOk().expectSome().expectAscii(nextUri);
   },
+});
+
+Clarinet.test({
+  name: "Market Test - ensure burning removes listing",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, commission1, tokenStacks, wallet1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+
+    mintV2Token(1, chain, accounts);
+    clientV2.getListingInToken(1).result.expectNone();
+
+    // list for 100 stx
+    let block = chain.mineBlock([
+      clientV2.listInToken(1, 100000000, commission1, tokenStacks, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    assertEquals(
+      clientV2.getListingInToken(1).result.expectSome().expectTuple(),
+      { price: types.uint(100000000), commission: commission1, token: tokenStacks }
+    );
+    // wallet 1 can burn
+    block = chain.mineBlock([clientV2.burn(1, wallet1.address)]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].events.expectNonFungibleTokenBurnEvent(
+      types.uint(1),
+      wallet1.address,
+      `${deployer.address}.indige`,
+      "indige"
+    );
+    // burning removes listing
+    clientV2.getListingInToken(1).result.expectNone();
+  }
 });
 
 Clarinet.test({
@@ -633,16 +694,11 @@ Clarinet.test({
     block = chain.mineBlock([
       clientV2.setApproved(1, deployer.address, true, wallet2.address),
     ]);
-    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].result.expectErr().expectUint(402);
 
     // check admin can't transfer still
     block = chain.mineBlock([
-      clientV2.transfer(
-        0,
-        wallet1.address,
-        wallet2.address,
-        deployer.address
-      ),
+      clientV2.transfer(0, wallet1.address, wallet2.address, deployer.address)
     ]);
     block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
 
@@ -661,12 +717,7 @@ Clarinet.test({
 
     // admin should be able to transfer on behalf of wallet 2
     block = chain.mineBlock([
-      clientV2.transfer(
-        1,
-        wallet2.address,
-        wallet3.address,
-        deployer.address
-      ),
+      clientV2.transfer(1, wallet2.address, wallet3.address, wallet2.address ),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[0].events.expectNonFungibleTokenTransferEvent(

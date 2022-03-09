@@ -16,7 +16,7 @@
 (define-data-var metadata-frozen bool false)
 
 ;; constants
-(define-constant MINT-PRICE u100000000)
+(define-constant MINT-PRICE u10000000)
 
 (define-constant COLLECTION_MAX_SUPPLY u50)
 
@@ -29,8 +29,8 @@
 (define-constant ERR_MINT_PASS_LIMIT_REACHED (err u109))
 (define-constant ERR_WRONG_COMMISSION (err u111))
 (define-constant ERR_WRONG_TOKEN (err u112))
-(define-constant ERR_NOT_IMPLEMENTED (err u113))
 (define-constant ERR_UNKNOWN_TENDER (err u113))
+(define-constant ERR_BATCH_SIZE_EXCEEDED u114)
 
 (define-constant ERR_NOT_AUTHORIZED (err u401))
 (define-constant ERR_NOT_OWNER (err u402))
@@ -81,7 +81,7 @@
     (begin
         (asserts! (unwrap! (is-approved id contract-caller) ERR_NOT_AUTHORIZED) ERR_NOT_AUTHORIZED)
         (asserts! (is-none (map-get? market id)) ERR_NFT_LISTED)
-        (map-delete approvals {owner: contract-caller, operator: owner, id: id})
+        (map-delete approvals {owner: owner, operator: contract-caller, id: id})
         (nft-transfer? indige id owner recipient)
     )
 )
@@ -95,7 +95,10 @@
 
 ;; operable
 (define-public (set-approved (id uint) (operator principal) (approved bool))
-    (ok (map-set approvals {owner: contract-caller, operator: operator, id: id} approved))
+    (let ((owner (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)))
+        (asserts! (is-eq owner contract-caller) ERR_NOT_OWNER)
+        (ok (map-set approvals {owner: contract-caller, operator: operator, id: id} approved))
+    )
 )
 
 ;; public methods
@@ -145,36 +148,31 @@
 )
 
 ;; only size of list matters, content of list doesn't matter
-(define-public (mint-with-many (entries (list 20 uint)) (token <ft-trait>))
+(define-public (mint-with-many (entries uint) (token <ft-trait>))
     (begin
-        (try! (if (is-some (element-at entries u0)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u1)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u2)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u3)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u4)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u5)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u6)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u7)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u8)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u9)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u10)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u11)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u12)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u13)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u14)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u15)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u16)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u17)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u18)) (mint-with token) (ok u0)))
-        (try! (if (is-some (element-at entries u19)) (mint-with token) (ok u0)))
+        (try! (if (<= u1 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u2 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u3 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u4 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u5 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u6 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u7 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u8 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u9 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u10 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u11 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u12 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u13 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u14 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u15 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u16 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u17 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u18 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u19 entries) (mint-with token) (ok u0)))
+        (try! (if (<= u20 entries) (mint-with token) (ok u0)))
         (ok true)
     )
 )
-
-;; unused param on purpose
-;; (define-private (mint-token-helper (entry uint))
-;;    (ERR_NOT_IMPLEMENTED)
-;; )
 
 (define-public (set-mint-pass (account principal) (limit uint))
     (begin
@@ -290,4 +288,4 @@
 )
 
 ;; TODO: add all whitelists
-(map-set mint-pass 'SP1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28GBQA1W0F u5)
+(map-set mint-pass 'SP1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28GBQA1W0F u50)

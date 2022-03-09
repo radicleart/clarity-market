@@ -94,6 +94,28 @@ Clarinet.test({
 });
 
 Clarinet.test({
+  name: "Mint Test - Ensure mint via a commission that has been removed return err unknown tender",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, tokenStacks, commission1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+    let block = chain.mineBlock([
+      clientV2.setMintCommission(tokenStacks, 0, mintAddress1, mintAddress2, 40, deployer.address),
+      clientV2.setMintPass(wallet1.address, 2, deployer.address),
+      clientV2.mintWith(tokenStacks, wallet1.address),
+      clientV2.removeMintCommission(tokenStacks, deployer.address),
+      clientV2.mintWith(tokenStacks, wallet1.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectOk().expectBool(true);
+    block.receipts[2].result.expectOk().expectUint(1);
+    block.receipts[3].result.expectOk().expectBool(true);
+    block.receipts[4].result.expectErr().expectUint(113);
+  }
+});
+
+Clarinet.test({
   name: "Mint Test - Ensure can mint in Stacks with zero price",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const { deployer, wallet1, tokenStacks, commission1, clientV2 } = getWalletsAndClient(

@@ -20,6 +20,7 @@ export enum ErrCode {
   ERR_MINT_PASS_LIMIT_REACHED = 109,
   ERR_ADD_MINT_PASS = 110,
   ERR_WRONG_COMMISSION = 111,
+  ERR_WRONG_TOKEN = 112,
 
   ERR_NOT_AUTHORIZED = 401,
   ERR_NOT_OWNER = 402,
@@ -104,11 +105,11 @@ export class GenesisVersion2Client {
     return Tx.contractCall(this.contractName, "mint-with", [types.principal(token)], sender);
   }
 
-  mintWithMany(entries: number[], token: string, sender: string): Tx {
+  mintWithMany(entries: number, token: string, sender: string): Tx {
     return Tx.contractCall(
       this.contractName,
       "mint-with-many",
-      [types.list(entries.map((entry) => types.uint(entry))), types.principal(token)],
+      [types.uint(entries), types.principal(token)],
       sender
     );
   }
@@ -220,6 +221,15 @@ export class GenesisVersion2Client {
       this.contractName,
       "set-mint-commission",
       [types.principal(tender), types.uint(price), types.principal(address), types.principal(commissionAddress), types.uint(commissionRate)],
+      sender
+    );
+  }
+
+  removeMintCommission(tender: string, sender: string): Tx {
+    return Tx.contractCall(
+      this.contractName,
+      "remove-mint-commission",
+      [types.principal(tender)],
       sender
     );
   }

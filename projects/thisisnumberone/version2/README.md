@@ -228,3 +228,62 @@ SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ
 SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ SP3QSAJQ4EA8WXEDSRRKMZZ29NH91VZ6C5X88FGZQ
 )) (shares (list u1000000000 u6300000000 u463000000 u463000000 u1774000000 u0 u0 u0 u0 u0)))))
 ```
+
+
+
+
+
+
+
+
+## mint-with
+
+Added test for removal of commission -> `Mint Test - Ensure mint via a commission that has been removed return err unknown tender`
+
+## mint-with-many()
+
+Changed entries to a simple uint - the history for having a list was about using fold/map to iterate over mint. However passing the token to mint means this could be simplified. Updated and added tests.
+
+## list-in-token()
+
+Added test `Market Test - Ensure ERR_WRONG_TOKEN when NFT is listed in wBTC and relisted in Diko and then attempt made to buy in wBTC`
+
+## unlist-in-token
+
+Added check to this test `Market Test - Ensure can list and unlist by owner and that unlist again return false`
+
+## buy-in-token
+
+Extended scope of test to cover missing behaviour see `Market Test - Ensure that NFT can't be bought with different sip10 token to listing`
+
+## transfer()
+
+Added check on map delete to `Approvals Test - wallet1 can approve wallet2 to transfer assets but approval is reset after first transfer`
+
+Deleting contract-caller from the approval map in transfer prevents batch transfers - unless the contract-caller is NFT DAO contract that owns the NFTs ?
+
+## burn
+
+Add test `Market Test - ensure burning removes listing`
+
+## set-administrator
+
+Policy is consistent with other contracts so leaving this.
+
+## set-mint-pass() & batch-set-mint-pass()
+
+Again policy has worked in crash punks - leaving as is.
+
+## set-approved
+
+Updated contract to assert only owner can create an approval.
+
+``` (define-public (set-approved (id uint) (operator principal) (approved bool))
+    (let ((owner (unwrap! (nft-get-owner? indige id) ERR_COULDNT_GET_NFT_OWNER)))
+        (asserts! (is-eq owner contract-caller) ERR_NOT_OWNER)
+        (ok (map-set approvals {owner: contract-caller, operator: operator, id: id} approved))
+``` 
+
+## remove-mint-commission
+
+Added a test for this in `Mint Test - Ensure mint via a commission that has been removed return err unknown tender`
