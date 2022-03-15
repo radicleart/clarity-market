@@ -523,7 +523,7 @@ Clarinet.test({
     );
 
     const firstUri =
-      "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/indige-{id}.json";
+      "ipfs://QmVXvcdKHUcg1RcsxAASmdAJAJtnxdE4YngcDiuAXcREZN/indige-{id}.json";
     const nextUri = "ipfs/QmdcBZnzSUwAKQdnVMKSkbVYoDD6DBkghPPUAwtVQjpwgq/{id}";
     clientV2
       .getTokenUri(0)
