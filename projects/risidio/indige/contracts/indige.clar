@@ -9,16 +9,17 @@
 
 ;; contract variables
 (define-data-var CONTRACT_OWNER principal tx-sender)
+(define-data-var ADMIN_MINT_PASS principal 'SP2DDG43477A5ZAEJJ76FSYDY2J5XQYFP9HCGS8AM)
 
 (define-data-var mint-counter uint u0)
 
-(define-data-var token-uri (string-ascii 246) "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/indige-{id}.json")
+(define-data-var token-uri (string-ascii 246) "ipfs://QmVXvcdKHUcg1RcsxAASmdAJAJtnxdE4YngcDiuAXcREZN/indige-{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants
-(define-constant MINT-PRICE u10000000)
+(define-constant MINT-PRICE u5000000)
 
-(define-constant COLLECTION_MAX_SUPPLY u50)
+(define-constant COLLECTION_MAX_SUPPLY u1000)
 
 (define-constant ERR_METADATA_FROZEN (err u101))
 (define-constant ERR_COULDNT_GET_NFT_OWNER (err u103))
@@ -36,6 +37,7 @@
 (define-constant ERR_NOT_OWNER (err u402))
 (define-constant ERR_NOT_ADMINISTRATOR (err u403))
 (define-constant ERR_NOT_FOUND (err u404))
+(define-constant ERR_NOT_ADMIN_MINT_PASS (err u405))
 
 (define-non-fungible-token indige uint)
 
@@ -174,6 +176,45 @@
     )
 )
 
+(define-public (admin-mint (recipient principal))
+    (let (
+            (newMintCounter (+ (var-get mint-counter) u1))
+        )
+        (asserts! (is-eq contract-caller (var-get ADMIN_MINT_PASS)) ERR_NOT_ADMIN_MINT_PASS)
+        (asserts! (<= newMintCounter COLLECTION_MAX_SUPPLY) ERR_COLLECTION_LIMIT_REACHED)
+        (try! (nft-mint? indige newMintCounter recipient))
+        (var-set mint-counter newMintCounter)
+        (ok newMintCounter)
+    )
+)
+
+(define-public (admin-mint-many (entries uint) (recipient principal))
+    (begin
+        (try! (if (<= u1 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u2 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u3 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u4 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u5 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u6 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u7 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u8 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u9 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u10 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u11 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u12 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u13 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u14 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u15 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u16 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u17 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u18 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u19 entries) (admin-mint recipient) (ok u0)))
+        (try! (if (<= u20 entries) (admin-mint recipient) (ok u0)))
+        (ok true)
+    )
+)
+
+
 (define-public (set-mint-pass (account principal) (limit uint))
     (begin
         (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
@@ -245,6 +286,13 @@
     )
 )
 
+(define-public (set-admin-mint-pass (new-admin-mint-pass principal))
+    (begin
+        (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
+        (ok (var-set ADMIN_MINT_PASS new-admin-mint-pass))
+    )
+)
+
 (define-public (set-token-uri (new-token-uri (string-ascii 80)))
     (begin
         (asserts! (is-eq contract-caller (var-get CONTRACT_OWNER)) ERR_NOT_ADMINISTRATOR)
@@ -289,3 +337,4 @@
 
 ;; TODO: add all whitelists
 (map-set mint-pass 'SP1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28GBQA1W0F u50)
+(map-set mint-pass 'ST112ZVZ2YQSW74BQ65VST84806RV5ZZZTW0261CV u50)
