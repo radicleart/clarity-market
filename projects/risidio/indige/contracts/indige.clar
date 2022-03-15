@@ -32,12 +32,12 @@
 (define-constant ERR_WRONG_TOKEN (err u112))
 (define-constant ERR_UNKNOWN_TENDER (err u113))
 (define-constant ERR_BATCH_SIZE_EXCEEDED u114)
+(define-constant ERR_NOT_ADMIN_MINT_PASS (err u115))
 
 (define-constant ERR_NOT_AUTHORIZED (err u401))
 (define-constant ERR_NOT_OWNER (err u402))
 (define-constant ERR_NOT_ADMINISTRATOR (err u403))
 (define-constant ERR_NOT_FOUND (err u404))
-(define-constant ERR_NOT_ADMIN_MINT_PASS (err u405))
 
 (define-non-fungible-token indige uint)
 
