@@ -19,7 +19,7 @@
 ;; constants
 (define-constant MINT-PRICE u5000000)
 
-(define-constant COLLECTION_MAX_SUPPLY u1000)
+(define-constant COLLECTION_MAX_SUPPLY u50)
 
 (define-constant ERR_METADATA_FROZEN (err u101))
 (define-constant ERR_COULDNT_GET_NFT_OWNER (err u103))
