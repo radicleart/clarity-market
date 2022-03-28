@@ -29,7 +29,7 @@ export enum ErrCode {
 }
 
 export class GenesisVersion2Client {
-  contractName: string = "thisisnumberone-roots";
+  contractName: string = "thisisnumberone";
   chain: Chain;
   deployer: Account;
 

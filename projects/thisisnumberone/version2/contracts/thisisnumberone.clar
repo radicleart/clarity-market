@@ -1,18 +1,13 @@
 ;; Interface definitions
-;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
-(impl-trait .nft-trait.nft-trait)
+(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 (impl-trait .operable.operable)
 
-;; TODO: either deploy it on admin address, or use an existing mainnet one
 (use-trait com10 .commission-trait-sip10.commission)
-(use-trait ft-trait .sip-010-trait-ft-standard.sip-010-trait)
+(use-trait ft-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
 
-;; contract variables
 (define-data-var CONTRACT_OWNER principal tx-sender)
-
 (define-data-var mint-counter uint u0)
-
-(define-data-var token-uri (string-ascii 246) "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/thisisnumberone-{id}.json")
+(define-data-var token-uri (string-ascii 246) "ipfs://QmXBaNb1XmLcXbcZ7TgJ85yuJMHnUA3vG7mWEVniL4WYge/thisisnumberone-{id}.json")
 (define-data-var metadata-frozen bool false)
 
 ;; constants

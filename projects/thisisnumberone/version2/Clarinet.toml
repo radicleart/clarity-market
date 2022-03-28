@@ -1,9 +1,9 @@
 
 [project]
-name = "thisisnumberone-roots"
+name = "thisisnumberone"
 
-[contracts.thisisnumberone-roots]
-path = "contracts/thisisnumberone-roots.clar"
+[contracts.thisisnumberone]
+path = "contracts/thisisnumberone.clar"
 depends_on = ["arkadiko-dao", "nft-trait", "operable", "sip-010-trait-ft-standard", "commission-trait-sip10"]
 
 [contracts.commission-trait-sip10]

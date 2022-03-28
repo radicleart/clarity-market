@@ -133,7 +133,7 @@ Clarinet.test({
     block.receipts[2].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
   }
@@ -159,7 +159,7 @@ Clarinet.test({
     block.receipts[2].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
     block.receipts[2].events.expectSTXTransferEvent(
@@ -217,7 +217,7 @@ Clarinet.test({
     block.receipts[3].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
   }
@@ -259,7 +259,7 @@ Clarinet.test({
     block.receipts[3].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
   }
@@ -317,7 +317,7 @@ Clarinet.test({
     block.receipts[0].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
 
@@ -338,7 +338,7 @@ Clarinet.test({
     block.receipts[1].events.expectNonFungibleTokenMintEvent(
       types.uint(2),
       wallet2.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
   }

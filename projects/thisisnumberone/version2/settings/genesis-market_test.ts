@@ -91,7 +91,7 @@ const mintV2Token = (tokenId: number, chain: Chain, accounts: Map<string, Accoun
   block.receipts[2].events.expectNonFungibleTokenMintEvent(
     types.uint(tokenId),
     wallet1.address,
-    `${deployer.address}.thisisnumberone-roots`,
+    `${deployer.address}.thisisnumberone`,
     "thisisnumberone"
   );
 
@@ -233,7 +233,7 @@ Clarinet.test({
       types.uint(1),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
   },
@@ -333,7 +333,7 @@ Clarinet.test({
         types.uint(1),
         wallet1.address,
         wallet2.address,
-        `${deployer.address}.thisisnumberone-roots`,
+        `${deployer.address}.thisisnumberone`,
         "thisisnumberone"
       );
     },
@@ -399,7 +399,7 @@ Clarinet.test({
         types.uint(1),
         wallet1.address,
         wallet2.address,
-        `${deployer.address}.thisisnumberone-roots`,
+        `${deployer.address}.thisisnumberone`,
         "thisisnumberone"
       );
     },
@@ -558,7 +558,7 @@ Clarinet.test({
     );
 
     const firstUri =
-      "ipfs://QmX7pQBn7FgxFQ6LgizaBKmsVVd5hKLhcDoqGb4JEWxKEv/thisisnumberone-{id}.json";
+      "ipfs://QmXBaNb1XmLcXbcZ7TgJ85yuJMHnUA3vG7mWEVniL4WYge/thisisnumberone-{id}.json";
     const nextUri = "ipfs/QmdcBZnzSUwAKQdnVMKSkbVYoDD6DBkghPPUAwtVQjpwgq/{id}";
     clientV2
       .getTokenUri(0)
@@ -624,7 +624,7 @@ Clarinet.test({
     block.receipts[0].events.expectNonFungibleTokenBurnEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
   },
@@ -717,7 +717,7 @@ Clarinet.test({
       types.uint(1),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
 
@@ -735,7 +735,7 @@ Clarinet.test({
       types.uint(1),
       wallet2.address,
       wallet3.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
   },
@@ -769,7 +769,7 @@ Clarinet.test({
       types.uint(1),
       wallet1.address,
       wallet2.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
 
@@ -782,7 +782,7 @@ Clarinet.test({
       types.uint(1),
       wallet2.address,
       wallet1.address,
-      `${deployer.address}.thisisnumberone-roots`,
+      `${deployer.address}.thisisnumberone`,
       "thisisnumberone"
     );
 

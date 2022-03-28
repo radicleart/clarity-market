@@ -19,7 +19,7 @@
 ;; constants
 (define-constant MINT-PRICE u5000000)
 
-(define-constant COLLECTION_MAX_SUPPLY u50)
+(define-constant COLLECTION_MAX_SUPPLY u1000)
 
 (define-constant ERR_METADATA_FROZEN (err u101))
 (define-constant ERR_COULDNT_GET_NFT_OWNER (err u103))
@@ -336,5 +336,5 @@
 )
 
 ;; TODO: add all whitelists
-(map-set mint-pass 'SP1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28GBQA1W0F u50)
+(map-set mint-pass 'ST1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28G8HXK9G5 u50)
 (map-set mint-pass 'ST112ZVZ2YQSW74BQ65VST84806RV5ZZZTW0261CV u50)
