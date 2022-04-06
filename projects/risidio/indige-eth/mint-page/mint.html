@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sociogenesis - MINT</title>
+
+    <style>
+        html, body {
+            padding: 0;
+            margin: 0;
+            font-family: Helvetica, sans-serif;
+        }
+        body {
+            padding: 1rem;
+            text-align: center;
+            background: white;
+            color: black
+        }
+        h1 {
+            font-family: Impact, sans-serif;
+            font-size: xxx-large;
+        }
+        #main {
+            margin: 0 auto 0;
+            padding: 1rem;
+            max-width: 40rem;
+        }
+        a, a:visited {
+            text-decoration: none;
+            color: lightseagreen;
+        }
+        a:hover, a:active {
+            color: lightskyblue;
+        }
+        button {
+            color: black;
+            background: orange;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 0.25rem;
+        }
+        button:disabled {
+            cursor: default;
+            opacity: 0.5;
+        }
+        button:hover:not(:disabled) {
+            border-color: gold;
+        }
+        button#onboard {
+            padding: 0.5rem 1rem;
+            min-width: 14rem;
+        }
+        #mint {
+            margin: 2rem auto;
+            max-width: 30rem;
+        }
+        #mint > * {
+            margin-top: 1rem;
+        }
+        #mint-progress {
+            position: relative;
+            width: 100%;
+            border: 2px solid gray;
+            background: white;
+        }
+        #mint-progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 50px;
+            width: 0;
+            background: lightgray;
+            transition: width 0.5s;
+        }
+        #mint-progress-text {
+            position: relative;
+            height: 50px;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+        #mint-phase {
+            font-size: 2rem;
+        }
+        #mint-form {
+            display: none;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border: 2px solid gray;
+            border-radius: 10px;
+            background: rgba(128, 128, 128, 0.1);
+        }
+        .form-line + .form-line {
+            margin-top: 1rem;
+        }
+        .form-inputs {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #less, #more {
+            cursor: pointer;
+            height: 35px;
+            width: 35px;
+            font-size: 1.3rem;
+            margin: 0.5rem;
+        }
+        label {
+            display: block;
+            margin: 0 0 0.25rem;
+        }
+        input {
+            height: 30px;
+            font-size: 1.3rem;
+        }
+        button#submit {
+            font-size: 1.2rem;
+            padding: 0.5rem 2rem;
+            min-width: 275px;
+        }
+        #form-result {
+            margin: 1rem 0 0;
+        }
+        .prices {
+            font-size: 1.2rem;
+        }
+        .prices > span + span {
+            margin-left: 1rem;
+        }
+        #default-price {
+            color: green;
+        }
+        .nowrap {
+            white-space: nowrap;
+        }
+        .confirmed {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+<div id="main">
+    <h1>SOCIOGENESIS</h1>
+    <div id="wallet">
+        <button id="onboard" disabled>Loading...</button>
+    </div>
+    <div id="mint">
+        <div id="mint-progress">
+            <div id="mint-progress-bar"></div>
+            <div id="mint-progress-text">&nbsp;</div>
+        </div>
+        <div id="mint-phase">&nbsp;</div>
+        <div id="mint-notes">&nbsp;</div>
+        <div id="mint-form">
+            <div class="form-line">
+                <label for="num-tokens">Number to mint (1&ndash;200):</label>
+                <div class="form-inputs">
+                    <button id="less">-</button>
+                    <input id="num-tokens" type="text" value="1" size="3" />
+                    <button id="more">+</button>
+                </div>
+            </div>
+            <div class="form-line prices">
+                <span class="nowrap">Token Price: <span id="default-price"></span></span>
+            </div>
+            <div class="form-line">
+                <button id="submit">MINT 1</button>
+            </div>
+            <div id="form-result">&nbsp;</div>
+        </div>
+    </div>
+    <p>
+        Need help?  <a href="https://discord.gg/Aj6nu86eND" target="_blank" rel="noreferrer nofollow">Join the official Sociogenesis Discord!</a>
+    </p>
+</div>
+
+<script src="metamask-onboarding.bundle.js"></script>
+<script src="https://cdn.ethers.io/lib/ethers-5.0.umd.min.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+  const SUPPORTED_CHAIN_ID = "0x1";
+  const SUPPORTED_CHAIN_NAME = "Mainnet";
+  const CONTRACT_ADDR = "0x670Aa9B0aa2504BB0e6b0272cc45461EC0664c9c";
+  const DEFAULT_PRICE = ethers.utils.parseEther("0.0688");
+  const MAX_MINT_AMOUNT = 200;
+  const MAX_SUPPLY = 2000;
+
+  (async () => {
+
+    const eth = window.ethereum;
+    let provider = new ethers.providers.Web3Provider(window.ethereum);
+    let signer = provider.getSigner();
+
+    let chainId = await ethereum.request({method: "eth_chainId"});
+    eth.on("chainChanged", (_chainId) => {
+      chainId = _chainId;
+      updateButton();
+    });
+
+    const onboarding = new MetaMaskOnboarding();
+    const onboardButton = document.getElementById("onboard");
+    const mintDiv = document.getElementById("mint");
+    const mintProgressBar = document.getElementById("mint-progress-bar");
+    const mintProgressText = document.getElementById("mint-progress-text");
+    const mintPhaseDiv = document.getElementById("mint-phase");
+    const mintNotesDiv = document.getElementById("mint-notes");
+    const mintFormDiv = document.getElementById("mint-form");
+    const numTokens = document.getElementById("num-tokens");
+    const mintLess = document.getElementById("less");
+    const mintMore = document.getElementById("more");
+    const mintButton = document.getElementById("submit");
+    const formResult = document.getElementById("form-result");
+    const defaultPriceSpan = document.getElementById("default-price");
+
+    defaultPriceSpan.innerHTML = `${ethers.utils.formatEther(DEFAULT_PRICE)}${ethers.constants.EtherSymbol}`;
+
+    let currentAccount = eth.selectedAddress ? ethers.utils.getAddress(eth.selectedAddress) : null;
+    let accounts = currentAccount ? [currentAccount] : null;
+
+    let saleIsActive = false;
+    let totalSupply = 0;
+
+    let numToMint = 1;
+
+    const handleNotReady = () => {
+      mintDiv.style.display = "none";
+      mintFormDiv.style.display = "none";
+    };
+
+    const handleReady = async () => {
+      mintDiv.style.display = "block";
+
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+
+      const Contract = await loadContract(provider);
+      const Signer = Contract.connect(signer);
+
+      await updateGlobals();
+
+      Contract.on("SaleStateChanged", async (isActive, event) => {
+        console.log(`sale set to active = ${isActive}`);
+        await updateGlobals();
+      });
+
+      Contract.on("Transfer", async (from, to, tokenId, event) => {
+        console.log(`${from} sent ${tokenId} to ${to}`);
+        await updateGlobals();
+      });
+
+      mintLess.onclick = async () => {
+        if (numToMint > 1) {
+          numTokens.value = --numToMint;
+          await handleNumTokensChange();
+        }
+      };
+
+      mintMore.onclick = async () => {
+        if (numToMint < MAX_MINT_AMOUNT) {
+          numTokens.value = ++numToMint;
+          await handleNumTokensChange();
+        }
+      };
+
+      async function handleNumTokensChange () {
+        const n = parseInt(numTokens.value);
+        if (n && !isNaN(n)) {
+          numTokens.value = numToMint = Math.max(1, Math.min(MAX_MINT_AMOUNT, n));
+        }
+        else {
+          numTokens.value = numToMint = 1;
+        }
+        const value = DEFAULT_PRICE.mul(Math.max(0, numToMint));
+        mintButton.innerText = `MINT ${numToMint} for ${ethers.utils.formatEther(value)}${ethers.constants.EtherSymbol}`;
+      }
+      numTokens.onchange = handleNumTokensChange;
+
+      mintButton.onclick = async () => {
+        mintButton.disabled = true;
+        await handleNumTokensChange();
+        formResult.innerHTML ="&nbsp;";
+        console.log(`${numToMint}`);
+
+        const value = DEFAULT_PRICE.mul(Math.max(0, numToMint));
+        console.log('VALUE', value.toString());
+
+        const tx = await Signer.mint(
+          numToMint,
+          { value }
+        ).catch(err => {
+          formResult.innerHTML = err?.error?.message || "&nbsp;";
+          mintButton.disabled = false;
+        });
+
+        if (tx) {
+          const txLink = `<a href="https://${SUPPORTED_CHAIN_ID === "0x4" ? "rinkeby." : ""}etherscan.io/tx/${tx.hash}" target="_blank" rel="noreferrer nofollow">${shortAddress(tx.hash)}</a>`;
+          formResult.innerHTML = [
+            `Transaction submitted...`,
+            `View on etherscan: ${txLink}`
+          ].join("<br/>");
+          const receipt = await tx.wait();
+          const osLink = `<a href="https://${SUPPORTED_CHAIN_ID === "0x4" ? "testnets." : ""}opensea.io/${currentAccount}/sociogenesis${SUPPORTED_CHAIN_ID === "0x4" ? "-v3" : ""}?search[sortBy]=CREATED_DATE&search[sortAscending]=false" target="_blank" rel="noreferrer nofollow">View on OpenSea</a>`;
+          formResult.innerHTML = [
+            `<span class="confirmed">✅ Transaction CONFIRMED! ✅</span>`,
+            `<span class="confirmed">${osLink}</span>`,
+            ``,
+            `View on etherscan: ${txLink}`
+          ].join("<br/>");
+          mintButton.disabled = false;
+        }
+      };
+
+      async function updateGlobals () {
+        const totalSupply = parseInt(await Contract.totalSupply());
+        saleIsActive = await Contract.saleIsActive();
+        await handleNumTokensChange()
+
+        const pct = 100 * totalSupply / MAX_SUPPLY;
+        mintProgressBar.style.width = `${pct}%`;
+        mintProgressText.innerHTML = `${totalSupply.toLocaleString()} / ${(MAX_SUPPLY).toLocaleString()} &mdash; ${pct.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}% Minted`;
+
+        if (saleIsActive) {
+          mintPhaseDiv.innerHTML = `🎉 MINT IS LIVE! 🎉`;
+          mintNotesDiv.innerHTML = `&nbsp;`;
+          mintFormDiv.style.display = "block";
+        }
+        else {
+          mintFormDiv.style.display = "none";
+          mintPhaseDiv.innerHTML = `⏰ (mint is currently paused) ⏰`;
+        }
+      }
+
+    };
+
+    const updateButton = async () => {
+      if (!MetaMaskOnboarding.isMetaMaskInstalled()) {
+        handleNotReady();
+        onboardButton.innerText = "Click here to install MetaMask!";
+        onboardButton.onclick = () => {
+          onboardButton.innerText = "Onboarding in progress";
+          onboardButton.disabled = true;
+          onboarding.startOnboarding();
+        };
+        onboardButton.disabled = false;
+      } else if (chainId !== SUPPORTED_CHAIN_ID) {
+        handleNotReady();
+        onboardButton.innerText = `Switch to ${SUPPORTED_CHAIN_NAME}!`;
+        onboardButton.onclick = async () => {
+          await eth.request({
+            method: "wallet_switchEthereumChain",
+            params: [{chainId: SUPPORTED_CHAIN_ID}]
+          });
+        };
+        onboardButton.disabled = false;
+      } else if (accounts && accounts.length > 0) {
+        onboardButton.innerText = "Connected: " + shortAddress(currentAccount);
+        onboardButton.disabled = true;
+        onboarding.stopOnboarding();
+        await handleReady();
+      } else {
+        handleNotReady();
+        onboardButton.innerText = "Connect";
+        onboardButton.onclick = async () => {
+          accounts = await eth.request({
+            method: "eth_requestAccounts",
+          });
+          await updateButton();
+        };
+        onboardButton.disabled = false;
+      }
+    };
+
+    await updateButton();
+    if (MetaMaskOnboarding.isMetaMaskInstalled()) {
+      eth.on("accountsChanged", async (newAccounts) => {
+        accounts = newAccounts;
+        if (accounts[0] !== currentAccount) {
+          currentAccount = ethers.utils.getAddress(accounts[0]);
+          await updateButton();
+        }
+      });
+    }
+
+
+  })();
+
+  function shortAddress(address) {
+    return address.slice(0, 5) + "..." + address.slice(-3);
+  }
+
+  async function loadContract(provider) {
+    return new ethers.Contract(CONTRACT_ADDR, [{
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_mintAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "mint",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }, {
+      "inputs": [],
+      "name": "totalSupply",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }, {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bool",
+          "name": "isActive",
+          "type": "bool"
+        }
+      ],
+      "name": "SaleStateChanged",
+      "type": "event"
+    }, {
+      "inputs": [],
+      "name": "saleIsActive",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }, {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "Transfer",
+      "type": "event"
+    }], provider);
+  }
+</script>
+
+</body>
+</html>
