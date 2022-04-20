@@ -5,7 +5,7 @@ import {
   Account
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
-import { IndigeClient, ErrCode } from "../../../../src/risidio-indige-client.ts";
+import { SmpoliticClient, ErrCode } from "../../../../src/eag-smpolitic-client.ts";
 import { WrappedBitcoin } from "../../../../src/wrapped-bitcoin-client.ts";
 import { WrappedDiko } from "../../../../src/wrapped-diko-client.ts";
 
@@ -29,7 +29,7 @@ const getWalletsAndClient = (
   wallet4: Account;
   wallet5: Account;
   newAdministrator: Account;
-  clientV2: IndigeClient;
+  clientV2: SmpoliticClient;
   clientWrappedBitcoin: WrappedBitcoin;
   clientWrappedDiko: WrappedDiko;
 } => {
@@ -37,16 +37,16 @@ const getWalletsAndClient = (
   const deployer = accounts.get("deployer")!;
   const tokenBitcoin = accounts.get("deployer")!.address + '.Wrapped-Bitcoin';
   const tokenDiko = accounts.get("deployer")!.address + '.arkadiko-token';
-  const tokenStacks = accounts.get("deployer")!.address + '.stx-token';
+  const tokenStacks = accounts.get("deployer")!.address + '.unwrapped-stx-token';
   const tokenWrappedStacks = accounts.get("deployer")!.address + '.wrapped-stx-token';
-  const commission1 = accounts.get("deployer")!.address + '.commission-indige';
+  const commission1 = accounts.get("deployer")!.address + '.commission-smpolitic';
   const wallet1 = accounts.get("wallet_1")!;
   const wallet2 = accounts.get("wallet_2")!;
   const wallet3 = accounts.get("wallet_3")!;
   const wallet4 = accounts.get("wallet_4")!;
   const wallet5 = accounts.get("wallet_5")!;
   const newAdministrator = accounts.get("wallet_6")!;
-  const clientV2 = new IndigeClient(chain, deployer);
+  const clientV2 = new SmpoliticClient(chain, deployer);
   const clientWrappedBitcoin = new WrappedBitcoin(chain, deployer);
   const clientWrappedDiko = new WrappedDiko(chain, deployer);
   return {
@@ -133,8 +133,8 @@ Clarinet.test({
     block.receipts[2].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.indige`,
-      "indige"
+      `${deployer.address}.smpolitic`,
+      "smpolitic"
     );
   }
 });
@@ -159,8 +159,8 @@ Clarinet.test({
     block.receipts[2].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.indige`,
-      "indige"
+      `${deployer.address}.smpolitic`,
+      "smpolitic"
     );
     block.receipts[2].events.expectSTXTransferEvent(
       99960000,
@@ -217,8 +217,8 @@ Clarinet.test({
     block.receipts[3].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.indige`,
-      "indige"
+      `${deployer.address}.smpolitic`,
+      "smpolitic"
     );
   }
 });
@@ -259,8 +259,8 @@ Clarinet.test({
     block.receipts[3].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.indige`,
-      "indige"
+      `${deployer.address}.smpolitic`,
+      "smpolitic"
     );
   }
 });
@@ -317,8 +317,8 @@ Clarinet.test({
     block.receipts[0].events.expectNonFungibleTokenMintEvent(
       types.uint(1),
       wallet1.address,
-      `${deployer.address}.indige`,
-      "indige"
+      `${deployer.address}.smpolitic`,
+      "smpolitic"
     );
 
     block.receipts[1].events.expectFungibleTokenTransferEvent(
@@ -338,8 +338,62 @@ Clarinet.test({
     block.receipts[1].events.expectNonFungibleTokenMintEvent(
       types.uint(2),
       wallet2.address,
-      `${deployer.address}.indige`,
-      "indige"
+      `${deployer.address}.smpolitic`,
+      "smpolitic"
+    );
+  }
+});
+
+Clarinet.test({
+  name: "Admin Mint Test - Ensure only admin mint pass can use admin-mint",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, wallet2, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+    let block = chain.mineBlock([
+      clientV2.setAdminMintPass(wallet1.address, deployer.address),
+      clientV2.adminMint(wallet2.address, 10, wallet2.address),
+      clientV2.adminMint(wallet1.address, 1000, wallet1.address)
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectErr().expectUint(115);
+    block.receipts[2].result.expectOk().expectUint(1000);
+    assertEquals(block.receipts[2].events.length, 1);
+    // console.log(block.receipts[2].events)
+    block.receipts[2].events.expectNonFungibleTokenMintEvent(
+      types.uint(1000),
+      wallet1.address,
+      `${deployer.address}.smpolitic`,
+      "smpolitic"
+    );
+  }
+});
+
+Clarinet.test({
+  name: "Admin Mint Test - Ensure constraints respected",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, wallet1, clientV2 } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+    let block = chain.mineBlock([
+      clientV2.setAdminMintPass(wallet1.address, deployer.address),
+      clientV2.adminMint(wallet1.address, 1001, wallet1.address),
+      clientV2.adminMint(wallet1.address, 1, wallet1.address),
+      clientV2.adminMint(wallet1.address, 1, wallet1.address),
+      clientV2.adminMint(wallet1.address, 0, wallet1.address)
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectErr().expectUint(108);
+    block.receipts[2].result.expectOk().expectUint(1);
+    block.receipts[3].result.expectErr().expectUint(1);
+    block.receipts[4].result.expectErr().expectUint(108);
+    block.receipts[2].events.expectNonFungibleTokenMintEvent(
+      types.uint(1),
+      wallet1.address,
+      `${deployer.address}.smpolitic`,
+      "smpolitic"
     );
   }
 });

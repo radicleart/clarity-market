@@ -28,8 +28,8 @@ export enum ErrCode {
   ERR_NOT_FOUND = 404,
 }
 
-export class IndigeClient {
-  contractName: string = "indige";
+export class SmpoliticClient {
+  contractName: string = "smpolitic";
   chain: Chain;
   deployer: Account;
 
@@ -104,7 +104,7 @@ export class IndigeClient {
   mintWith(token: string, sender: string): Tx {
     return Tx.contractCall(this.contractName, "mint-with", [types.principal(token)], sender);
   }
-
+  
   adminMint(recipient: string, mintCounter: number, sender: string): Tx {
     return Tx.contractCall(this.contractName, "admin-mint", [types.principal(recipient), types.uint(mintCounter)], sender);
   }
@@ -117,16 +117,7 @@ export class IndigeClient {
       sender
     );
   }
-
-  adminMintAirdrop(recipient: string, id: number, sender: string): Tx {
-    return Tx.contractCall(
-      this.contractName,
-      "admin-mint-airdrop",
-      [types.principal(recipient), types.uint(id)],
-      sender
-    );
-  }
-
+  
   adminMintMany(
     entries: Array<{ recipient: string; nftIndex: number }>,
     sender: string

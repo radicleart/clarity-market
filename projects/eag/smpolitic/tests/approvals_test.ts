@@ -5,7 +5,7 @@ import {
   Account
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
-import { GenesisVersion2Client } from "../../../../src/thisisnumberone-version2-client.ts";
+import { SmpoliticClient, ErrCode } from "../../../../src/eag-smpolitic-client.ts";
 import { WrappedBitcoin } from "../../../../src/wrapped-bitcoin-client.ts";
 import { WrappedDiko } from "../../../../src/wrapped-diko-client.ts";
 
@@ -29,7 +29,7 @@ const getWalletsAndClient = (
   wallet4: Account;
   wallet5: Account;
   newAdministrator: Account;
-  clientV2: GenesisVersion2Client;
+  clientV2: SmpoliticClient;
   clientWrappedBitcoin: WrappedBitcoin;
   clientWrappedDiko: WrappedDiko;
 } => {
@@ -39,14 +39,14 @@ const getWalletsAndClient = (
   const tokenDiko = accounts.get("deployer")!.address + '.arkadiko-token';
   const tokenStacks = accounts.get("deployer")!.address + '.unwrapped-stx-token';
   const tokenWrappedStacks = accounts.get("deployer")!.address + '.wrapped-stx-token';
-  const commission1 = accounts.get("deployer")!.address + '.commission-genesis';
+  const commission1 = accounts.get("deployer")!.address + '.commission-smpolitic';
   const wallet1 = accounts.get("wallet_1")!;
   const wallet2 = accounts.get("wallet_2")!;
   const wallet3 = accounts.get("wallet_3")!;
   const wallet4 = accounts.get("wallet_4")!;
   const wallet5 = accounts.get("wallet_5")!;
   const newAdministrator = accounts.get("wallet_6")!;
-  const clientV2 = new GenesisVersion2Client(chain, deployer);
+  const clientV2 = new SmpoliticClient(chain, deployer);
   const clientWrappedBitcoin = new WrappedBitcoin(chain, deployer);
   const clientWrappedDiko = new WrappedDiko(chain, deployer);
   return {
@@ -89,7 +89,7 @@ Clarinet.test({
     block = chain.mineBlock([
       clientV2.setApproved(1, wallet2.address, true, wallet2.address)
     ]);
-    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[0].result.expectErr().expectUint(402);
 
     clientV2.getListingInToken(1).result.expectNone();
     // list for 100 stx
@@ -172,10 +172,13 @@ Clarinet.test({
       clientV2.setApproved(1, wallet2.address, true, wallet1.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
+    clientV2.isApproved(1, wallet2.address).result.expectOk().expectBool(true)
     block = chain.mineBlock([
       clientV2.transfer(2, wallet1.address, wallet2.address, wallet2.address),
     ]);
+    // transfer resets the approval!
     block.receipts[0].result.expectErr().expectUint(401);
+    
     // wallet1 is no longer the owner
     block = chain.mineBlock([
       clientV2.setApproved(1, wallet2.address, false, wallet1.address),

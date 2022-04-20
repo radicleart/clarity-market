@@ -63,8 +63,8 @@ depends_on = []
 path = "../../../contracts/external/restricted-token-trait.clar"
 depends_on = []
 
-[contracts.stx-token]
-path = "../../../contracts/external/stx-token.clar"
+[contracts.unwrapped-stx-token]
+path = "../../../contracts/external/unwrapped-stx-token.clar"
 depends_on = ["sip-010-trait-ft-standard"]
 
 [contracts.arkadiko-swap-trait-v1]
