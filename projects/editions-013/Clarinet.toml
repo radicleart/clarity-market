@@ -19,3 +19,11 @@ depends_on = ["sip-010-trait-ft-standard"]
 [contracts.sip-010-trait-ft-standard]
 path = "contracts/external/sip-010-trait-ft-standard.clar"
 depends_on = []
+
+[contracts.commission-editions]
+path = "contracts/external/commission-editions.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.unwrapped-stx-token]
+path = "contracts/external/unwrapped-stx-token.clar"
+depends_on = ["sip-010-trait-ft-standard"]

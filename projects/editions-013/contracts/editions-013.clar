@@ -14,7 +14,6 @@
 (define-map token-supplies uint uint)
 (define-map approvals {owner: principal, operator: principal, id: uint} bool)
 (define-map market {token-id: uint, owner: principal} {price: uint, commission: principal, token: principal})
-(define-map mint-pass principal uint)
 
 ;; contract variables
 (define-data-var CONTRACT_OWNER principal tx-sender)
@@ -24,8 +23,10 @@
 
 ;; constants
 (define-constant COLLECTION_MAX_SUPPLY u1000)
+
+(define-constant ERR_TOKEN_ID_TAKEN (err u100))
 (define-constant ERR_METADATA_FROZEN (err u101))
-(define-constant ERR_COULDNT_GET_NFT_OWNER (err u103))
+(define-constant ERR_AMOUNT_TOO_HIGH (err u102))
 (define-constant ERR_PRICE_WAS_ZERO (err u104))
 (define-constant ERR_NFT_NOT_LISTED_FOR_SALE (err u105))
 (define-constant ERR_NFT_LISTED (err u107))
@@ -42,14 +43,6 @@
 (define-constant ERR_NOT_OWNER (err u402))
 (define-constant ERR_NOT_ADMINISTRATOR (err u403))
 (define-constant ERR_NOT_FOUND (err u404))
-
-
-;; SIP-009: ------------------------------------------------------------------
-;; (define-read-only (get-last-token-id) (ok (var-get mint-counter)))
-;; (define-read-only (get-token-uri (id uint)) (ok (some (var-get token-uri))))
-;; (define-read-only (get-owner (id uint))(ok (nft-get-owner? artwork-token id)))
-;; (define-public (transfer (id uint) (owner principal) (recipient principal))(begin(asserts! (unwrap! (is-approved id contract-caller) ERR_NOT_AUTHORIZED) ERR_NOT_AUTHORIZED)(asserts! (is-none (map-get? market id)) ERR_NFT_LISTED)(nft-transfer? artwork-token id owner recipient)))
-;; ---------------------------------------------------------------------------
 
 ;; SIP-013: ------------------------------------------------------------------
 (define-read-only (get-balance (token-id uint) (who principal))
@@ -68,14 +61,22 @@
 	(ok u0)
 )
 (define-read-only (get-token-uri (token-id uint))
-	(ok none)
+	(ok (some (var-get token-uri)))
 )
 (define-public (transfer (token-id uint) (amount uint) (sender principal) (recipient principal))
+	(begin
+		(asserts! (or (is-eq sender tx-sender) (is-eq sender contract-caller)) ERR_NOT_AUTHORIZED)
+        (try! (transfer-internal token-id amount sender recipient))
+		(ok true)
+	)
+)
+(define-private (transfer-internal (token-id uint) (amount uint) (sender principal) (recipient principal))
 	(let
 		(
 			(sender-balance (get-balance-uint token-id sender))
 		)
-		(asserts! (or (is-eq sender tx-sender) (is-eq sender contract-caller)) ERR_NOT_AUTHORIZED)
+        ;; token must be delisted in this contract before being transferred
+        (asserts! (is-none (map-get? market { token-id: token-id, owner: sender })) ERR_NFT_LISTED)
 		(asserts! (<= amount sender-balance) ERR_INSUFFICIENT_BALANCE)
 		(try! (ft-transfer? edition-token amount sender recipient))
 		(try! (tag-nft-token-id {token-id: token-id, owner: sender}))
@@ -86,13 +87,6 @@
 		(ok true)
 	)
 )
-;;(define-public (transfer (id uint) (owner principal) (recipient principal))
-;;    (begin
-;;        (asserts! (unwrap! (is-approved id contract-caller) ERR_NOT_AUTHORIZED) ERR_NOT_AUTHORIZED)
-;;        (asserts! (is-none (map-get? market id)) ERR_NFT_LISTED)
-;;        (nft-transfer? artwork-token id owner recipient)
-;;    )
-;;)
 (define-public (transfer-memo (token-id uint) (amount uint) (sender principal) (recipient principal) (memo (buff 34)))
 	(begin
 		(try! (transfer token-id amount sender recipient))
@@ -117,6 +111,7 @@
 (define-private (transfer-many-memo-iter (item {token-id: uint, amount: uint, sender: principal, recipient: principal, memo: (buff 34)}) (previous-response (response bool uint)))
 	(match previous-response prev-ok (transfer-memo (get token-id item) (get amount item) (get sender item) (get recipient item) (get memo item)) prev-err previous-response)
 )
+;; if minting - burns the original and remints a 
 (define-private (tag-nft-token-id (nft-token-id {token-id: uint, owner: principal}))
     ;; burning then minting seems counter intuitive but makes possible post conditions for semi-fungible transfers
     ;; since post conditions can't currently be hooked onto custom events.
@@ -136,21 +131,24 @@
 ;; ------------------------------------------------------------------------------------------
 
 ;; -- Minting / Burning functions -----------------------------------------------------------
-(define-public (burn (token-id uint) (owner principal))
-    (let ((current-owner (unwrap! (nft-get-owner? artwork-token {token-id: token-id, owner: owner}) ERR_COULDNT_GET_NFT_OWNER)))
-        (asserts! (is-owned-or-approved token-id contract-caller current-owner) ERR_NOT_AUTHORIZED)
+(define-public (burn (token-id uint))
+    (let (
+            (owner (unwrap! (nft-get-owner? artwork-token {token-id: token-id, owner: contract-caller}) ERR_NOT_OWNER))
+			(balance (get-balance-uint token-id contract-caller))
+        )
         (map-delete market {token-id: token-id, owner: owner})
-        (nft-burn? artwork-token {token-id: token-id, owner: owner} contract-caller)
+        (map-delete token-balances {token-id: token-id, owner: owner})
+        (try! (ft-burn? edition-token balance owner))
+        (try! (nft-burn? artwork-token {token-id: token-id, owner: owner} owner))
+		(ok token-id)
     )
 )
 (define-public (admin-mint (token-id uint) (amount uint) (recipient principal))
 	(begin
         (asserts! (and (> token-id u0) (<= token-id COLLECTION_MAX_SUPPLY)) ERR_COLLECTION_LIMIT_REACHED)
         (asserts! (is-eq contract-caller (var-get ADMIN_MINT_PASS)) ERR_NOT_ADMIN_MINT_PASS)
-        (asserts! (is-none (nft-get-owner? artwork-token {token-id: token-id, owner: recipient})) ERR_NOT_ADMIN_MINT_PASS)
 		(try! (ft-mint? edition-token amount recipient))
-		;; too convoluted? (try! (tag-nft-token-id {token-id: token-id, owner: recipient}))
-		(try! (nft-mint? artwork-token {token-id: token-id, owner: recipient} recipient))
+		(try! (tag-nft-token-id {token-id: token-id, owner: recipient}))
 		(set-balance token-id (+ (get-balance-uint token-id recipient) amount) recipient)
 		(map-set token-supplies token-id (+ (unwrap-panic (get-total-supply token-id)) amount))
 		(print {type: "sft_mint_event", token-id: token-id, amount: amount, recipient: recipient})
@@ -172,36 +170,38 @@
 ;; ------------------------------------------------------------------------------------------
 
 ;; -- Marketplace functions -----------------------------------------------------------------
-(define-public (list-in-token (token-id uint) (price uint) (comm <com10>) (token <ft-trait>))
+(define-public (list-in-token (token-id uint) (unit-price uint) (comm <com10>) (token <ft-trait>))
     (let (
-            (listing {price: price, commission: (contract-of comm), token: (contract-of token)})
+            (listing {price: unit-price, commission: (contract-of comm), token: (contract-of token)})
         )
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? artwork-token {token-id: token-id, owner: contract-caller}) ERR_COULDNT_GET_NFT_OWNER)) ERR_NOT_OWNER)
-        (asserts! (> price u0) ERR_PRICE_WAS_ZERO)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? artwork-token {token-id: token-id, owner: contract-caller}) ERR_NOT_OWNER)) ERR_NOT_OWNER)
+        (asserts! (> unit-price u0) ERR_PRICE_WAS_ZERO)
         (ok (map-set market {token-id: token-id, owner: contract-caller} listing))
     )
 )
 (define-public (unlist-in-token (token-id uint))
     (begin
-        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? artwork-token {token-id: token-id, owner: contract-caller}) ERR_COULDNT_GET_NFT_OWNER)) ERR_NOT_OWNER)
+        (asserts! (is-eq contract-caller (unwrap! (nft-get-owner? artwork-token {token-id: token-id, owner: contract-caller}) ERR_NOT_OWNER)) ERR_NOT_OWNER)
         (ok (map-delete market {token-id: token-id, owner: contract-caller}))
     )
 )
-(define-public (buy-in-token (token-id uint) (owner principal) (comm <com10>) (token <ft-trait>))
+(define-public (buy-in-token (token-id uint) (amount uint) (owner principal) (comm <com10>) (token <ft-trait>))
     (let 
         (
+			(balance (get-balance-uint token-id owner))
             (listing (unwrap! (map-get? market { token-id: token-id, owner: owner }) ERR_NFT_NOT_LISTED_FOR_SALE))
-            (current-owner (unwrap! (nft-get-owner? artwork-token { token-id: token-id, owner: owner }) ERR_COULDNT_GET_NFT_OWNER))
+            (current-owner (unwrap! (nft-get-owner? artwork-token { token-id: token-id, owner: owner }) ERR_NOT_OWNER))
             (buyer contract-caller)
-            (price (get price listing))
+            (price (* amount (get price listing)))
         )
+        (asserts! (<= amount balance) ERR_AMOUNT_TOO_HIGH)
         (asserts! (is-eq (contract-of token) (get token listing)) ERR_WRONG_TOKEN)
         (asserts! (is-eq (contract-of comm) (get commission listing)) ERR_WRONG_COMMISSION)
         (asserts! (is-eq current-owner owner) ERR_NOT_OWNER)
         (try! (contract-call? token transfer price contract-caller owner none))
         (try! (contract-call? comm pay token token-id price))
-        (try! (nft-transfer? artwork-token { token-id: token-id, owner: owner } owner buyer))
-        (map-delete market { token-id: token-id, owner: current-owner })
+        (map-delete market { token-id: token-id, owner: owner })
+        (try! (transfer-internal token-id amount owner buyer))
         (ok true)
     )
 )
@@ -211,15 +211,15 @@
 ;; ------------------------------------------------------------------------------------------
 
 ;; -- Approval functions --------------------------------------------------
-(define-read-only (is-approved (token-id uint) (operator principal))
-    (let ((owner (unwrap! (nft-get-owner? artwork-token { token-id: token-id, owner: operator }) ERR_COULDNT_GET_NFT_OWNER)))
-        (ok (is-owned-or-approved token-id operator owner))
-    )
-)
 (define-public (set-approved (token-id uint) (operator principal) (approved bool))
-    (let ((owner (unwrap! (nft-get-owner? artwork-token { token-id: token-id, owner: tx-sender }) ERR_COULDNT_GET_NFT_OWNER)))
+    (let ((owner (unwrap! (nft-get-owner? artwork-token { token-id: token-id, owner: tx-sender }) ERR_NOT_OWNER)))
         (asserts! (is-eq owner contract-caller) ERR_NOT_OWNER)
         (ok (map-set approvals { owner: owner, operator: operator, id: token-id } approved))
+    )
+)
+(define-read-only (is-approved (token-id uint) (operator principal))
+    (let ((owner (unwrap! (nft-get-owner? artwork-token { token-id: token-id, owner: operator }) ERR_NOT_OWNER)))
+        (ok (is-owned-or-approved token-id operator owner))
     )
 )
 (define-private (is-owned-or-approved (token-id uint) (operator principal) (owner principal))
@@ -231,26 +231,6 @@
 ;; ------------------------------------------------------------------------------------------
 
 ;; -- Admin functions --------------------------------------------------
-(define-public (set-mint-pass (account principal) (limit uint))
-    (begin
-        (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
-        (ok (map-set mint-pass account limit))
-    )
-)
-
-(define-public (batch-set-mint-pass (entries (list 200 {account: principal, limit: uint})))
-   (begin
-        (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
-        (map set-mint-pass-helper entries)
-        (ok true)
-    )
-)
-
-(define-private (set-mint-pass-helper (entry {account: principal, limit: uint}))
-    (map-set mint-pass (get account entry) (get limit entry))
-)
-
-;; the contract CONTRACT_OWNER can change the contract CONTRACT_OWNER
 (define-public (set-administrator (new-administrator principal))
     (begin
         (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
@@ -280,12 +260,6 @@
         (ok true)
     )
 )
-
-(define-read-only (get-mint-pass-balance (account principal))
-    (default-to u0
-        (map-get? mint-pass account)
-    )
-)
 (define-private (check-err (result (response bool uint)) (prior (response bool uint)))
     (match prior 
         ok-value result
@@ -293,7 +267,3 @@
     )
 )
 ;; ------------------------------------------------------------------------------------------
-
-;; TODO: add all whitelists
-(map-set mint-pass 'ST1R1061ZT6KPJXQ7PAXPFB6ZAZ6ZWW28G8HXK9G5 u50)
-(map-set mint-pass 'ST112ZVZ2YQSW74BQ65VST84806RV5ZZZTW0261CV u50)
