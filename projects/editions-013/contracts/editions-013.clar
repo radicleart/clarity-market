@@ -8,7 +8,7 @@
 (use-trait ft-trait .sip-010-trait-ft-standard.sip-010-trait)
 
 ;; data structures
-(define-fungible-token edition-token)
+(define-fungible-token edition-token u100000)
 (define-non-fungible-token artwork-token {token-id: uint, owner: principal})
 (define-map token-balances {token-id: uint, owner: principal} uint)
 (define-map token-supplies uint uint)
@@ -16,6 +16,7 @@
 (define-map market {token-id: uint, owner: principal} {price: uint, commission: principal, token: principal})
 
 ;; contract variables
+(define-data-var PER_TOKEN_MAX_SUPPLY uint u100)
 (define-data-var CONTRACT_OWNER principal tx-sender)
 (define-data-var ADMIN_MINT_PASS principal 'SP2DDG43477A5ZAEJJ76FSYDY2J5XQYFP9HCGS8AM)
 (define-data-var token-uri (string-ascii 246) "ipfs://QmVXvcdKHUcg1RcsxAASmdAJAJtnxdE4YngcDiuAXcREZN/edition-{id}.json")
@@ -26,7 +27,7 @@
 
 (define-constant ERR_TOKEN_ID_TAKEN (err u100))
 (define-constant ERR_METADATA_FROZEN (err u101))
-(define-constant ERR_AMOUNT_TOO_HIGH (err u102))
+(define-constant ERR_AMOUNT_REQUESTED_GREATER_THAN_BALANCE (err u102))
 (define-constant ERR_PRICE_WAS_ZERO (err u104))
 (define-constant ERR_NFT_NOT_LISTED_FOR_SALE (err u105))
 (define-constant ERR_NFT_LISTED (err u107))
@@ -38,6 +39,7 @@
 (define-constant ERR_BATCH_SIZE_EXCEEDED u114)
 (define-constant ERR_NOT_ADMIN_MINT_PASS (err u115))
 (define-constant ERR_INSUFFICIENT_BALANCE (err u116))
+(define-constant ERR_LIMIT_PER_FT_EXCEEDED (err u117))
 
 (define-constant ERR_NOT_AUTHORIZED (err u401))
 (define-constant ERR_NOT_OWNER (err u402))
@@ -147,6 +149,7 @@
 	(begin
         (asserts! (and (> token-id u0) (<= token-id COLLECTION_MAX_SUPPLY)) ERR_COLLECTION_LIMIT_REACHED)
         (asserts! (is-eq contract-caller (var-get ADMIN_MINT_PASS)) ERR_NOT_ADMIN_MINT_PASS)
+        (asserts! (>= (var-get PER_TOKEN_MAX_SUPPLY) (+ (unwrap! (get-total-supply token-id) ERR_LIMIT_PER_FT_EXCEEDED) amount)) ERR_LIMIT_PER_FT_EXCEEDED)
 		(try! (ft-mint? edition-token amount recipient))
 		(try! (tag-nft-token-id {token-id: token-id, owner: recipient}))
 		(set-balance token-id (+ (get-balance-uint token-id recipient) amount) recipient)
@@ -194,7 +197,7 @@
             (buyer contract-caller)
             (price (* amount (get price listing)))
         )
-        (asserts! (<= amount balance) ERR_AMOUNT_TOO_HIGH)
+        (asserts! (<= amount balance) ERR_AMOUNT_REQUESTED_GREATER_THAN_BALANCE)
         (asserts! (is-eq (contract-of token) (get token listing)) ERR_WRONG_TOKEN)
         (asserts! (is-eq (contract-of comm) (get commission listing)) ERR_WRONG_COMMISSION)
         (asserts! (is-eq current-owner owner) ERR_NOT_OWNER)
@@ -235,6 +238,13 @@
     (begin
         (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
         (ok (var-set CONTRACT_OWNER new-administrator))
+    )
+)
+
+(define-public (set-limit-per-token (limit uint))
+    (begin
+        (asserts! (is-eq (var-get CONTRACT_OWNER) contract-caller) ERR_NOT_ADMINISTRATOR)
+        (ok (var-set PER_TOKEN_MAX_SUPPLY limit))
     )
 )
 

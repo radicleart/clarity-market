@@ -60,9 +60,9 @@ Clarinet.test({
       client.setAdministrator(phil.address, deployer.address),
       client.setAdministrator(phil.address, deployer.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(403);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
     block.receipts[1].result.expectOk().expectBool(true);
-    block.receipts[2].result.expectErr().expectUint(403);
+    block.receipts[2].result.expectErr().expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
   }
 });
 
@@ -78,9 +78,9 @@ Clarinet.test({
       client.setAdminMintPass(phil.address, deployer.address),
       client.setAdminMintPass(phil.address, phil.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(403);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
     block.receipts[1].result.expectOk().expectBool(true);
-    block.receipts[2].result.expectErr().expectUint(403);
+    block.receipts[2].result.expectErr().expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
   }
 });
 
@@ -96,9 +96,9 @@ Clarinet.test({
       client.setTokenUri('https://address2/{id}', deployer.address),
       client.setTokenUri('https://address3/{id}', phil.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(403);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
     block.receipts[1].result.expectOk().expectBool(true);
-    block.receipts[2].result.expectErr().expectUint(403);
+    block.receipts[2].result.expectErr().expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
     client.getTokenUri(111).result.expectOk().expectSome() .expectAscii('https://address2/{id}');
   }
 });
@@ -117,9 +117,9 @@ Clarinet.test({
       client.setTokenUri('https://address3/{id}', deployer.address),
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    block.receipts[1].result.expectErr().expectUint(403);
+    block.receipts[1].result.expectErr().expectUint(ErrCode.ERR_NOT_ADMINISTRATOR);
     block.receipts[2].result.expectOk().expectBool(true);
-    block.receipts[3].result.expectErr().expectUint(101);
+    block.receipts[3].result.expectErr().expectUint(ErrCode.ERR_METADATA_FROZEN);
     client.getTokenUri(222).result.expectOk().expectSome() .expectAscii('https://address2/{id}');
   }
 });

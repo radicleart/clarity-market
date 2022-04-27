@@ -24,6 +24,7 @@ const getWalletsAndClient = (
   bobby: Account;
   hunter: Account;
   newAdministrator: Account;
+  commission1: string;
   client: ContractClient;
   events: CustomEventsClient;
 } => {
@@ -35,6 +36,7 @@ const getWalletsAndClient = (
   const bobby = accounts.get("wallet_3")!;
   const hunter = accounts.get("wallet_4")!;
   const newAdministrator = accounts.get("wallet_6")!;
+  const commission1 = accounts.get("deployer")!.address + '.commission-editions';
   const client = new ContractClient(chain, deployer, contractName);
   const events = new CustomEventsClient();
   return {
@@ -46,6 +48,7 @@ const getWalletsAndClient = (
     bobby,
     hunter,
     newAdministrator,
+    commission1,
     client,
     events
   };
@@ -62,7 +65,27 @@ Clarinet.test({
     let block = chain.mineBlock([
       client.transfer(1, 1, phil.address, daisy.address, phil.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(116); // id 1 not owned
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_INSUFFICIENT_BALANCE); // id 1 not owned
+  }
+});
+
+Clarinet.test({
+  name: "Transfer Test - Ensure can't transfer if listed",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, phil, daisy, commission1, tokenStacks, client } = getWalletsAndClient(chain, accounts);
+
+    const entries = [
+      { 'token-id': 1, amount: 100, recipient: phil.address }
+    ]
+    let block = chain.mineBlock([
+      client.setAdminMintPass(deployer.address, deployer.address),
+      client.adminMintMany(entries, deployer.address),
+      client.listInToken(1, 100, commission1, tokenStacks, phil.address)
+    ]);
+    block = chain.mineBlock([
+      client.transfer(1, 50, phil.address, daisy.address, phil.address),
+    ]);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NFT_LISTED);
   }
 });
 
@@ -74,7 +97,7 @@ Clarinet.test({
       accounts
     );
     const entries = [
-      { 'token-id': 1, amount: 1000, recipient: phil.address }
+      { 'token-id': 1, amount: 10, recipient: phil.address }
     ]
     let block = chain.mineBlock([
       client.setAdminMintPass(deployer.address, deployer.address),
@@ -83,11 +106,11 @@ Clarinet.test({
     block = chain.mineBlock([
       client.transfer(1, 1, phil.address, daisy.address, deployer.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(401);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
     block = chain.mineBlock([
-      client.transfer(1, 1001, phil.address, daisy.address, phil.address),
+      client.transfer(1, 11, phil.address, daisy.address, phil.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(116);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_INSUFFICIENT_BALANCE);
   }
 });
 
@@ -99,7 +122,7 @@ Clarinet.test({
       accounts
     );
     const entries = [
-      { 'token-id': 1, amount: 1000, recipient: phil.address }
+      { 'token-id': 1, amount: 10, recipient: phil.address }
     ]
     let block = chain.mineBlock([
       client.setAdminMintPass(deployer.address, deployer.address),
@@ -108,11 +131,11 @@ Clarinet.test({
     block = chain.mineBlock([
       client.transferMemo(1, 1, phil.address, daisy.address, "hallo", deployer.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(401);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
     block = chain.mineBlock([
-      client.transferMemo(1, 1001, phil.address, daisy.address, "hallo", phil.address),
+      client.transferMemo(1, 11, phil.address, daisy.address, "hallo", phil.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(116);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_INSUFFICIENT_BALANCE);
   }
 });
 
@@ -126,7 +149,7 @@ Clarinet.test({
     let block = chain.mineBlock([
       client.transferMemo(1, 1, phil.address, daisy.address, "hallo", deployer.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(401);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_NOT_AUTHORIZED);
   }
 });
 
@@ -144,7 +167,7 @@ Clarinet.test({
     let block = chain.mineBlock([
       client.transferMany(entries, phil.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(116);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_INSUFFICIENT_BALANCE);
   }
 });
 
@@ -167,7 +190,7 @@ Clarinet.test({
     block = chain.mineBlock([
       client.transferManyMemo(entries, phil.address),
     ]);
-    block.receipts[0].result.expectErr().expectUint(116);
+    block.receipts[0].result.expectErr().expectUint(ErrCode.ERR_INSUFFICIENT_BALANCE);
   }
 });
 // -- end check constraints for the 4 variatios of transfer --------------------------------------------
@@ -183,7 +206,7 @@ Clarinet.test({
       accounts
     );
     const entries = [
-      { 'token-id': 1, amount: 1000, recipient: phil.address }
+      { 'token-id': 1, amount: 100, recipient: phil.address }
     ]
     let block = chain.mineBlock([
       client.setAdminMintPass(deployer.address, deployer.address),
@@ -191,11 +214,11 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk().expectBool(true);
-    client.getBalance(1, phil.address).result.expectOk().expectUint(1000);
+    client.getBalance(1, phil.address).result.expectOk().expectUint(100);
     client.getBalance(1, daisy.address).result.expectOk().expectUint(0);
-    client.getOverallBalance(phil.address).result.expectOk().expectUint(1000);
-    client.getOverallSupply().result.expectOk().expectUint(1000);
-    client.getTotalSupply(1).result.expectOk().expectUint(1000);
+    client.getOverallBalance(phil.address).result.expectOk().expectUint(100);
+    client.getOverallSupply().result.expectOk().expectUint(100);
+    client.getTotalSupply(1).result.expectOk().expectUint(100);
     // console.log(block.receipts[1].events)
     // check the events make sense
     events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 1)
@@ -205,15 +228,15 @@ Clarinet.test({
     events.expectEventCount(block.receipts[1].events, 'ft_burn_event', 0)
 
     block = chain.mineBlock([
-      client.transfer(1, 500, phil.address, daisy.address, phil.address),
+      client.transfer(1, 50, phil.address, daisy.address, phil.address),
     ]);
 
-    client.getBalance(1, phil.address).result.expectOk().expectUint(500);
-    client.getBalance(1, daisy.address).result.expectOk().expectUint(500);
-    client.getOverallBalance(phil.address).result.expectOk().expectUint(500);
-    client.getOverallBalance(daisy.address).result.expectOk().expectUint(500);
-    client.getOverallSupply().result.expectOk().expectUint(1000);
-    client.getTotalSupply(1).result.expectOk().expectUint(1000);
+    client.getBalance(1, phil.address).result.expectOk().expectUint(50);
+    client.getBalance(1, daisy.address).result.expectOk().expectUint(50);
+    client.getOverallBalance(phil.address).result.expectOk().expectUint(50);
+    client.getOverallBalance(daisy.address).result.expectOk().expectUint(50);
+    client.getOverallSupply().result.expectOk().expectUint(100);
+    client.getTotalSupply(1).result.expectOk().expectUint(100);
     // check the events make sense
     events.expectEventCount(block.receipts[0].events, 'ft_mint_event', 0)
     events.expectEventCount(block.receipts[0].events, 'ft_transfer_event', 1)
@@ -233,9 +256,9 @@ Clarinet.test({
       accounts
     );
     const entries = [
-      { 'token-id': 1, amount: 1000, recipient: phil.address },
-      { 'token-id': 500, amount: 1000, recipient: phil.address },
-      { 'token-id': 1000, amount: 1000, recipient: phil.address }
+      { 'token-id': 1, amount: 100, recipient: phil.address },
+      { 'token-id': 500, amount: 100, recipient: phil.address },
+      { 'token-id': 1000, amount: 100, recipient: phil.address }
     ]
     let block = chain.mineBlock([
       client.setAdminMintPass(deployer.address, deployer.address),
@@ -243,15 +266,15 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk().expectBool(true);
-    client.getBalance(1, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(500, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(1000, phil.address).result.expectOk().expectUint(1000);
+    client.getBalance(1, phil.address).result.expectOk().expectUint(100);
+    client.getBalance(500, phil.address).result.expectOk().expectUint(100);
+    client.getBalance(1000, phil.address).result.expectOk().expectUint(100);
     client.getBalance(1, daisy.address).result.expectOk().expectUint(0);
-    client.getOverallBalance(phil.address).result.expectOk().expectUint(3000);
-    client.getOverallSupply().result.expectOk().expectUint(3000);
-    client.getTotalSupply(1).result.expectOk().expectUint(1000);
-    client.getTotalSupply(500).result.expectOk().expectUint(1000);
-    client.getTotalSupply(1000).result.expectOk().expectUint(1000);
+    client.getOverallBalance(phil.address).result.expectOk().expectUint(300);
+    client.getOverallSupply().result.expectOk().expectUint(300);
+    client.getTotalSupply(1).result.expectOk().expectUint(100);
+    client.getTotalSupply(500).result.expectOk().expectUint(100);
+    client.getTotalSupply(1000).result.expectOk().expectUint(100);
     // check the events make sense
     events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 3)
     events.expectEventCount(block.receipts[1].events, 'nft_mint_event', 3)
@@ -262,24 +285,24 @@ Clarinet.test({
     const transferEntries = [
       { 'token-id': 1, amount: 10, owner: phil.address, recipient: daisy.address, memo: 'message 1' },
       { 'token-id': 500, amount: 10, owner: phil.address, recipient: daisy.address, memo: 'message 2' },
-      { 'token-id': 1000, amount: 1000, owner: phil.address, recipient: daisy.address, memo: 'message 3' }
+      { 'token-id': 1000, amount: 100, owner: phil.address, recipient: daisy.address, memo: 'message 3' }
     ]
     block = chain.mineBlock([
       client.transferManyMemo(transferEntries, phil.address),
     ]);
 
-    client.getBalance(1, phil.address).result.expectOk().expectUint(990);
+    client.getBalance(1, phil.address).result.expectOk().expectUint(90);
     client.getBalance(1, daisy.address).result.expectOk().expectUint(10);
-    client.getBalance(500, phil.address).result.expectOk().expectUint(990);
+    client.getBalance(500, phil.address).result.expectOk().expectUint(90);
     client.getBalance(500, daisy.address).result.expectOk().expectUint(10);
     client.getBalance(1000, phil.address).result.expectOk().expectUint(0);
-    client.getBalance(1000, daisy.address).result.expectOk().expectUint(1000);
-    client.getOverallBalance(phil.address).result.expectOk().expectUint(1980);
-    client.getOverallBalance(daisy.address).result.expectOk().expectUint(1020);
-    client.getOverallSupply().result.expectOk().expectUint(3000);
-    client.getTotalSupply(1).result.expectOk().expectUint(1000);
-    client.getTotalSupply(500).result.expectOk().expectUint(1000);
-    client.getTotalSupply(1000).result.expectOk().expectUint(1000);
+    client.getBalance(1000, daisy.address).result.expectOk().expectUint(100);
+    client.getOverallBalance(phil.address).result.expectOk().expectUint(180);
+    client.getOverallBalance(daisy.address).result.expectOk().expectUint(120);
+    client.getOverallSupply().result.expectOk().expectUint(300);
+    client.getTotalSupply(1).result.expectOk().expectUint(100);
+    client.getTotalSupply(500).result.expectOk().expectUint(100);
+    client.getTotalSupply(1000).result.expectOk().expectUint(100);
     // check the events make sense
     // console.log(block.receipts[1].events)
     events.expectEventCount(block.receipts[0].events, 'ft_mint_event', 0)
@@ -299,9 +322,9 @@ Clarinet.test({
       accounts
     );
     const entries = [
-      { 'token-id': 1, amount: 1000, recipient: phil.address },
-      { 'token-id': 500, amount: 1000, recipient: phil.address },
-      { 'token-id': 1000, amount: 1000, recipient: phil.address }
+      { 'token-id': 1, amount: 100, recipient: phil.address },
+      { 'token-id': 500, amount: 100, recipient: phil.address },
+      { 'token-id': 1000, amount: 100, recipient: phil.address }
     ]
     let block = chain.mineBlock([
       client.setAdminMintPass(deployer.address, deployer.address),
@@ -309,15 +332,15 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk().expectBool(true);
-    client.getBalance(1, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(500, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(1000, phil.address).result.expectOk().expectUint(1000);
+    client.getBalance(1, phil.address).result.expectOk().expectUint(100);
+    client.getBalance(500, phil.address).result.expectOk().expectUint(100);
+    client.getBalance(1000, phil.address).result.expectOk().expectUint(100);
     client.getBalance(1, daisy.address).result.expectOk().expectUint(0);
-    client.getOverallBalance(phil.address).result.expectOk().expectUint(3000);
-    client.getOverallSupply().result.expectOk().expectUint(3000);
-    client.getTotalSupply(1).result.expectOk().expectUint(1000);
-    client.getTotalSupply(500).result.expectOk().expectUint(1000);
-    client.getTotalSupply(1000).result.expectOk().expectUint(1000);
+    client.getOverallBalance(phil.address).result.expectOk().expectUint(300);
+    client.getOverallSupply().result.expectOk().expectUint(300);
+    client.getTotalSupply(1).result.expectOk().expectUint(100);
+    client.getTotalSupply(500).result.expectOk().expectUint(100);
+    client.getTotalSupply(1000).result.expectOk().expectUint(100);
     // console.log(block.receipts[1].events)
     // check the events make sense
     events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 3)
@@ -329,29 +352,29 @@ Clarinet.test({
     const transferEntries = [
       { 'token-id': 1, amount: 10, owner: phil.address, recipient: daisy.address, memo: 'message 1' },
       { 'token-id': 500, amount: 10, owner: phil.address, recipient: daisy.address, memo: 'message 2' },
-      { 'token-id': 1000, amount: 1001, owner: phil.address, recipient: daisy.address, memo: 'message 3' }
+      { 'token-id': 1000, amount: 10, owner: phil.address, recipient: daisy.address, memo: 'message 3' }
     ]
     block = chain.mineBlock([
       client.transferManyMemo(transferEntries, phil.address),
     ]);
 
-    client.getBalance(1, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(1, daisy.address).result.expectOk().expectUint(0);
-    client.getBalance(500, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(500, daisy.address).result.expectOk().expectUint(0);
-    client.getBalance(1000, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(1000, daisy.address).result.expectOk().expectUint(0);
-    client.getOverallBalance(phil.address).result.expectOk().expectUint(3000);
-    client.getOverallBalance(daisy.address).result.expectOk().expectUint(0);
-    client.getOverallSupply().result.expectOk().expectUint(3000);
-    client.getTotalSupply(1).result.expectOk().expectUint(1000);
-    client.getTotalSupply(500).result.expectOk().expectUint(1000);
-    client.getTotalSupply(1000).result.expectOk().expectUint(1000);
+    client.getBalance(1, phil.address).result.expectOk().expectUint(90);
+    client.getBalance(1, daisy.address).result.expectOk().expectUint(10);
+    client.getBalance(500, phil.address).result.expectOk().expectUint(90);
+    client.getBalance(500, daisy.address).result.expectOk().expectUint(10);
+    client.getBalance(1000, phil.address).result.expectOk().expectUint(90);
+    client.getBalance(1000, daisy.address).result.expectOk().expectUint(10);
+    client.getOverallBalance(phil.address).result.expectOk().expectUint(270);
+    client.getOverallBalance(daisy.address).result.expectOk().expectUint(30);
+    client.getOverallSupply().result.expectOk().expectUint(300);
+    client.getTotalSupply(1).result.expectOk().expectUint(100);
+    client.getTotalSupply(500).result.expectOk().expectUint(100);
+    client.getTotalSupply(1000).result.expectOk().expectUint(100);
     events.expectEventCount(block.receipts[0].events, 'ft_mint_event', 0)
-    events.expectEventCount(block.receipts[0].events, 'ft_transfer_event', 0)
-    events.expectEventCount(block.receipts[0].events, 'nft_mint_event', 0)
-    events.expectEventCount(block.receipts[0].events, 'contract_event', 0) // the memo and the sft event are printed
-    events.expectEventCount(block.receipts[0].events, 'nft_burn_event', 0)
+    events.expectEventCount(block.receipts[0].events, 'ft_transfer_event', 3)
+    events.expectEventCount(block.receipts[0].events, 'nft_mint_event', 6)
+    events.expectEventCount(block.receipts[0].events, 'contract_event', 6) // the memo and the sft event are printed
+    events.expectEventCount(block.receipts[0].events, 'nft_burn_event', 3)
     events.expectEventCount(block.receipts[0].events, 'ft_burn_event', 0)
   }
 });
@@ -364,15 +387,9 @@ Clarinet.test({
       accounts
     );
     const entries = [
-      { 'token-id': 1, amount: 1000, recipient: phil.address },
-      { 'token-id': 1, amount: 1000, recipient: daisy.address },
-      { 'token-id': 1, amount: 1000, recipient: hunter.address },
-      { 'token-id': 500, amount: 1000, recipient: phil.address },
-      { 'token-id': 500, amount: 1000, recipient: daisy.address },
-      { 'token-id': 500, amount: 1000, recipient: hunter.address },
-      { 'token-id': 1000, amount: 1000, recipient: phil.address },
-      { 'token-id': 1000, amount: 1000, recipient: daisy.address },
-      { 'token-id': 1000, amount: 1000, recipient: hunter.address }
+      { 'token-id': 1, amount: 20, recipient: phil.address },
+      { 'token-id': 500, amount: 20, recipient: daisy.address },
+      { 'token-id': 1000, amount: 20, recipient: hunter.address }
     ]
     let block = chain.mineBlock([
       client.setAdminMintPass(deployer.address, deployer.address),
@@ -380,72 +397,78 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk().expectBool(true);
-    client.getBalance(1, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(1, daisy.address).result.expectOk().expectUint(1000);
-    client.getBalance(1, hunter.address).result.expectOk().expectUint(1000);
-    client.getBalance(500, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(500, daisy.address).result.expectOk().expectUint(1000);
-    client.getBalance(500, hunter.address).result.expectOk().expectUint(1000);
-    client.getBalance(1000, phil.address).result.expectOk().expectUint(1000);
-    client.getBalance(1000, daisy.address).result.expectOk().expectUint(1000);
-    client.getBalance(1000, hunter.address).result.expectOk().expectUint(1000);
-    client.getOverallBalance(phil.address).result.expectOk().expectUint(3000);
-    client.getOverallBalance(daisy.address).result.expectOk().expectUint(3000);
-    client.getOverallBalance(hunter.address).result.expectOk().expectUint(3000);
-    client.getTotalSupply(1).result.expectOk().expectUint(3000);
-    client.getTotalSupply(500).result.expectOk().expectUint(3000);
-    client.getTotalSupply(1000).result.expectOk().expectUint(3000);
-    client.getOverallSupply().result.expectOk().expectUint(9000);
+    client.getBalance(1, phil.address).result.expectOk().expectUint(20);
+    client.getBalance(1, daisy.address).result.expectOk().expectUint(0);
+    client.getBalance(1, hunter.address).result.expectOk().expectUint(0);
+    client.getBalance(500, phil.address).result.expectOk().expectUint(0);
+    client.getBalance(500, daisy.address).result.expectOk().expectUint(20);
+    client.getBalance(500, hunter.address).result.expectOk().expectUint(0);
+    client.getBalance(1000, phil.address).result.expectOk().expectUint(0);
+    client.getBalance(1000, daisy.address).result.expectOk().expectUint(0);
+    client.getBalance(1000, hunter.address).result.expectOk().expectUint(20);
+    client.getOverallBalance(phil.address).result.expectOk().expectUint(20);
+    client.getOverallBalance(daisy.address).result.expectOk().expectUint(20);
+    client.getOverallBalance(hunter.address).result.expectOk().expectUint(20);
+    client.getTotalSupply(1).result.expectOk().expectUint(20);
+    client.getTotalSupply(500).result.expectOk().expectUint(20);
+    client.getTotalSupply(1000).result.expectOk().expectUint(20);
+    client.getOverallSupply().result.expectOk().expectUint(60);
     // console.log(block.receipts[1].events)
     // check the events make sense
-    events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 9)
+    events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 3)
     events.expectEventCount(block.receipts[1].events, 'ft_transfer_event', 0)
-    events.expectEventCount(block.receipts[1].events, 'nft_mint_event', 9)
+    events.expectEventCount(block.receipts[1].events, 'nft_mint_event', 3)
     events.expectEventCount(block.receipts[1].events, 'nft_transfer_event', 0)
-    events.expectEventCount(block.receipts[1].events, 'contract_event', 9)
+    events.expectEventCount(block.receipts[1].events, 'contract_event', 3)
     events.expectEventCount(block.receipts[1].events, 'nft_burn_event', 0)
     events.expectEventCount(block.receipts[1].events, 'ft_burn_event', 0)
 
     const transferEntries1 = [
-      { 'token-id': 1, amount: 500, owner: phil.address, recipient: daisy.address },
-      { 'token-id': 1, amount: 500, owner: phil.address, recipient: hunter.address }
+      { 'token-id': 1, amount: 10, owner: phil.address, recipient: daisy.address },
+      { 'token-id': 1, amount: 10, owner: phil.address, recipient: hunter.address }
     ]
     const transferEntries2 = [
-      { 'token-id': 500, amount: 500, owner: daisy.address, recipient: phil.address },
-      { 'token-id': 500, amount: 500, owner: daisy.address, recipient: hunter.address }
+      { 'token-id': 500, amount: 10, owner: daisy.address, recipient: phil.address },
+      { 'token-id': 500, amount: 10, owner: daisy.address, recipient: hunter.address }
     ]
     const transferEntries3 = [
-      { 'token-id': 1000, amount: 500, owner: hunter.address, recipient: phil.address },
-      { 'token-id': 1000, amount: 500, owner: hunter.address, recipient: daisy.address }
+      { 'token-id': 1000, amount: 10, owner: hunter.address, recipient: phil.address },
+      { 'token-id': 1000, amount: 10, owner: hunter.address, recipient: daisy.address }
     ]
     block = chain.mineBlock([
       client.transferMany(transferEntries1, phil.address),
       client.transferMany(transferEntries2, daisy.address),
       client.transferMany(transferEntries3, hunter.address)
     ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectOk().expectBool(true);
+    block.receipts[2].result.expectOk().expectBool(true);
+
+    console.log(block.receipts[0].events)
 
     client.getBalance(1, phil.address).result.expectOk().expectUint(0);
-    client.getBalance(1, daisy.address).result.expectOk().expectUint(1500);
-    client.getBalance(1, hunter.address).result.expectOk().expectUint(1500);
-    client.getBalance(500, phil.address).result.expectOk().expectUint(1500);
+    client.getBalance(1, daisy.address).result.expectOk().expectUint(10);
+    client.getBalance(1, hunter.address).result.expectOk().expectUint(10);
+    client.getBalance(500, phil.address).result.expectOk().expectUint(10);
     client.getBalance(500, daisy.address).result.expectOk().expectUint(0);
-    client.getBalance(500, hunter.address).result.expectOk().expectUint(1500);
-    client.getBalance(1000, phil.address).result.expectOk().expectUint(1500);
-    client.getBalance(1000, daisy.address).result.expectOk().expectUint(1500);
+    client.getBalance(500, hunter.address).result.expectOk().expectUint(10);
+    client.getBalance(1000, phil.address).result.expectOk().expectUint(10);
+    client.getBalance(1000, daisy.address).result.expectOk().expectUint(10);
     client.getBalance(1000, hunter.address).result.expectOk().expectUint(0);
-    client.getOverallBalance(phil.address).result.expectOk().expectUint(3000);
-    client.getOverallBalance(daisy.address).result.expectOk().expectUint(3000);
-    client.getOverallBalance(hunter.address).result.expectOk().expectUint(3000);
-    client.getTotalSupply(1).result.expectOk().expectUint(3000);
-    client.getTotalSupply(500).result.expectOk().expectUint(3000);
-    client.getTotalSupply(1000).result.expectOk().expectUint(3000);
-    client.getOverallSupply().result.expectOk().expectUint(9000);
+    client.getOverallBalance(phil.address).result.expectOk().expectUint(20);
+    client.getOverallBalance(daisy.address).result.expectOk().expectUint(20);
+    client.getOverallBalance(hunter.address).result.expectOk().expectUint(20);
+    client.getTotalSupply(1).result.expectOk().expectUint(20);
+    client.getTotalSupply(500).result.expectOk().expectUint(20);
+    client.getTotalSupply(1000).result.expectOk().expectUint(20);
+    client.getOverallSupply().result.expectOk().expectUint(60);
+
     events.expectEventCount(block.receipts[0].events, 'ft_mint_event', 0)
     events.expectEventCount(block.receipts[0].events, 'ft_transfer_event', 2)
     events.expectEventCount(block.receipts[0].events, 'nft_mint_event', 4)
     events.expectEventCount(block.receipts[0].events, 'nft_transfer_event', 0)
     events.expectEventCount(block.receipts[0].events, 'contract_event', 2) // the memo and the sft event are printed
-    events.expectEventCount(block.receipts[0].events, 'nft_burn_event', 4)
+    events.expectEventCount(block.receipts[0].events, 'nft_burn_event', 2)
     events.expectEventCount(block.receipts[0].events, 'ft_burn_event', 0)
 
     events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 0)
@@ -453,7 +476,7 @@ Clarinet.test({
     events.expectEventCount(block.receipts[1].events, 'nft_mint_event', 4)
     events.expectEventCount(block.receipts[1].events, 'nft_transfer_event', 0)
     events.expectEventCount(block.receipts[1].events, 'contract_event', 2) // the memo and the sft event are printed
-    events.expectEventCount(block.receipts[1].events, 'nft_burn_event', 4)
+    events.expectEventCount(block.receipts[1].events, 'nft_burn_event', 2)
     events.expectEventCount(block.receipts[1].events, 'ft_burn_event', 0)
 
     events.expectEventCount(block.receipts[2].events, 'ft_mint_event', 0)
@@ -461,7 +484,7 @@ Clarinet.test({
     events.expectEventCount(block.receipts[2].events, 'nft_mint_event', 4)
     events.expectEventCount(block.receipts[2].events, 'nft_transfer_event', 0)
     events.expectEventCount(block.receipts[2].events, 'contract_event', 2) // the memo and the sft event are printed
-    events.expectEventCount(block.receipts[2].events, 'nft_burn_event', 4)
+    events.expectEventCount(block.receipts[2].events, 'nft_burn_event', 2)
     events.expectEventCount(block.receipts[2].events, 'ft_burn_event', 0)
   }
 });
@@ -474,15 +497,15 @@ Clarinet.test({
       accounts
     );
     const entries = [
-      { 'token-id': 1, amount: 1000, recipient: phil.address },
-      { 'token-id': 1, amount: 1000, recipient: daisy.address },
-      { 'token-id': 1, amount: 1000, recipient: hunter.address },
-      { 'token-id': 500, amount: 1000, recipient: phil.address },
-      { 'token-id': 500, amount: 1000, recipient: daisy.address },
-      { 'token-id': 500, amount: 1000, recipient: hunter.address },
-      { 'token-id': 1000, amount: 1000, recipient: phil.address },
-      { 'token-id': 1000, amount: 1000, recipient: daisy.address },
-      { 'token-id': 1000, amount: 1000, recipient: hunter.address }
+      { 'token-id': 1, amount: 10, recipient: phil.address },
+      { 'token-id': 1, amount: 10, recipient: daisy.address },
+      { 'token-id': 1, amount: 10, recipient: hunter.address },
+      { 'token-id': 500, amount: 10, recipient: phil.address },
+      { 'token-id': 500, amount: 10, recipient: daisy.address },
+      { 'token-id': 500, amount: 10, recipient: hunter.address },
+      { 'token-id': 1000, amount: 10, recipient: phil.address },
+      { 'token-id': 1000, amount: 10, recipient: daisy.address },
+      { 'token-id': 1000, amount: 10, recipient: hunter.address }
     ]
     let block = chain.mineBlock([
       client.setAdminMintPass(deployer.address, deployer.address),
@@ -490,12 +513,12 @@ Clarinet.test({
     ]);
 
     const transferEntries = [
-      { 'token-id': 1, amount: 500, owner: phil.address, recipient: daisy.address },
-      { 'token-id': 1, amount: 500, owner: phil.address, recipient: hunter.address },
-      { 'token-id': 500, amount: 500, owner: daisy.address, recipient: phil.address },
-      { 'token-id': 500, amount: 500, owner: daisy.address, recipient: hunter.address },
-      { 'token-id': 1000, amount: 500, owner: hunter.address, recipient: phil.address },
-      { 'token-id': 1000, amount: 500, owner: hunter.address, recipient: daisy.address }
+      { 'token-id': 1, amount: 50, owner: phil.address, recipient: daisy.address },
+      { 'token-id': 1, amount: 50, owner: phil.address, recipient: hunter.address },
+      { 'token-id': 500, amount: 50, owner: daisy.address, recipient: phil.address },
+      { 'token-id': 500, amount: 50, owner: daisy.address, recipient: hunter.address },
+      { 'token-id': 1000, amount: 50, owner: hunter.address, recipient: phil.address },
+      { 'token-id': 1000, amount: 50, owner: hunter.address, recipient: daisy.address }
     ]
     block = chain.mineBlock([
       client.setApproved(1, phil.address, true, daisy.address),
@@ -512,7 +535,7 @@ Clarinet.test({
     block.receipts[3].result.expectOk().expectBool(true);
     block.receipts[4].result.expectOk().expectBool(true);
     block.receipts[5].result.expectOk().expectBool(true);
-    block.receipts[6].result.expectErr().expectUint(401);
+    block.receipts[6].result.expectErr().expectUint(ErrCode.ERR_INSUFFICIENT_BALANCE);
 /**
     client.getBalance(1, phil.address).result.expectOk().expectUint(0);
     client.getBalance(1, daisy.address).result.expectOk().expectUint(1500);

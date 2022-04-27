@@ -64,7 +64,7 @@ Clarinet.test({
       client.adminMint(1000, 10, phil.address, phil.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    block.receipts[1].result.expectErr().expectUint(115);
+    block.receipts[1].result.expectErr().expectUint(ErrCode.ERR_NOT_ADMIN_MINT_PASS);
     block.receipts[2].result.expectOk().expectUint(1000);
     assertEquals(block.receipts[2].events.length, 3);
     // console.log(block.receipts[2].events)
@@ -93,8 +93,8 @@ Clarinet.test({
       client.adminMint(0, 10, phil.address, phil.address)
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
-    block.receipts[1].result.expectErr().expectUint(108);
-    block.receipts[2].result.expectErr().expectUint(108);
+    block.receipts[1].result.expectErr().expectUint(ErrCode.ERR_COLLECTION_LIMIT_REACHED);
+    block.receipts[2].result.expectErr().expectUint(ErrCode.ERR_COLLECTION_LIMIT_REACHED);
   }
 });
 Clarinet.test({
@@ -116,6 +116,8 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk().expectBool(true); // reached mint pass limit
     client.getBalance(1, daisy.address).result.expectOk().expectUint(2);
+    client.getTotalSupply(1).result.expectOk().expectUint(2);
+    client.getOverallSupply().result.expectOk().expectUint(2);
   }
 });
 
@@ -128,10 +130,10 @@ Clarinet.test({
     );
 
     const entries = [
-      { 'token-id': 1, amount: 1000000, recipient: daisy.address },
-      { 'token-id': 1, amount: 1000000, recipient: daisy.address },
-      { 'token-id': 1, amount: 1000000, recipient: bobby.address },
-      { 'token-id': 1, amount: 1000000, recipient: bobby.address }
+      { 'token-id': 1, amount: 25, recipient: daisy.address },
+      { 'token-id': 1, amount: 25, recipient: daisy.address },
+      { 'token-id': 1, amount: 25, recipient: bobby.address },
+      { 'token-id': 1, amount: 25, recipient: bobby.address }
     ]
     let block = chain.mineBlock([
       client.setAdminMintPass(phil.address, deployer.address),
@@ -139,17 +141,52 @@ Clarinet.test({
     ]);
     block.receipts[0].result.expectOk().expectBool(true);
     block.receipts[1].result.expectOk().expectBool(true);
-    client.getBalance(1, daisy.address).result.expectOk().expectUint(2000000);
-    client.getBalance(1, bobby.address).result.expectOk().expectUint(2000000);
-    client.getOverallBalance(daisy.address).result.expectOk().expectUint(2000000);
-    client.getOverallBalance(bobby.address).result.expectOk().expectUint(2000000);
-    client.getTotalSupply(1).result.expectOk().expectUint(4000000);
-    client.getOverallSupply().result.expectOk().expectUint(4000000);
+    client.getBalance(1, daisy.address).result.expectOk().expectUint(50);
+    client.getBalance(1, bobby.address).result.expectOk().expectUint(50);
+    client.getOverallBalance(daisy.address).result.expectOk().expectUint(50);
+    client.getOverallBalance(bobby.address).result.expectOk().expectUint(50);
+    client.getTotalSupply(1).result.expectOk().expectUint(100);
+    client.getOverallSupply().result.expectOk().expectUint(100);
     // check events
     events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 4)
     events.expectEventCount(block.receipts[1].events, 'nft_mint_event', 4)
     events.expectEventCount(block.receipts[1].events, 'contract_event', 4)
     events.expectEventCount(block.receipts[1].events, 'nft_burn_event', 2)
+    events.expectEventCount(block.receipts[1].events, 'ft_burn_event', 0)
+  }
+});
+
+Clarinet.test({
+  name: "Mint Test - Ensure can't more than the limit per NFT",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const { deployer, phil, daisy, bobby, client, events } = getWalletsAndClient(
+      chain,
+      accounts
+    );
+
+    const entries = [
+      { 'token-id': 1, amount: 25, recipient: daisy.address },
+      { 'token-id': 1, amount: 25, recipient: daisy.address },
+      { 'token-id': 1, amount: 25, recipient: bobby.address },
+      { 'token-id': 1, amount: 26, recipient: bobby.address }
+    ]
+    let block = chain.mineBlock([
+      client.setAdminMintPass(phil.address, deployer.address),
+      client.adminMintMany(entries, phil.address),
+    ]);
+    block.receipts[0].result.expectOk().expectBool(true);
+    block.receipts[1].result.expectErr().expectUint(ErrCode.ERR_LIMIT_PER_FT_EXCEEDED);
+    client.getBalance(1, daisy.address).result.expectOk().expectUint(0);
+    client.getBalance(1, bobby.address).result.expectOk().expectUint(0);
+    client.getOverallBalance(daisy.address).result.expectOk().expectUint(0);
+    client.getOverallBalance(bobby.address).result.expectOk().expectUint(0);
+    client.getTotalSupply(1).result.expectOk().expectUint(0);
+    client.getOverallSupply().result.expectOk().expectUint(0);
+    // check events
+    events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 0)
+    events.expectEventCount(block.receipts[1].events, 'nft_mint_event', 0)
+    events.expectEventCount(block.receipts[1].events, 'contract_event', 0)
+    events.expectEventCount(block.receipts[1].events, 'nft_burn_event', 0)
     events.expectEventCount(block.receipts[1].events, 'ft_burn_event', 0)
   }
 });
@@ -185,7 +222,6 @@ Clarinet.test({
     events.expectEventCount(block.receipts[1].events, 'contract_event', 2)
     events.expectEventCount(block.receipts[1].events, 'nft_burn_event', 0)
     events.expectEventCount(block.receipts[1].events, 'ft_burn_event', 0)
-
   }
 });
 

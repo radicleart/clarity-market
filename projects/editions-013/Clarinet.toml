@@ -24,6 +24,18 @@ depends_on = []
 path = "contracts/external/commission-editions.clar"
 depends_on = ["sip-010-trait-ft-standard"]
 
+[contracts.commission-eag]
+path = "contracts/external/commission-eag.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
 [contracts.unwrapped-stx-token]
 path = "contracts/external/unwrapped-stx-token.clar"
 depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.Wrapped-Bitcoin]
+path = "contracts/external/Wrapped-Bitcoin.clar"
+depends_on = ["sip-010-trait-ft-standard", "restricted-token-trait"]
+
+[contracts.restricted-token-trait]
+path = "contracts/external/restricted-token-trait.clar"
+depends_on = []
