@@ -219,7 +219,7 @@ Clarinet.test({
     client.getOverallBalance(phil.address).result.expectOk().expectUint(100);
     client.getOverallSupply().result.expectOk().expectUint(100);
     client.getTotalSupply(1).result.expectOk().expectUint(100);
-    // console.log(block.receipts[1].events)
+
     // check the events make sense
     events.expectEventCount(block.receipts[1].events, 'ft_mint_event', 1)
     events.expectEventCount(block.receipts[1].events, 'nft_mint_event', 1)
@@ -303,8 +303,8 @@ Clarinet.test({
     client.getTotalSupply(1).result.expectOk().expectUint(100);
     client.getTotalSupply(500).result.expectOk().expectUint(100);
     client.getTotalSupply(1000).result.expectOk().expectUint(100);
+
     // check the events make sense
-    // console.log(block.receipts[1].events)
     events.expectEventCount(block.receipts[0].events, 'ft_mint_event', 0)
     events.expectEventCount(block.receipts[0].events, 'ft_transfer_event', 3)
     events.expectEventCount(block.receipts[0].events, 'nft_mint_event', 6)
@@ -444,7 +444,7 @@ Clarinet.test({
     block.receipts[1].result.expectOk().expectBool(true);
     block.receipts[2].result.expectOk().expectBool(true);
 
-    console.log(block.receipts[0].events)
+    // console.log(block.receipts[0].events)
 
     client.getBalance(1, phil.address).result.expectOk().expectUint(0);
     client.getBalance(1, daisy.address).result.expectOk().expectUint(10);

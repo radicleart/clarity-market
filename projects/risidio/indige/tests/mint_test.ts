@@ -5,9 +5,9 @@ import {
   Account
 } from "https://deno.land/x/clarinet@v0.20.0/index.ts";
 import { assertEquals } from "https://deno.land/std@0.90.0/testing/asserts.ts";
-import { IndigeClient, ErrCode } from "../../../../src/risidio-indige-client";
-import { WrappedBitcoin } from "../../../../src/wrapped-bitcoin-client";
-import { WrappedDiko } from "../../../../src/wrapped-diko-client";
+import { IndigeClient, ErrCode } from "../../../../src/risidio-indige-client.ts";
+import { WrappedBitcoin } from "../../../../src/wrapped-bitcoin-client.ts";
+import { WrappedDiko } from "../../../../src/wrapped-diko-client.ts";
 
 const mintAddress1 = "SP2M92VAE2YJ1P5VZ1Q4AFKWZFEKDS8CDA1KVFJ21";
 const mintAddress2 = "SP132K8CVJ9B2GEDHTQS5MH3N7BR5QDMN1PXVS8MY";

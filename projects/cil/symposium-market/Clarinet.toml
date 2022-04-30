@@ -1,0 +1,45 @@
+
+[project]
+name = "symposium-market"
+authors = []
+telemetry = true
+
+[contracts.symposium-market]
+path = "contracts/symposium-market.clar"
+depends_on = ["sip013-semi-fungible-token-trait", "commission-trait-sip10", "sip-010-trait-ft-standard"]
+
+[contracts.editions-013]
+path = "contracts/editions-013.clar"
+depends_on = ["sip013-semi-fungible-token-trait", "commission-trait-sip10", "sip-010-trait-ft-standard"]
+
+[contracts.sip013-semi-fungible-token-trait]
+path = "contracts/external/sip013-semi-fungible-token-trait.clar"
+depends_on = []
+
+[contracts.commission-trait-sip10]
+path = "contracts/external/commission-trait-sip10.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.sip-010-trait-ft-standard]
+path = "contracts/external/sip-010-trait-ft-standard.clar"
+depends_on = []
+
+[contracts.commission-editions]
+path = "contracts/external/commission-editions.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.commission-eag]
+path = "contracts/external/commission-eag.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.unwrapped-stx-token]
+path = "contracts/external/unwrapped-stx-token.clar"
+depends_on = ["sip-010-trait-ft-standard"]
+
+[contracts.Wrapped-Bitcoin]
+path = "contracts/external/Wrapped-Bitcoin.clar"
+depends_on = ["sip-010-trait-ft-standard", "restricted-token-trait"]
+
+[contracts.restricted-token-trait]
+path = "contracts/external/restricted-token-trait.clar"
+depends_on = []
