@@ -1,46 +1,12 @@
-# Clarity Market 1 2020
+# Clarity Projects
 
-Structure of this repo is as follows.
+To run clarinet tests cd into the project and run clarinet test
 
 ```#javascript
-./src - common test helpers typescript classes
-./contracts - external contracts and common traits
-./projects - individual projects and version thereof e.g.
-./projects/thisisnumberone/version1 
-./projects/thisisnumberone/version1/Clarinet.toml
-./projects/thisisnumberone/version1/contracts - project contracts
-./projects/thisisnumberone/version1/tests - clarinet tests
-```
-
-To run Clarinet tests for version 2 (generalise FT marketplace) of thisisumberone contract
-
-```
-> cd ./projects/thisisnumberone/version2
+> cd projects/risidio/indige
 > clarinet test
 ```
-# External Contracts
 
-Contracts pulled in to explore DAO concepts and mint fungible tokens via a DAO>
-
-[Arkadiko](https://app.arkadiko.finance/)
-
-```
-SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-dao-token-trait-v1
-SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-token
-SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-dao
-```
-
-Token Pair and Swap Contract
-```
-SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.wrapped-stx-token
-SP3DX3H4FEYZJZ586MFBS25ZW3HZDMEW92260R2PR.Wrapped-Bitcoin
-SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-swap-token-wstx-xbtc
-```
-
-```
-get-pair-details (YZR.wrapped-stx-token, YZR.Wrapped-Bitcoin)
-(ok (some (tuple (balance-x u153799683635) (balance-y u440698629) (enabled true) (fee-balance-x u332732249) (fee-balance-y u1323023) (fee-to-address (some SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR)) (name "wSTX-xBTC") (shares-total u8127104822) (swap-token SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-swap-token-wstx-xbtc))))
-```
 ## Clarinet Repo Structure
 
 Adding a new project..
@@ -92,7 +58,6 @@ $ tree -L 2 -I node_modules
 │   └── utils.ts
 └── tsconfig.json
 ```
-
 
 ## References
 
