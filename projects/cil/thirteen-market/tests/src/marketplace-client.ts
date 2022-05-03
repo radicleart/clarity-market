@@ -10,10 +10,9 @@ import { assertEquals, assert } from "https://deno.land/std@0.90.0/testing/asser
 export enum MarketErrCode {
   ERR_UNKNOWN_LISTING = 2000,
   ERR_PRICE_WAS_ZERO = 2001,
-  ERR_NFT_NOT_LISTED_FOR_SALE = 2002,
   ERR_NFT_ASSET_MISMATCH = 2003,
   ERR_ASSET_NOT_ALLOWED = 2005,
-  ERR_EXPIRY_IN_PAST = 106,
+  ERR_EXPIRY_IN_PAST = 2006,
   ERR_PAYMENT_CONTRACT_NOT_ALLOWED = 2007,
   ERR_MAKER_TAKER_EQUAL = 2008,
   ERR_UNINTENDED_TAKER = 2009,
@@ -25,6 +24,22 @@ export enum MarketErrCode {
   ERR_NOT_OWNER = 402,
   ERR_NOT_ADMINISTRATOR = 403
 }
+interface Listing {
+	tokenId: number,
+	unitPrice: number,
+	amount: number,
+	expiry: number,
+	taker?: string
+}
+const makeListing = (listing: Listing) =>
+	types.tuple({
+		'taker': listing.taker ? types.some(types.principal(listing.taker)) : types.none(),
+		'token-id': types.uint(listing.tokenId),
+		'amount': types.uint(listing.amount),
+		'expiry': types.uint(listing.expiry),
+		'unit-price': types.uint(listing.unitPrice)
+	});
+
 
 export class MarketplaceClient {
   contractName: string = "";
@@ -46,12 +61,13 @@ export class MarketplaceClient {
     return this.callReadOnlyFn("is-allowed", [types.principal(nftContract)]);
   }
 
-  listInToken(nftContract: string, id: number, price: number, amount: number, expiry: number, taker: string, comm: string, token: string, sender: string): Tx {
+  
+  listInTokenTuple(nftContract: string, listing: Listing, commission: string, token: string, sender: string): Tx {
     
     return Tx.contractCall(
       this.contractName,
       "list-in-token",
-      [types.principal(nftContract), types.uint(id), types.uint(price), types.uint(amount), types.uint(expiry), taker.length > 0 ? types.some(types.principal(taker)) : types.none(), types.principal(comm), types.principal(token)],
+      [types.principal(nftContract), makeListing(listing), types.principal(commission), types.principal(token)],
       sender
     );
   }

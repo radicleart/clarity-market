@@ -1,15 +1,19 @@
 
 [project]
-name = "symposium-market"
+name = "thirteen-market"
 authors = []
 telemetry = true
 
-[contracts.symposium-market]
-path = "contracts/symposium-market.clar"
+[contracts.thirteen-market]
+path = "contracts/thirteen-market.clar"
 depends_on = ["sip013-semi-fungible-token-trait", "commission-trait-sip10", "sip-010-trait-ft-standard"]
 
-[contracts.editions-013]
-path = "contracts/editions-013.clar"
+[contracts.thirteen-mint]
+path = "contracts/thirteen-mint.clar"
+depends_on = ["sip013-semi-fungible-token-trait", "commission-trait-sip10", "sip-010-trait-ft-standard"]
+
+[contracts.fourteen-mint]
+path = "contracts/fourteen-mint.clar"
 depends_on = ["sip013-semi-fungible-token-trait", "commission-trait-sip10", "sip-010-trait-ft-standard"]
 
 [contracts.sip013-semi-fungible-token-trait]

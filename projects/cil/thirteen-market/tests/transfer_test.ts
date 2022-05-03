@@ -10,7 +10,7 @@ import { CustomEventsClient } from "./src/custom-events-client.ts";
 
 const nonFungibleName = 'artwork-token'
 const fungibleName = 'edition-token'
-const contractName = 'editions-013'
+const contractName = 'thirteen-mint'
 
 const getWalletsAndClient = (
   chain: Chain,
